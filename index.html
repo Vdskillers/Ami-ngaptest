@@ -3739,15 +3739,16 @@ document.addEventListener('click', function(e) {
 </script>
 
 <script>
+/* ══════════════════════════════════════════════════════════════
+   Hook showApp UNIVERSEL (desktop + mobile) pour initialiser :
+   - Les éléments topbar (bouton 🔔 notifications, 🔍 recherche, sync status)
+   - Les KPIs rapport / filtres hist à la navigation
+   - Le toast de bienvenue
+   ⚠️ Ce bloc DOIT être hors IIFE mobile-only, sinon 🔔 ne s'affiche pas sur desktop.
+══════════════════════════════════════════════════════════════ */
 (function(){
-  // Déplacer voicebtn dans le header mobile (mobile uniquement)
-  if(window.innerWidth > 768) return;
   document.addEventListener('DOMContentLoaded', function(){
-    var wrap = document.getElementById('mobile-header-fabs');
-    var vbtn = document.getElementById('voicebtn');
-    if(wrap && vbtn) wrap.appendChild(vbtn);
-
-    // Hook showApp pour initialiser les extras topbar + toast de bienvenue
+    // Hook showApp : init extras topbar + toast bienvenue (tous devices)
     var _origShowApp = window.showApp;
     window.showApp = function() {
       if (typeof _origShowApp === 'function') _origShowApp.apply(this, arguments);
@@ -3761,7 +3762,7 @@ document.addEventListener('click', function(e) {
       }, 600);
     };
 
-    // Chargement auto KPIs rapport + filtre hist à la navigation
+    // Chargement auto KPIs rapport + filtre hist à la navigation (tous devices)
     document.addEventListener('ui:navigate', function(e) {
       const view = e.detail?.view;
       if (view === 'rapport') {
@@ -3789,6 +3790,18 @@ document.addEventListener('click', function(e) {
   window.addEventListener('appinstalled', function(){
     var m = document.getElementById('btn-install-mobile');
     if(m) m.style.display = 'none';
+  });
+})();
+</script>
+
+<script>
+/* IIFE mobile-only : déplacement voicebtn dans header mobile */
+(function(){
+  if(window.innerWidth > 768) return;
+  document.addEventListener('DOMContentLoaded', function(){
+    var wrap = document.getElementById('mobile-header-fabs');
+    var vbtn = document.getElementById('voicebtn');
+    if(wrap && vbtn) wrap.appendChild(vbtn);
   });
 })();
 </script>

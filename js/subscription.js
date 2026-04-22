@@ -128,6 +128,7 @@ window.SUB = (function(){
 
     try {
       const data = await _api('/webhook/subscription-status', {});
+      const simTier = (role === 'admin') ? sessionStorage.getItem(STORAGE_ADMIN_SIM) : null;
       _state = {
         appMode:  data.app_mode || 'TEST',
         tier:     data.tier,
@@ -137,19 +138,27 @@ window.SUB = (function(){
         daysLeft: data.days_left,
         locked:   !!data.locked,
         isAdmin:  role === 'admin',
-        simTier:  (role === 'admin') ? sessionStorage.getItem(STORAGE_ADMIN_SIM) : null,
+        simTier:  simTier,
+        isAdminSim: !!(role === 'admin' && simTier),
         cabinetMember: !!data.cabinet_member,
         cabinetSize:   data.cabinet_size || 0,
         cabinetRole:   data.cabinet_role || null
       };
+      // 🔎 Debug diagnostic — visible dans la console navigateur
+      //   Permet de vérifier que le worker renvoie bien app_mode='TEST' côté client.
+      //   Si appMode n'est pas 'TEST' alors que tu attends le mode test, problème serveur/DB.
+      console.info('[SUB] bootstrap OK — appMode=%s tier=%s trial=%s locked=%s cabinet=%s',
+        _state.appMode, _state.tier, _state.isTrial, _state.locked, _state.cabinetMember);
     } catch (e) {
       console.warn('[SUB] bootstrap failed, fallback mode TEST:', e.message);
+      const simTier = (role === 'admin') ? sessionStorage.getItem(STORAGE_ADMIN_SIM) : null;
       _state = {
         appMode: 'TEST',
         tier: role === 'admin' ? 'ADMIN' : 'TEST',
         isTrial: false,
         isAdmin: role === 'admin',
-        simTier: (role === 'admin') ? sessionStorage.getItem(STORAGE_ADMIN_SIM) : null,
+        simTier: simTier,
+        isAdminSim: !!(role === 'admin' && simTier),
         cabinetMember: false,
         cabinetSize: 0,
         cabinetRole: null,
@@ -287,6 +296,7 @@ window.SUB = (function(){
     if (_role !== 'admin') return false;
     if (tier && !TIERS[tier] && tier !== 'LOCKED') return false;
     _state.simTier = tier || null;
+    _state.isAdminSim = !!tier;
     if (tier) sessionStorage.setItem(STORAGE_ADMIN_SIM, tier);
     else sessionStorage.removeItem(STORAGE_ADMIN_SIM);
     _applyTrialBanner();

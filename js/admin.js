@@ -1053,11 +1053,13 @@ async function applySubOverride(userId, tier) {
       tier: tier
     });
     if (!d.ok) throw new Error(d.error || 'Erreur');
+    console.info('[admin-subscription-override] OK', { userId, tier, response: d });
     admAlert(`✓ Tier "${tier}" appliqué avec succès.`, 'o');
     closeSubOverrideModal();
     loadAdmComptes();
   } catch (e) {
-    admAlert(e.message, 'e');
+    console.error('[admin-subscription-override] FAILED', { userId, tier, error: e.message });
+    admAlert(`Échec override : ${e.message}. Vérifiez que les tables "subscriptions" et "app_config" existent dans Supabase (exécutez migration_subscriptions.sql).`, 'e');
   }
 }
 
