@@ -1911,28 +1911,31 @@ async function coterDepuisPatient(id) {
   if (!row) return;
   const p = { ...(_dec(row._data)||{}), nom: row.nom, prenom: row.prenom };
 
-  // ── Pré-détection cotation existante ────────────────────────────────────
-  // Si une cotation existe déjà pour ce patient aujourd'hui, pré-poser
-  // _editingCotation pour que la modale de choix s'affiche dès le clic sur "Coter".
-  // On efface d'abord toute ref précédente pour repartir propre.
+  // ── Pré-détection cotation existante + attachement systématique au patient ──
+  // REGLE : l'utilisateur a cliqué ⚡ Coter sur UN patient précis depuis le carnet.
+  // On DOIT garantir que la nouvelle cotation s'attache à ce patient.id, peu
+  // importe ce que l'infirmière tape dans le champ nom. Donc on pose toujours
+  // patientId + _forceAttachToPatient pour que le pipeline cotation.js
+  // résolve par ID (fiable) et non par nom (fragile si doublons / chiffrement).
   window._editingCotation = null;
   try {
     const _todayStr = new Date().toISOString().slice(0, 10);
+    let _existIdx = -1;
     if (Array.isArray(p.cotations)) {
-      const _existIdx = p.cotations.findIndex(c => c.date === _todayStr);
-      if (_existIdx >= 0) {
-        const _existCot = p.cotations[_existIdx];
-        window._editingCotation = {
-          patientId:      row.id,
-          cotationIdx:    _existIdx,
-          invoice_number: _existCot.invoice_number || null,
-          _fromPatient:   true,
-          _autoDetected:  true, // sera remplacé par le choix explicite de l'utilisateur
-        };
-        if (typeof showToast === 'function')
-          showToast(`⚠️ Cotation du ${new Date(_todayStr).toLocaleDateString('fr-FR')} déjà existante — mise à jour proposée`, 'wa');
-      }
+      // ⚡ Comparaison robuste : c.date peut être ISO complet ("2026-04-22T14:30:00.000Z")
+      // ou juste YYYY-MM-DD. Le .slice(0,10) couvre les deux cas.
+      _existIdx = p.cotations.findIndex(c => (c.date || '').slice(0, 10) === _todayStr);
     }
+    window._editingCotation = {
+      patientId:             row.id,
+      cotationIdx:           _existIdx >= 0 ? _existIdx : null,
+      invoice_number:        _existIdx >= 0 ? ((p.cotations[_existIdx] || {}).invoice_number || null) : null,
+      _fromPatient:          true,
+      _forceAttachToPatient: true,              // garantit l'attachement par id
+      _autoDetected:         _existIdx >= 0,    // true uniquement si cotation du jour détectée
+    };
+    if (_existIdx >= 0 && typeof showToast === 'function')
+      showToast(`⚠️ Cotation du ${new Date(_todayStr).toLocaleDateString('fr-FR')} déjà existante — mise à jour proposée`, 'wa');
   } catch (_) {}
 
   navTo('cot', null);
