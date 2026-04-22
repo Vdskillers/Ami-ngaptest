@@ -71,21 +71,29 @@ window.SUB = (function(){
     cabinet_manage_members:  { tier:'CABINET', label:'Gestion des membres',    desc:'Inviter, promouvoir et retirer des membres du cabinet (titulaire/gestionnaire uniquement).' },
     cabinet_consolidated_stats: { tier:'CABINET', label:'Stats consolidées cabinet', desc:'Vue CA, actes et performance de toutes les IDE du cabinet (titulaire/gestionnaire uniquement).' },
     compliance_engine:   { tier:'CABINET', label:'Conformité cabinet',        desc:'Moteur de conformité du cabinet : scoring 4 piliers, auto-correction, risque prédictif (titulaire/gestionnaire uniquement).' },
-    optimisation_ca_plus:{ tier:'PREMIUM', label:'Optimisation CA+',          desc:'Revenue engine premium.' },
-    protection_legale_plus:{ tier:'PREMIUM', label:'Protection médico-légale+', desc:'Certificats forensiques horodatés.' },
-    sla_support:         { tier:'PREMIUM', label:'SLA support',               desc:'Support prioritaire < 2h.' },
+    /* ═══ 💎 PREMIUM — Add-on IDEL haut volume (+15 € HT / mois) ════════
+       S'ajoute à Pro ou Cabinet. Les 6 fonctionnalités ci-dessous
+       sont réservées aux abonnés PREMIUM et aux admins (démo/test). */
+    optimisation_ca_plus:    { tier:'PREMIUM', label:'Optimisation CA avancée',        desc:'Revenue engine premium : IA prédictive sur manques-à-gagner, suggestions d\'actes, upsell cotations.' },
+    ca_sous_declare:         { tier:'PREMIUM', label:'Détection CA sous-déclaré',       desc:'Croisement longitudinal tournées/cotations/BSI pour détecter les actes non-cotés et récupérer le CA perdu.' },
+    protection_legale_plus:  { tier:'PREMIUM', label:'Protection médico-légale+',       desc:'Couche renforcée : opposabilité CPAM, bouclier anti-redressement, archivage probant 10 ans.' },
+    forensic_certificates:   { tier:'PREMIUM', label:'Certificats forensiques',         desc:'Certificats horodatés RFC 3161, chaîne de preuve cryptographique SHA-256, export PDF opposable juridiquement.' },
+    sla_support:             { tier:'PREMIUM', label:'SLA support prioritaire < 2h',    desc:'Engagement contractuel de réponse support < 2h ouvrées, canal dédié premium.' },
+    rapport_juridique_mensuel:{ tier:'PREMIUM', label:'Rapport juridique mensuel',      desc:'Synthèse mensuelle auditée : conformité, preuves collectées, exposition contentieux, recommandations DPO.' },
     dashboard_consolide: { tier:'COMPTABLE', label:'Dashboard consolidé',     desc:'Vue multi-IDEL pour cabinet comptable.' },
     export_fiscal:       { tier:'COMPTABLE', label:'Export fiscal',           desc:'Exports liasse fiscale, 2035.' },
     scoring_risque:      { tier:'COMPTABLE', label:'Scoring risque portfolio', desc:'Scoring risque de chaque IDEL sous mandat.' }
   };
 
   const ACCESS_MATRIX = {
-    TEST:      () => true,
-    ADMIN:     () => true,
-    TRIAL:     () => true,
+    TEST:      () => true,   // Mode test global : tout accessible à tous (démo)
+    ADMIN:     () => true,   // Admin : bypass total (démo, audit, support)
+    TRIAL:     () => true,   // Essai gratuit 30j : accès total, PREMIUM inclus pour conversion
     ESSENTIEL: f => FEATURES[f]?.tier === 'ESSENTIEL',
     PRO:       f => ['ESSENTIEL','PRO'].includes(FEATURES[f]?.tier),
     CABINET:   f => ['ESSENTIEL','PRO','CABINET'].includes(FEATURES[f]?.tier),
+    // PREMIUM comme tier autonome inclut tout (rare ; admin simulation principalement).
+    // Dans le modèle add-on réel, l'user a tier=PRO ou CABINET + premiumAddon=true.
     PREMIUM:   f => ['ESSENTIEL','PRO','CABINET','PREMIUM'].includes(FEATURES[f]?.tier),
     COMPTABLE: f => FEATURES[f]?.tier === 'COMPTABLE' || FEATURES[f]?.tier === 'ESSENTIEL',
     LOCKED:    f => ['contact_admin','historique'].includes(f)
@@ -142,7 +150,10 @@ window.SUB = (function(){
         isAdminSim: !!(role === 'admin' && simTier),
         cabinetMember: !!data.cabinet_member,
         cabinetSize:   data.cabinet_size || 0,
-        cabinetRole:   data.cabinet_role || null
+        cabinetRole:   data.cabinet_role || null,
+        // 💎 Add-on PREMIUM (+15€ HT/mois) — activable par-dessus Pro ou Cabinet
+        premiumAddon:  !!data.premium_addon,
+        premiumAddonUntil: data.premium_addon_until || null
       };
       // 🔎 Debug diagnostic — visible dans la console navigateur
       //   Permet de vérifier que le worker renvoie bien app_mode='TEST' côté client.
@@ -162,6 +173,8 @@ window.SUB = (function(){
         cabinetMember: false,
         cabinetSize: 0,
         cabinetRole: null,
+        premiumAddon: false,
+        premiumAddonUntil: null,
         _fallback: true
       };
     }
@@ -202,6 +215,8 @@ window.SUB = (function(){
       cabinetSize: _state.cabinetSize || 0,
       cabinetRole: _state.cabinetRole || null,
       isCabinetManager: ['titulaire','gestionnaire'].includes(_state.cabinetRole || ''),
+      premiumAddon: !!_state.premiumAddon,
+      premiumAddonUntil: _state.premiumAddonUntil || null,
       fallback: !!_state._fallback
     };
   }
@@ -256,6 +271,14 @@ window.SUB = (function(){
     //   quel que soit son tier souscrit.
     if (_state.cabinetMember && tier !== 'LOCKED') {
       if (FEATURES[featId]?.tier === 'CABINET') return true;
+    }
+
+    // 💎 Add-on PREMIUM (+15€ HT/mois) : s'ajoute à Pro ou Cabinet
+    //   Si l'user a souscrit l'add-on (_state.premiumAddon = true),
+    //   il a accès aux features PREMIUM en plus de son tier de base.
+    //   Cas où tier = 'PREMIUM' est déjà couvert par ACCESS_MATRIX.PREMIUM.
+    if (_state.premiumAddon && tier !== 'LOCKED') {
+      if (FEATURES[featId]?.tier === 'PREMIUM') return true;
     }
 
     const matrix = ACCESS_MATRIX[tier];
