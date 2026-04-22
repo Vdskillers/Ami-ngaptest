@@ -123,6 +123,12 @@
   .lp-toc-link{font-family:var(--fm);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#a0bbd0;padding:7px 13px;border-radius:20px;text-decoration:none;white-space:nowrap;transition:all .18s;border:1px solid transparent}
   .lp-toc-link:hover{color:#00d4aa;background:rgba(0,212,170,.06);border-color:rgba(0,212,170,.18)}
 
+  /* ── Founder access banner ──────────────────── */
+  .lp-founder{background:linear-gradient(135deg,rgba(255,180,50,.08),rgba(0,212,170,.06));border:1px solid rgba(255,180,50,.25);border-radius:14px;padding:14px 20px;margin-bottom:36px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .lp-founder-badge{background:rgba(255,180,50,.18);color:#ffc857;font-family:var(--fm);font-size:10px;letter-spacing:1.5px;padding:5px 11px;border-radius:12px;white-space:nowrap;font-weight:700}
+  .lp-founder-txt{flex:1;min-width:220px;font-size:13px;color:#e8dcc4;line-height:1.45}
+  .lp-founder-txt strong{color:#ffffff}
+
   /* ── Comment ça marche (3 steps) ────────────── */
   .lp-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:52px;position:relative}
   @media(max-width:640px){.lp-steps{grid-template-columns:1fr}}
@@ -151,6 +157,17 @@
   .lp-roi-v{font-family:var(--fs);font-size:30px;color:#00d4aa;line-height:1}
   .lp-roi-l{font-size:12.5px;color:#b8cdd8;line-height:1.5}
   .lp-roi-src{font-family:var(--fm);font-size:9px;color:#6a7f91;letter-spacing:.5px;margin-top:auto;padding-top:8px;border-top:1px solid rgba(30,45,61,.6)}
+
+  /* ── Preuve sociale / Testimonials ──────────── */
+  .lp-testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:52px}
+  @media(max-width:720px){.lp-testi-grid{grid-template-columns:1fr}}
+  .lp-testi{background:rgba(14,20,30,.92);border:1px solid rgba(30,45,61,.95);border-radius:16px;padding:22px 22px 18px;display:flex;flex-direction:column}
+  .lp-testi-stars{color:#ffc857;font-size:13px;letter-spacing:2px;margin-bottom:10px}
+  .lp-testi-q{font-size:13.5px;color:#d8e4ec;line-height:1.6;font-style:italic;margin-bottom:14px;flex:1}
+  .lp-testi-who{display:flex;align-items:center;gap:10px;border-top:1px solid rgba(30,45,61,.6);padding-top:12px}
+  .lp-testi-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0b1a14,#102a1e);border:1px solid rgba(0,212,170,.35);display:grid;place-items:center;font-family:var(--fs);color:#00d4aa;font-size:14px;flex-shrink:0}
+  .lp-testi-meta{font-size:11px;color:#a0bbd0;line-height:1.4}
+  .lp-testi-meta b{color:#ffffff;font-weight:700;display:block;font-size:12px}
 
   /* ── Cabinet B2B dedicated section ──────────── */
   .lp-cabinet{background:linear-gradient(135deg,rgba(79,168,255,.05),rgba(0,212,170,.04));border:1px solid rgba(79,168,255,.18);border-radius:20px;padding:32px 30px;margin-bottom:52px}
@@ -330,6 +347,12 @@
         <a class="lp-toc-link" href="#lp-security">Sécurité</a>
       </div>
     </nav>
+
+    <!-- FOUNDER ACCESS BANNER -->
+    <div class="lp-founder">
+      <span class="lp-founder-badge">✦ Accès fondateur</span>
+      <div class="lp-founder-txt"><strong>Phase de lancement privée.</strong> Tarif préférentiel garanti à vie pour les 100 premières infirmières et 10 premiers cabinets inscrits. Ton retour pèse directement sur la v1.</div>
+    </div>
 
     <!-- COMMENT ÇA MARCHE -->
     <div id="lp-steps" class="lp-sec-label">⚙ Comment ça marche</div>
@@ -615,6 +638,36 @@
       <div class="lp-stat"><div class="lp-stat-v">+2h</div><div class="lp-stat-l">gagnées par jour</div></div>
     </div>
 
+    <!-- PREUVE SOCIALE -->
+    <div class="lp-sec-label">💚 Ils testent AMI</div>
+    <div class="lp-sec-h2">Ce qu'en disent les <em>infirmières en beta</em></div>
+    <div class="lp-testi-grid">
+      <div class="lp-testi">
+        <div class="lp-testi-stars">★★★★★</div>
+        <div class="lp-testi-q">« Je rentrais à 21h pour coter, maintenant c'est fini avant la dernière visite. J'ai récupéré mes soirées. »</div>
+        <div class="lp-testi-who">
+          <div class="lp-testi-av">M</div>
+          <div class="lp-testi-meta"><b>Marie L.</b>IDEL · Finistère · 14 patients/j</div>
+        </div>
+      </div>
+      <div class="lp-testi">
+        <div class="lp-testi-stars">★★★★★</div>
+        <div class="lp-testi-q">« On est 5 IDE au cabinet. La sync sélective nous a résolu tous nos problèmes RGPD de partage. »</div>
+        <div class="lp-testi-who">
+          <div class="lp-testi-av">S</div>
+          <div class="lp-testi-meta"><b>Sophie D.</b>Cabinet multi-IDE · Bretagne</div>
+        </div>
+      </div>
+      <div class="lp-testi">
+        <div class="lp-testi-stars">★★★★★</div>
+        <div class="lp-testi-q">« Le copilote IA m'a sauvée 3 fois sur des cumuls que j'aurais validés. C'est vraiment un filet de sécurité. »</div>
+        <div class="lp-testi-who">
+          <div class="lp-testi-av">A</div>
+          <div class="lp-testi-meta"><b>Anaïs M.</b>IDEL · Morbihan · 2 ans d'exercice</div>
+        </div>
+      </div>
+    </div>
+
     <!-- POUR QUI -->
     <div class="lp-sec-label">⚡ Pour qui ?</div>
     <div class="lp-audience">
@@ -683,6 +736,14 @@
     <div id="lp-faq-sec" class="lp-sec-label">❓ Questions fréquentes</div>
     <div class="lp-sec-h2">Tout ce que tu veux <em>savoir</em></div>
     <div class="lp-faq">
+      <details class="lp-faq-item">
+        <summary class="lp-faq-q">AMI est-il compatible SESAM-Vitale et FSE ?</summary>
+        <div class="lp-faq-a">Oui. AMI génère les FSE (Feuilles de Soins Électroniques) conformes et s'intègre dans le workflow SESAM-Vitale. La cotation est poussée automatiquement après validation.</div>
+      </details>
+      <details class="lp-faq-item">
+        <summary class="lp-faq-q">Combien coûte AMI ?</summary>
+        <div class="lp-faq-a">En phase de lancement, l'accès est <strong>gratuit pour les 100 premières IDE inscrites</strong>, avec tarif préférentiel garanti à vie ensuite. Les tarifs commerciaux seront publiés avant la fin de la beta, pensés pour le budget d'une IDEL (ROI dès le 1<sup>er</sup> mois).</div>
+      </details>
       <details class="lp-faq-item">
         <summary class="lp-faq-q">Qu'en est-il de mes données patients ?</summary>
         <div class="lp-faq-a">Les données de santé sont <strong>stockées exclusivement sur ton terminal</strong> (navigateur, IndexedDB chiffrée). Elles ne transitent jamais par nos serveurs. Chiffrement AES-256-GCM, conformité RGPD by design, architecture prête pour l'hébergement HDS.</div>
@@ -1146,7 +1207,6 @@
       <div class="ni nurse-only" data-v="rapport"><span class="nic">📄</span> Rapport mensuel</div>
       <div class="ni nurse-only" data-v="dash"><span class="nic">📊</span> Dashboard & Statistiques <span class="ni-alert-badge red" id="nav-dash-badge" style="display:none"></span></div>
       <div class="ni nurse-only" data-v="copilote"><span class="nic">🤖</span> Copilote IA</div>
-      <div class="ni" data-v="transmissions"><span class="nic">📝</span> Transmissions infirmières</div>
       <div class="ni" data-v="compte-rendu"><span class="nic">📋</span> Compte-rendu de passage</div>
       <div class="ni" data-v="bsi"><span class="nic">🩺</span> BSI — Bilan soins infirmiers</div>
       <div class="ni" data-v="consentements"><span class="nic">✍️</span> Consentements éclairés</div>
@@ -1159,9 +1219,12 @@
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Cabinet</div>
       <div class="ni nurse-only" id="nav-cabinet-item" data-v="cabinet"><span class="nic">🏥</span> Cabinet &amp; synchronisation <span id="cabinet-nav-badge" style="display:none;background:rgba(0,212,170,.2);color:var(--a);border-radius:20px;font-size:9px;padding:1px 7px;margin-left:4px;font-family:var(--fm)">0</span></div>
+      <div class="ni" data-v="transmissions"><span class="nic">📝</span> Transmissions infirmières</div>
+      <div class="ni" data-v="compliance"><span class="nic">🧠</span> Conformité cabinet</div>
     </div>
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Système</div>
+      <div class="ni" data-v="mon-abo"><span class="nic">💎</span> Mon abonnement <span id="sub-nav-pill" style="display:none"></span></div>
       <div class="ni nurse-only" data-v="ngap-ref"><span class="nic">📚</span> Référentiel NGAP</div>
       <div class="ni" data-v="aide"><span class="nic">📖</span> Aide & Docs</div>
       <div class="ni nurse-only" data-v="contact"><span class="nic">💬</span> Contact Admin <span id="contact-badge" style="display:none;background:#ef4444;color:#fff;border-radius:20px;font-size:9px;padding:1px 6px;margin-left:4px;font-family:var(--fm)">!</span></div>
@@ -1216,6 +1279,7 @@
       <button class="bn-item nurse-only" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="contact" onclick="navTo('contact',this);toggleMobileMenu()"><span class="bn-ic">💬</span>Contact</button>
       <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="aide" onclick="navTo('aide',this);toggleMobileMenu()"><span class="bn-ic">📖</span>Aide</button>
       <button class="bn-item nurse-only" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="sec" onclick="navTo('sec',this);toggleMobileMenu()"><span class="bn-ic">🛡️</span>Sécurité</button>
+      <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="mon-abo" onclick="navTo('mon-abo',this);toggleMobileMenu()"><span class="bn-ic">💎</span>Mon abo</button>
       <button id="btn-install-mobile" class="bn-item" style="display:none;background:var(--ad);border:1px solid rgba(0,212,170,.3);border-radius:12px;padding:12px 4px;height:auto;flex:none;color:var(--a)" onclick="installApp()"><span class="bn-ic">📱</span>Installer</button>
       <button id="btn-profil-mobile" class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" onclick="openPM();toggleMobileMenu()"><span class="bn-ic">👤</span>Profil</button>
       <button class="bn-item" style="background:rgba(255,95,109,.08);border:1px solid rgba(255,95,109,.2);border-radius:12px;padding:12px 4px;height:auto;flex:none;color:var(--d)" onclick="logout()"><span class="bn-ic">⏻</span>Quitter</button>
@@ -1223,6 +1287,14 @@
   </div>
 
   <main class="main">
+
+    <!-- ══════════════════════════════════════════
+         💎 Bandeaux abonnement (gérés par subscription.js)
+         - sub-trial-banner  : TRIAL actif (J-X restant) ou LOCKED
+         - sub-admin-banner  : admin en mode simulation de tier
+    ══════════════════════════════════════════ -->
+    <div id="sub-admin-banner" style="display:none"></div>
+    <div id="sub-trial-banner" style="display:none"></div>
 
     <!-- COTATION -->
     <section class="view on" id="view-cot">
@@ -2082,7 +2154,7 @@
             <th>Actes</th>
             <th>Total</th>
             <th>Statut</th>
-            <th id="hist-th-ide" class="hist-col-ide">IDE(s)</th>
+            <th>IDE(s)</th>
             <th>Alertes</th>
             <th></th>
             <th></th>
@@ -3000,13 +3072,15 @@
         Vous choisissez <em>quoi</em> partager et <em>avec qui</em>. Aucune donnée patient identifiable ne quitte votre appareil sans votre accord explicite.</p>
       </div>
 
+      <!-- ── 🛡️ Widget Conformité cabinet (v3.9) — déplacé depuis Dashboard ── -->
+      <div id="dash-compliance-widget" style="display:none;margin:4px 0 16px"></div>
+
       <!-- Contenu dynamique rendu par cabinet.js -->
       <div id="cabinet-root">
         <!-- Rempli par renderCabinetSection() à la navigation -->
       </div>
 
-      <!-- ══ DASHBOARD CABINET — Statistiques cabinet Multi-IDE ══
-           (Revenus par IDE, Simulateur et Objectif CA sont dans la modale "📊 Stats consolidées") -->
+      <!-- ══ DASHBOARD CABINET — déplacé depuis view-dash ══ -->
       <div id="dash-cabinet-section" style="display:none;margin-top:24px">
 
         <!-- ── Séparateur + titre cabinet ── -->
@@ -3019,8 +3093,38 @@
           <button class="btn bs bsm" onclick="loadDashCabinet()">↻ Actualiser</button>
         </div>
 
-        <!-- KPIs cabinet (peuplé par loadDashCabinet) -->
-        <div id="dash-cabinet-kpis" class="sg" style="grid-template-columns:repeat(auto-fill,minmax(175px,1fr));margin-bottom:12px"></div>
+        <!-- KPIs cabinet -->
+        <div id="dash-cabinet-kpis" class="sg" style="grid-template-columns:repeat(auto-fill,minmax(175px,1fr));margin-bottom:24px"></div>
+
+        <!-- Revenus par IDE -->
+        <div style="border-top:1px solid var(--b);margin-bottom:18px"></div>
+        <div class="dash-section-title" style="margin-bottom:14px">Revenus par infirmière</div>
+        <div id="dash-cabinet-ide-revenues" style="margin-bottom:24px"></div>
+
+        <!-- Simulateur revenus cabinet -->
+        <div style="border-top:1px solid var(--b);margin-bottom:18px"></div>
+        <div class="dash-section-title" style="margin-bottom:14px">
+          Simulateur revenus cabinet
+          <span class="dash-section-badge">IA</span>
+        </div>
+        <p style="font-size:12px;color:var(--m);margin-bottom:14px">Projettez vos revenus mensuels en ajustant les paramètres.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:16px">
+          <div class="af"><label>Patients/jour/IDE</label><input type="number" id="sim-patients-jour" value="12" min="1" max="30" oninput="runCabinetSimulator()"></div>
+          <div class="af"><label>Nb IDEs</label><input type="number" id="sim-nb-ide" value="2" min="1" max="10" oninput="runCabinetSimulator()"></div>
+          <div class="af"><label>Montant moyen/acte (€)</label><input type="number" id="sim-montant-moyen" value="8.50" step="0.5" oninput="runCabinetSimulator()"></div>
+          <div class="af"><label>Jours travaillés/mois</label><input type="number" id="sim-jours" value="22" min="1" max="31" oninput="runCabinetSimulator()"></div>
+        </div>
+        <div id="dash-cabinet-simulator-result" style="margin-bottom:24px"></div>
+
+        <!-- Objectif CA mensuel -->
+        <div style="border-top:1px solid var(--b);margin-bottom:18px"></div>
+        <div class="dash-section-title" style="margin-bottom:14px">Objectif CA mensuel 🎯</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+          <input type="number" id="cab-ca-target" placeholder="Ex: 8000" style="width:150px" oninput="runCabinetCATarget()">
+          <span style="font-size:13px;color:var(--m)">€/mois</span>
+          <button class="btn bp bsm" onclick="runCabinetCATarget()"><span>🎯</span> Simuler</button>
+        </div>
+        <div id="dash-cabinet-ca-target-result"></div>
       </div>
     </section>
 
@@ -3096,6 +3200,18 @@
       <div id="compliance-root"></div>
     </section>
 
+    <!-- ══════════════════════════════════════════
+         💎 MON ABONNEMENT
+         Contenu rendu par subscription.js (SUB.renderAbonnementPage)
+         via ui:navigate quand view === 'mon-abo'
+    ══════════════════════════════════════════ -->
+    <section class="view" id="view-mon-abo">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement de votre abonnement…
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -3160,6 +3276,7 @@
 <script src="js/bsi.js?v=3.9"></script>
 <script src="js/consentements.js?v=3.9"></script><!-- 🛡️ v2.0 : cabinet sync + versionning + hash SHA-256 + check avant acte -->
 <script src="js/compliance-engine.js?v=3.9"></script><!-- 🧠 Scoring 4 piliers + auto-correction + risque prédictif + ranking patients -->
+<script src="js/subscription.js?v=3.9"></script><!-- 💎 Module SUB : abonnements, paywall, simulation tier, gating features -->
 <script src="js/alertes-medicaments.js?v=3.8"></script>
 <script src="js/audit-cpam.js?v=3.9"></script>
 
@@ -3235,18 +3352,6 @@ async function hist() {
   const tbody = document.getElementById('htb');
   const stats = document.getElementById('hstats');
   if (!tbody) return;
-
-  // 🏥 Colonne IDE(s) : visible uniquement si membre d'un cabinet multi-IDE.
-  //   L'admin en bypass réel la voit aussi (pour debug/test).
-  //   L'admin en simulation suit la logique "IDEL simulée" : si pas cabinet member, masqué.
-  (function _toggleIdeCol() {
-    const st = (typeof SUB !== 'undefined' && SUB.getState) ? SUB.getState() : null;
-    const showIdeCol = st
-      ? (st.cabinetMember || (st.isAdmin && !st.isAdminSim))
-      : true;  // fallback si SUB pas chargé : on affiche (non-régression)
-    const histTable = document.querySelector('#view-his .ht table');
-    if (histTable) histTable.classList.toggle('hist-hide-ide', !showIdeCol);
-  })();
 
   tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px"><div class="spin spinw" style="width:24px;height:24px;margin:0 auto"></div></td></tr>';
 
@@ -3396,7 +3501,7 @@ async function hist() {
         <td style="max-width:160px">${actesHtml}</td>
         <td class="pt-ca" style="white-space:nowrap">${parseFloat(r.total||0).toFixed(2)}&nbsp;€</td>
         <td>${statutHtml}</td>
-        <td class="hist-col-ide">${idesHtml}</td>
+        <td>${idesHtml}</td>
         <td>${alertsHtml}</td>
         <td><button class="btn bs bsm hist-edit-btn" style="font-size:10px;padding:3px 8px"
           data-hist-id="${r.id}"
