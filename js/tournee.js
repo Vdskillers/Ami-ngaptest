@@ -1639,7 +1639,8 @@ function _renderRouteHTML(route, osrm, ca, rentab, mode) {
       ${osrm?.avoid_motorway ? `<div class="dreb" style="background:rgba(255,181,71,.1);border-color:rgba(255,181,71,.3);color:var(--w)">🚫 Sans autoroutes</div>` : ''}
       <div class="ca-pill">💶 CA estimé : ${parseFloat(ca).toFixed(2)} €</div>
       ${rentab?`<div class="ca-pill" style="background:rgba(79,168,255,.1);border-color:rgba(79,168,255,.3);color:var(--a2)">📊 ${rentab.euro_heure}€/h</div>`:''}
-      <button class="btn bs bsm" style="margin-left:auto;color:var(--d);border-color:rgba(255,95,109,.3);font-size:11px" onclick="clearTournee()">🗑️ Vider</button>
+      <button class="btn bs bsm" style="margin-left:auto;background:linear-gradient(135deg,#c678dd 0%,#8b5fbf 100%);color:white;border:none;font-size:11px" onclick="optimizeTourneeCA()">💸 Optimiser le CA</button>
+      <button class="btn bs bsm" style="color:var(--d);border-color:rgba(255,95,109,.3);font-size:11px" onclick="clearTournee()">🗑️ Vider</button>
     </div>
     ${route.map((p,i)=>{
       const sd  = encodeURIComponent(p.acte || p.texte || p.description || '');
@@ -1934,6 +1935,75 @@ function clearTournee() {
   if (resTur) resTur.classList.remove('show');
   if (typeof showToast === 'function') showToast('🗑️ Tournée vidée');
 }
+
+/* ════════════════════════════════════════════════
+   💸 PREMIUM — Optimisation CA de la tournée
+   ────────────────────────────────────────────────
+   Appelle /webhook/ami-tournee-optimize via PremiumIntel
+   et affiche le gain potentiel par patient + total.
+   Gating : la route worker fait déjà le check Premium
+   (retour 403 si non-Premium → on affiche le paywall).
+════════════════════════════════════════════════ */
+async function optimizeTourneeCA() {
+  if (typeof PremiumIntel === 'undefined' || !PremiumIntel.optimizeTournee) {
+    if (typeof showToast === 'function') showToast('error', 'Module non chargé', 'Premium Intelligence indisponible.');
+    return;
+  }
+
+  // Collecte des patients de la tournée courante (priorité APP.uberPatients,
+  // fallback sur APP.importedData pour rétrocompat).
+  const source = (APP?.uberPatients && APP.uberPatients.length)
+    ? APP.uberPatients
+    : (APP?.importedData?.patients || APP?.importedData || []);
+
+  if (!Array.isArray(source) || !source.length) {
+    if (typeof showToast === 'function') showToast('warning', 'Tournée vide', 'Optimisez d\'abord votre tournée.');
+    return;
+  }
+
+  // Mapping vers le format attendu par /ami-tournee-optimize
+  const patients = source.map((p, i) => ({
+    id:           p.patient_id || p.id || ('pi_' + i),
+    name:         ((p.nom || '') + ' ' + (p.prenom || '')).trim() || p.label || p.description || ('Patient ' + (i+1)),
+    notes:        p.acte || p.description || p.texte || p.notes || '',
+    distance_km:  parseFloat(p.distance_km || p._legKm || 0) || 0,
+    heure_soin:   p.heure_soin || p.heure_preferee || p.start_str || '',
+    current_revenue: parseFloat(p.amount || p.total || p.montant || 0) || 0
+  }));
+
+  // UX feedback pendant l'appel
+  if (typeof showToast === 'function') showToast('info', '🤖 Analyse en cours…', `${patients.length} patient(s) analysé(s)`);
+
+  try {
+    const result = await PremiumIntel.optimizeTournee(patients);
+
+    // Cas 403 (Premium requis) — l'API renvoie une erreur, le wrapper la mange
+    // et retourne { error: ... }. On déclenche alors le paywall directement.
+    if (result?.error && /premium/i.test(result.error)) {
+      if (typeof SUB !== 'undefined' && SUB.showPaywall) SUB.showPaywall('optimisation_ca_plus');
+      return;
+    }
+
+    // Injection du widget juste sous la barre d'actions de la route
+    const tbody = $('tbody');
+    if (!tbody) return;
+    let mount = document.getElementById('pi-tournee-mount');
+    if (mount) mount.remove();
+    mount = document.createElement('div');
+    mount.id = 'pi-tournee-mount';
+    mount.style.marginTop = '12px';
+    tbody.parentNode.insertBefore(mount, tbody);
+    PremiumIntel.renderTourneeOptimizer(mount, result);
+
+    if (result.total_gain > 0 && typeof showToast === 'function') {
+      showToast('success', '💸 Gain détecté', `+${result.total_gain.toFixed(0)}€ potentiel sur cette tournée`);
+    }
+  } catch (e) {
+    console.warn('[tournee] optimizeTourneeCA KO:', e);
+    if (typeof showToast === 'function') showToast('error', 'Erreur d\'optimisation', e.message || 'Réessayez plus tard.');
+  }
+}
+window.optimizeTourneeCA = optimizeTourneeCA;
 
 /* Fallback API backend (ancien comportement) */
 async function _optimiserTourneeAPI(startLat, startLng) {

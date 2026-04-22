@@ -149,6 +149,79 @@ document.addEventListener('input', e => {
 });
 
 /* ════════════════════════════════════════════════
+   🤖 PREMIUM — Pré-check temps réel pendant la saisie
+   ────────────────────────────────────────────────
+   Appelle /webhook/ami-precheck avec un debounce de 600ms
+   pour suggérer en LIVE des optimisations (IK manquante,
+   majo nuit oubliée, pansement à requalifier, etc.) AVANT
+   que l'utilisateur valide la cotation.
+
+   Effet : "magique" pour l'utilisateur — corrige avant.
+   Affiche dans #pi-precheck-mount injecté sous #live-reco.
+   Premium-aware : utilise PremiumIntel.precheckInput() qui
+   gère les fallbacks proprement.
+════════════════════════════════════════════════ */
+(function _initPrecheckLive() {
+  let _precheckTimer = null;
+  let _precheckLastLen = 0;
+
+  function _ensureMount() {
+    let mount = document.getElementById('pi-precheck-mount');
+    if (mount) return mount;
+    const liveReco = document.getElementById('live-reco');
+    if (!liveReco) return null;
+    mount = document.createElement('div');
+    mount.id = 'pi-precheck-mount';
+    mount.style.marginBottom = '10px';
+    liveReco.parentNode.insertBefore(mount, liveReco.nextSibling);
+    return mount;
+  }
+
+  async function _runPrecheck() {
+    if (typeof PremiumIntel === 'undefined' || !PremiumIntel.precheckInput) return;
+    const txt = (document.getElementById('f-txt')?.value || '').trim();
+    const mount = _ensureMount();
+    if (!mount) return;
+    if (txt.length < 5) {
+      mount.innerHTML = '';
+      mount.style.display = 'none';
+      return;
+    }
+    try {
+      const heure = document.getElementById('f-hs')?.value || '';
+      const date  = document.getElementById('f-ds')?.value || '';
+      const precheck = await PremiumIntel.precheckInput(txt, { heure, date });
+      PremiumIntel.renderPreCheck(mount, precheck);
+    } catch (e) { /* silencieux : ne jamais perturber la saisie */ }
+  }
+
+  document.addEventListener('input', e => {
+    if (e.target?.id !== 'f-txt') return;
+    const len = (e.target.value || '').length;
+    // Skip si juste 1-2 char tapés ou supprimés (bruit)
+    if (Math.abs(len - _precheckLastLen) < 2 && len > 5) return;
+    _precheckLastLen = len;
+    clearTimeout(_precheckTimer);
+    _precheckTimer = setTimeout(_runPrecheck, 600);  // debounce 600ms
+  });
+
+  // Re-trigger quand l'heure change (pour détecter majo nuit)
+  document.addEventListener('change', e => {
+    if (e.target?.id === 'f-hs' || e.target?.id === 'f-ds') {
+      clearTimeout(_precheckTimer);
+      _precheckTimer = setTimeout(_runPrecheck, 200);
+    }
+  });
+
+  // Reset à la soumission (clrCot) — écouté via mutation du champ
+  document.addEventListener('cotation:cleared', () => {
+    const mount = document.getElementById('pi-precheck-mount');
+    if (mount) { mount.innerHTML = ''; mount.style.display = 'none'; }
+    _precheckLastLen = 0;
+  });
+})();
+
+/* ════════════════════════════════════════════════
    RENDU DU PANNEAU "QUI FAIT QUOI ?"
 ════════════════════════════════════════════════ */
 
@@ -1165,6 +1238,31 @@ async function _cotationPipeline() {
     $('cbody').innerHTML = renderCot(d);
     $('res-cot').classList.add('show');
 
+    // ── 💎 PREMIUM INTELLIGENCE — affichage post-cotation ────────────────
+    // Injecte loss + coach + forecast sous le résultat de cotation.
+    // S'auto-skip si premium_intel absent (ex: ancien worker, fallback).
+    try {
+      if (d && d.premium_intel && typeof PremiumIntel !== 'undefined') {
+        const cbody = document.getElementById('cbody');
+        if (cbody) {
+          // Conteneur dédié — vidé à chaque cotation pour éviter l'empilement
+          let piWrap = document.getElementById('pi-cotation-wrap');
+          if (piWrap) piWrap.remove();
+          piWrap = document.createElement('div');
+          piWrap.id = 'pi-cotation-wrap';
+          piWrap.innerHTML = `
+            <div id="pi-cot-loss"></div>
+            <div id="pi-cot-coach"></div>
+            <div id="pi-cot-forecast"></div>
+          `;
+          cbody.appendChild(piWrap);
+          PremiumIntel.renderLossCard('pi-cot-loss', d.premium_intel);
+          PremiumIntel.renderCoachBlock('pi-cot-coach', d.premium_intel.coach);
+          PremiumIntel.renderForecastCard('pi-cot-forecast', d.premium_intel.forecast);
+        }
+      }
+    } catch (e) { console.warn('[PI] post-cotation render KO:', e.message); }
+
     // ── Upsert cotation dans le carnet patient (IDB) ───────────────────────
     // RÈGLE STRICTE :
     //   • Patient existant → toujours upsert (mise à jour), jamais de doublon
@@ -2127,6 +2225,11 @@ function clrCot() {
   if (sugg) { sugg.textContent = ''; sugg.style.display = 'none'; }
   const actesList = $('cot-cabinet-actes-list');
   if (actesList) actesList.innerHTML = '<div class="ai in" style="font-size:12px">Saisissez la description des soins ci-dessus pour assigner les actes aux IDEs.</div>';
+
+  // 💎 Notifier le module Premium Intelligence pour vider precheck + résultats
+  document.dispatchEvent(new CustomEvent('cotation:cleared'));
+  const piWrap = document.getElementById('pi-cotation-wrap');
+  if (piWrap) piWrap.remove();
 }
 
 function coterDepuisRoute(desc, nomPatient) {
