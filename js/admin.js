@@ -596,14 +596,19 @@ function renderAccs(list){
         const urgent = daysLeft <= 7;
         sub = `<span class="acc-sub-days ${urgent?'urgent':''}">${daysLeft}j restant${daysLeft>1?'s':''}</span>`;
       } else if (tier === 'LOCKED') {
-        sub = `<span class="acc-sub-days urgent">Expiré</span>`;
+        // Différencier : essai expiré vs abo payant expiré
+        sub = a.expired
+          ? `<span class="acc-sub-days urgent">Abo expiré</span>`
+          : `<span class="acc-sub-days urgent">Essai expiré</span>`;
       } else if (['ESSENTIEL','PRO','CABINET','PREMIUM','COMPTABLE'].includes(tier) && a.paid_until) {
         const daysRem = Math.max(0, Math.ceil((new Date(a.paid_until) - Date.now())/(1000*60*60*24)));
-        sub = `<span class="acc-sub-days">${daysRem}j payé</span>`;
+        const lowStock = daysRem <= 7;
+        sub = `<span class="acc-sub-days ${lowStock?'urgent':''}">${daysRem}j payé${daysRem>1?'s':''}</span>`;
       }
       const ovrIcon = hasOverride ? ' 🛠️' : '';
+      const cabIcon = a.cabinet_member ? ` <span title="Membre d'un cabinet ${a.cabinet_size} IDE — bonus CABINET actif" style="cursor:help">🏥</span>` : '';
       subPill = `<div class="acc-sub-pill" style="background:${tierColor}22;border-color:${tierColor}55;color:${tierColor}">
-        <span class="acc-sub-label">${tierLabel}${ovrIcon}</span>
+        <span class="acc-sub-label">${tierLabel}${ovrIcon}${cabIcon}</span>
         ${sub}
       </div>`;
     }

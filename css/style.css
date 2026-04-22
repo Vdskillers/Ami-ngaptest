@@ -1860,3 +1860,9 @@ tbody tr:hover{background:var(--c)}tbody tr:last-child td{border-bottom:none}
 }
 /* Fix : .acc-name garde sa typo mais ne doit plus être flex:1 quand il est dans .acc-info-col */
 .acc-info-col .acc-name{flex:none;font-size:15px;font-weight:500}
+
+/* ─── Bandeau bonus cabinet ─── */
+.sub-mode-banner.cabinet{
+  background:linear-gradient(135deg,rgba(255,181,71,.08),rgba(255,181,71,.02));
+  border:1px solid rgba(255,181,71,.3)
+}

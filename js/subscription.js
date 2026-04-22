@@ -131,10 +131,13 @@ window.SUB = (function(){
         tier:     data.tier,
         isTrial:  !!data.is_trial,
         trialEnd: data.trial_end || null,
+        paidUntil: data.paid_until || null,
         daysLeft: data.days_left,
         locked:   !!data.locked,
         isAdmin:  role === 'admin',
-        simTier:  (role === 'admin') ? sessionStorage.getItem(STORAGE_ADMIN_SIM) : null
+        simTier:  (role === 'admin') ? sessionStorage.getItem(STORAGE_ADMIN_SIM) : null,
+        cabinetMember: !!data.cabinet_member,
+        cabinetSize:   data.cabinet_size || 0
       };
     } catch (e) {
       console.warn('[SUB] bootstrap failed, fallback mode TEST:', e.message);
@@ -144,6 +147,8 @@ window.SUB = (function(){
         isTrial: false,
         isAdmin: role === 'admin',
         simTier: (role === 'admin') ? sessionStorage.getItem(STORAGE_ADMIN_SIM) : null,
+        cabinetMember: false,
+        cabinetSize: 0,
         _fallback: true
       };
     }
@@ -173,10 +178,13 @@ window.SUB = (function(){
       isTrial: !!_state.isTrial,
       daysLeft: _state.daysLeft,
       trialEnd: _state.trialEnd,
+      paidUntil: _state.paidUntil,
       locked: !!_state.locked,
       isAdmin: !!_state.isAdmin,
       isAdminSim: !!(_state.isAdmin && _state.simTier),
       simTier: _state.simTier,
+      cabinetMember: !!_state.cabinetMember,
+      cabinetSize: _state.cabinetSize || 0,
       fallback: !!_state._fallback
     };
   }
@@ -190,6 +198,15 @@ window.SUB = (function(){
     if (_state.isAdmin && !_state.simTier) return true;
 
     const tier = _state.isAdmin ? _state.simTier : _state.tier;
+
+    // 💎 Bonus cabinet : si l'user est membre d'un cabinet ≥ 2 IDE,
+    //   il a accès aux features CABINET (planning_shared, transmissions_shared, cabinet_multi_ide)
+    //   quel que soit son tier souscrit (le tier reste inchangé pour la facturation).
+    //   Ne s'applique que si l'user n'est pas LOCKED et pas en simulation admin.
+    if (_state.cabinetMember && !_state.isAdmin && tier !== 'LOCKED') {
+      if (FEATURES[featId]?.tier === 'CABINET') return true;
+    }
+
     const matrix = ACCESS_MATRIX[tier];
     return matrix ? matrix(featId) : false;
   }
@@ -274,10 +291,19 @@ window.SUB = (function(){
               · Accès total à toutes les fonctionnalités.</span>
               <button class="stb-btn" onclick="navTo('mon-abo')">Voir les abonnements</button>`;
     } else if (st.locked) {
-      html = `<span class="stb-ic">🔒</span>
-              <span><b style="color:var(--d)">Votre essai gratuit est terminé.</b>
-              · Choisissez un abonnement pour retrouver l'accès complet.</span>
-              <button class="stb-btn stb-btn-cta" onclick="navTo('mon-abo')">Voir les abonnements</button>`;
+      // Différencier : essai expiré vs abonnement payant expiré
+      const wasPaidExpired = !!st.paidUntil && new Date(st.paidUntil).getTime() < Date.now();
+      if (wasPaidExpired) {
+        html = `<span class="stb-ic">⏱️</span>
+                <span><b style="color:var(--d)">Votre abonnement a expiré le ${new Date(st.paidUntil).toLocaleDateString('fr-FR')}.</b>
+                · Renouvelez pour retrouver l'accès.</span>
+                <button class="stb-btn stb-btn-cta" onclick="navTo('mon-abo')">Renouveler</button>`;
+      } else {
+        html = `<span class="stb-ic">🔒</span>
+                <span><b style="color:var(--d)">Votre essai gratuit est terminé.</b>
+                · Choisissez un abonnement pour retrouver l'accès complet.</span>
+                <button class="stb-btn stb-btn-cta" onclick="navTo('mon-abo')">Voir les abonnements</button>`;
+      }
     }
     banner.innerHTML = html;
   }
@@ -414,6 +440,19 @@ window.SUB = (function(){
         </div>`;
     }
 
+    // 💎 Bandeau bonus cabinet (si membre d'un cabinet ≥ 2 IDE)
+    let cabinetBanner = '';
+    if (st.cabinetMember && !st.isAdmin) {
+      cabinetBanner = `
+        <div class="sub-mode-banner cabinet">
+          <span style="font-size:22px">🏥</span>
+          <div>
+            <div style="font-weight:700;color:var(--w);margin-bottom:2px">Bonus cabinet actif (${st.cabinetSize} IDE)</div>
+            <div style="font-size:13px;color:var(--m)">Vous êtes membre d'un cabinet multi-IDE. Les fonctionnalités cabinet (planning partagé, transmissions collaboratives) sont débloquées automatiquement.</div>
+          </div>
+        </div>`;
+    }
+
     let header = '';
     if (st.isAdmin) {
       header = `
@@ -508,6 +547,7 @@ window.SUB = (function(){
           <p class="sub-abo-hero-sub">Choisissez le plan adapté à votre activité.</p>
         </div>
         ${modeBanner}
+        ${cabinetBanner}
         ${header}
         ${adminPanel}
         <div class="sub-plans-grid">${planCards}</div>
