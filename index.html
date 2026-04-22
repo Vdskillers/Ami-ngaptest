@@ -3000,29 +3000,27 @@
         Vous choisissez <em>quoi</em> partager et <em>avec qui</em>. Aucune donnée patient identifiable ne quitte votre appareil sans votre accord explicite.</p>
       </div>
 
-      <!-- ── 🛡️ Widget Conformité cabinet (v3.9) — déplacé depuis Dashboard ── -->
-      <div id="dash-compliance-widget" style="display:none;margin:4px 0 16px"></div>
-
       <!-- Contenu dynamique rendu par cabinet.js -->
       <div id="cabinet-root">
         <!-- Rempli par renderCabinetSection() à la navigation -->
       </div>
 
-      <!-- ══ DASHBOARD CABINET — Objectif CA (les 3 autres sections sont dans la modale "📊 Stats consolidées") ══ -->
+      <!-- ══ DASHBOARD CABINET — Statistiques cabinet Multi-IDE ══
+           (Revenus par IDE, Simulateur et Objectif CA sont dans la modale "📊 Stats consolidées") -->
       <div id="dash-cabinet-section" style="display:none;margin-top:24px">
 
-        <!-- ID wrapper conservé pour que loadDashCabinet() gère son display:none/block
-             Les KPIs, Revenus par IDE et Simulateur sont désormais dans la modale Stats consolidées. -->
-
-        <!-- Objectif CA mensuel (reste ici — directement accessible dans la vue Cabinet) -->
-        <div style="border-top:1px solid var(--b);margin:28px 0 18px"></div>
-        <div class="dash-section-title" style="margin-bottom:14px">Objectif CA mensuel 🎯</div>
-        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-          <input type="number" id="cab-ca-target" placeholder="Ex: 8000" style="width:150px" oninput="runCabinetCATarget()">
-          <span style="font-size:13px;color:var(--m)">€/mois</span>
-          <button class="btn bp bsm" onclick="runCabinetCATarget()"><span>🎯</span> Simuler</button>
+        <!-- ── Séparateur + titre cabinet ── -->
+        <div style="border-top:1px solid var(--b);margin:28px 0 20px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+          <div class="dash-section-title" style="margin-bottom:0">
+            Statistiques cabinet
+            <span class="dash-section-badge b" style="margin-left:8px">🏥 Multi-IDE</span>
+          </div>
+          <button class="btn bs bsm" onclick="loadDashCabinet()">↻ Actualiser</button>
         </div>
-        <div id="dash-cabinet-ca-target-result"></div>
+
+        <!-- KPIs cabinet (peuplé par loadDashCabinet) -->
+        <div id="dash-cabinet-kpis" class="sg" style="grid-template-columns:repeat(auto-fill,minmax(175px,1fr));margin-bottom:12px"></div>
       </div>
     </section>
 

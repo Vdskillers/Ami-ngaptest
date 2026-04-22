@@ -221,13 +221,9 @@ async function renderCabinetSection() {
     root.innerHTML = `<div class="card"><div class="msg e">Erreur chargement : ${e.message}</div></div>`;
   }
 
-  /* ── Widgets déplacés depuis le Dashboard (v3.9+) ──
-     Le widget 🛡️ Conformité cabinet et la section 📊 Statistiques cabinet
-     vivent désormais dans la vue « Cabinet & synchronisation ».
-     On les rafraîchit ici pour qu'ils suivent le cycle de vie de la vue
-     (navigation + clic sur ↻ Actualiser). Non bloquant. */
-  try { if (typeof renderComplianceBadge === 'function') renderComplianceBadge(); }
-  catch (e) { console.warn('[compliance widget]', e.message); }
+  /* ── Widget KPIs cabinet : alimenté par loadDashCabinet() ──
+     (Widget 🛡️ Conformité cabinet retiré de view-cabinet — accessible via "🧠 Conformité cabinet"
+      dans les Outils manager, qui navigue vers view-compliance.) */
   try { if (typeof loadDashCabinet === 'function') setTimeout(loadDashCabinet, 100); }
   catch (e) { console.warn('[dash cabinet]', e.message); }
 }
@@ -1992,23 +1988,14 @@ function _renderCabinetStats(modal, d) {
     </div>
 
     <!-- ════════════════════════════════════════════════════════════
-         🏥 Sections déplacées depuis view-cabinet :
-         (1) Statistiques cabinet Multi-IDE  (2) Revenus par infirmière  (3) Simulateur revenus
-         IDs identiques à l'ancien #dash-cabinet-section pour que loadDashCabinet() les peuple
+         🏥 Sections approfondies : Revenus par IDE, Simulateur, Objectif CA
+         IDs partagés avec view-cabinet (#dash-cabinet-kpis reste là-bas)
+         loadDashCabinet() peuple #dash-cabinet-ide-revenues et appelle
+         runCabinetSimulator() → #dash-cabinet-simulator-result
     ════════════════════════════════════════════════════════════ -->
-    <div style="border-top:1px solid var(--b);margin:22px 0 18px"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
-      <div class="cab-stats-section-title" style="margin-bottom:0">
-        Statistiques cabinet 🏥 Multi-IDE
-      </div>
-      <button class="btn bs bsm" onclick="loadDashCabinet()">↻ Actualiser</button>
-    </div>
-
-    <!-- KPIs cabinet (peuplé par loadDashCabinet) -->
-    <div id="dash-cabinet-kpis" class="sg" style="grid-template-columns:repeat(auto-fill,minmax(175px,1fr));margin-bottom:24px"></div>
 
     <!-- Revenus par IDE -->
-    <div style="border-top:1px solid var(--b);margin-bottom:18px"></div>
+    <div style="border-top:1px solid var(--b);margin:22px 0 18px"></div>
     <div class="cab-stats-section-title">Revenus par infirmière</div>
     <div id="dash-cabinet-ide-revenues" style="margin-bottom:24px"></div>
 
@@ -2023,6 +2010,16 @@ function _renderCabinetStats(modal, d) {
       <div class="af"><label>Jours travaillés/mois</label><input type="number" id="sim-jours" value="22" min="1" max="31" oninput="runCabinetSimulator()"></div>
     </div>
     <div id="dash-cabinet-simulator-result" style="margin-bottom:24px"></div>
+
+    <!-- Objectif CA mensuel -->
+    <div style="border-top:1px solid var(--b);margin-bottom:18px"></div>
+    <div class="cab-stats-section-title">Objectif CA mensuel 🎯</div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <input type="number" id="cab-ca-target" placeholder="Ex: 8000" style="width:150px" oninput="runCabinetCATarget()">
+      <span style="font-size:13px;color:var(--m)">€/mois</span>
+      <button class="btn bp bsm" onclick="runCabinetCATarget()"><span>🎯</span> Simuler</button>
+    </div>
+    <div id="dash-cabinet-ca-target-result" style="margin-bottom:20px"></div>
 
     <div class="cab-stats-note">
       🔒 <strong>RGPD :</strong> Seuls les codes NGAP et montants agrégés sont exposés. Aucune donnée patient identifiable.
