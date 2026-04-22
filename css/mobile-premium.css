@@ -1,0 +1,594 @@
+/* ════════════════════════════════════════════════════════
+   mobile-premium.css — AMI Pro
+   Design App Store mobile — surcharges @max-width:768px
+   Non-destructif : étend style.css, ne le remplace pas
+════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* ── Variables premium mobile ── */
+  :root {
+    --mp-accent: #00E5B8;
+    --mp-accent2: #5B8EFF;
+    --mp-surface: rgba(255,255,255,.04);
+    --mp-border:  rgba(255,255,255,.08);
+    --mp-r: 16px;
+  }
+
+  /* ── BODY ── */
+  body {
+    background: #080C10 !important;
+  }
+
+  body::before {
+    background-image:
+      linear-gradient(rgba(0,229,184,.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,184,.018) 1px, transparent 1px) !important;
+    background-size: 32px 32px !important;
+  }
+
+  /* ── Greeting dans admin-header-controls (inline) ── */
+  #admin-header-controls #mobile-greeting {
+    display: flex !important;
+    flex-direction: column !important;
+    line-height: 1.1 !important;
+    margin-left: 6px !important;
+  }
+
+  /* Annuler sticky en mode admin — header 2 lignes ne déborde plus */
+  .top.admin-active {
+    position: relative !important;
+    top: auto !important;
+  }
+
+  /* ── TOPBAR ── */
+  .top {
+    background: rgba(8,12,16,.96) !important;
+    border-bottom: 1px solid rgba(255,255,255,.06) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    height: 54px !important;
+  }
+
+  .lmark {
+    background: linear-gradient(135deg, var(--mp-accent), var(--mp-accent2)) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 0 18px rgba(0,229,184,.25) !important;
+  }
+
+  .ltext {
+    font-size: 18px !important;
+    letter-spacing: -.3px !important;
+    color: #F0F4F8 !important;
+  }
+
+  .bout {
+    background: rgba(255,95,109,.1) !important;
+    border: 1px solid rgba(255,95,109,.2) !important;
+    color: #FF7A85 !important;
+    border-radius: 20px !important;
+    font-size: 10px !important;
+    padding: 4px 11px !important;
+  }
+
+  .buser {
+    background: rgba(0,229,184,.1) !important;
+    border: 1px solid rgba(0,229,184,.2) !important;
+    color: var(--mp-accent) !important;
+    border-radius: 20px !important;
+    font-size: 10px !important;
+    padding: 4px 11px !important;
+  }
+
+  /* ── SALUTATION MOBILE — nom uniquement, sans "BONJOUR" ── */
+  #mobile-greeting {
+    display: none !important; /* remplacé par #mobile-admin-name */
+  }
+
+  /* Pill nom admin dans le header mobile */
+  #mobile-admin-name {
+    background: rgba(255,95,109,.1) !important;
+    border: 1px solid rgba(255,95,109,.25) !important;
+    color: #FF7A85 !important;
+    font-family: var(--fm) !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    padding: 4px 11px !important;
+    border-radius: 20px !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* ── Badge "🛡️ MODE ADMIN SÉCURISÉ" ──────────────────────────
+     Pill cohérente avec #mobile-admin-name (rouge/rose admin).
+     Sur mobile étroit (<420px) on masque le texte et on ne garde
+     que l'icône bouclier centrée dans une pastille ronde, alignée
+     verticalement comme les autres éléments de #admin-header-controls. */
+  .admin-mode-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    background: rgba(255,95,109,.08) !important;
+    border: 1px solid rgba(255,95,109,.2) !important;
+    color: #FF7A85 !important;
+    font-family: var(--fm) !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: .04em !important;
+    padding: 4px 10px !important;
+    border-radius: 20px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    line-height: 1.4 !important;
+  }
+  .admin-mode-badge .amb-ic {
+    font-size: 12px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+  .admin-mode-badge .amb-lbl {
+    display: inline !important;
+  }
+
+  /* Mobile étroit : ne garder que l'icône 🛡️ centrée dans une pastille */
+  @media (max-width: 420px) {
+    .admin-mode-badge {
+      padding: 4px 8px !important;
+      gap: 0 !important;
+    }
+    .admin-mode-badge .amb-lbl {
+      display: none !important;
+    }
+    .admin-mode-badge .amb-ic {
+      font-size: 13px !important;
+    }
+  }
+
+  /* ── BOTTOM NAV ── */
+  #bottom-nav {
+    background: rgba(8,12,16,.97) !important;
+    border-top: 1px solid rgba(255,255,255,.06) !important;
+    backdrop-filter: blur(28px) !important;
+    -webkit-backdrop-filter: blur(28px) !important;
+    height: 64px !important;
+    padding: 0 8px !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+
+  .bn-item {
+    color: rgba(255,255,255,.7) !important;
+    font-size: 9px !important;
+    letter-spacing: .04em !important;
+    border-radius: 12px !important;
+    padding: 6px 4px !important;
+    transition: all .15s !important;
+    gap: 4px !important;
+  }
+
+  .bn-item.on {
+    color: var(--mp-accent) !important;
+    background: rgba(0,229,184,.08) !important;
+  }
+
+  .bn-item .bn-ic {
+    font-size: 19px !important;
+  }
+
+  .bn-item.on .bn-ic {
+    transform: translateY(-1px) scale(1.08) !important;
+    filter: drop-shadow(0 0 6px rgba(0,229,184,.4)) !important;
+  }
+
+  /* ── MAIN CONTENT ── */
+  /* En mode admin, le header fait 2 lignes — forcer le recalcul du grid */
+  #app:has(.top.admin-active) {
+    grid-template-rows: auto 1fr 64px !important;
+  }
+
+  .main {
+    background: #090D11 !important;
+  }
+
+  .view {
+    padding: 18px 16px 24px !important;
+  }
+
+  /* ── TITRES ── */
+  h1.pt {
+    font-size: 26px !important;
+    letter-spacing: -.6px !important;
+    color: #F0F4F8 !important;
+  }
+
+  h1.pt em {
+    background: linear-gradient(135deg, var(--mp-accent), var(--mp-accent2)) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+  }
+
+  .ps {
+    font-size: 13px !important;
+    color: rgba(255,255,255,.7) !important;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--mp-surface) !important;
+    border: 1px solid var(--mp-border) !important;
+    border-radius: 18px !important;
+    padding: 18px 16px !important;
+    box-shadow: none !important;
+  }
+
+  .card + .card {
+    margin-top: 12px !important;
+  }
+
+  .ct {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: rgba(255,255,255,.82) !important;
+    letter-spacing: .04em !important;
+  }
+
+  /* ── BOUTONS ── */
+  .bp {
+    background: linear-gradient(135deg, var(--mp-accent), var(--mp-accent2)) !important;
+    color: #000 !important;
+    border: none !important;
+    border-radius: 14px !important;
+    font-weight: 700 !important;
+    padding: 13px 20px !important;
+    font-size: 14px !important;
+    box-shadow: 0 4px 18px rgba(0,229,184,.22) !important;
+    transition: transform .15s, box-shadow .15s !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  .bp:active {
+    transform: scale(.97) !important;
+    box-shadow: 0 2px 10px rgba(0,229,184,.15) !important;
+  }
+
+  .bs {
+    background: rgba(255,255,255,.05) !important;
+    border: 1px solid rgba(255,255,255,.1) !important;
+    color: rgba(255,255,255,.7) !important;
+    border-radius: 14px !important;
+    padding: 12px 18px !important;
+    font-size: 14px !important;
+  }
+
+  .bv {
+    background: rgba(91,142,255,.1) !important;
+    border: 1px solid rgba(91,142,255,.25) !important;
+    color: var(--mp-accent2) !important;
+    border-radius: 14px !important;
+  }
+
+  .bd {
+    background: rgba(255,95,109,.08) !important;
+    border: 1px solid rgba(255,95,109,.2) !important;
+    color: #FF7A85 !important;
+    border-radius: 14px !important;
+  }
+
+  .bsm {
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+    border-radius: 10px !important;
+  }
+
+  /* ── INPUTS ── */
+  input, select, textarea {
+    background: rgba(255,255,255,.05) !important;
+    border: 1px solid rgba(255,255,255,.1) !important;
+    border-radius: 12px !important;
+    color: #F0F4F8 !important;
+    font-size: 16px !important;
+    padding: 12px 14px !important;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--mp-accent) !important;
+    box-shadow: 0 0 0 3px rgba(0,229,184,.14) !important;
+    background: rgba(0,229,184,.04) !important;
+    outline: none !important;
+  }
+
+  label {
+    font-size: 10px !important;
+    color: rgba(255,255,255,.7) !important;
+    letter-spacing: .1em !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+  }
+
+  /* ── STAT CARDS ── */
+  .sc {
+    background: var(--mp-surface) !important;
+    border: 1px solid var(--mp-border) !important;
+    border-radius: 18px !important;
+    padding: 16px !important;
+  }
+
+  .sc.g .sv { color: var(--mp-accent) !important; }
+  .sc.b .sv { color: var(--mp-accent2) !important; }
+  .sc.o .sv { color: #FFB830 !important; }
+  .sc.r .sv { color: #FF6B6B !important; }
+
+  .sv { font-size: 30px !important; letter-spacing: -.6px !important; }
+  .si { font-size: 20px !important; }
+  .sn { font-size: 11px !important; color: rgba(255,255,255,.7) !important; }
+
+  /* ── KPI ── */
+  .kpi {
+    background: var(--mp-surface) !important;
+    border: 1px solid var(--mp-border) !important;
+    border-radius: 16px !important;
+    padding: 14px !important;
+  }
+
+  .kpi-v { font-size: 24px !important; letter-spacing: -.6px !important; }
+  .kpi-v.g { color: var(--mp-accent) !important; }
+  .kpi-v.b { color: var(--mp-accent2) !important; }
+  .kpi-v.o { color: #FFB830 !important; }
+  .kpi-v.r { color: #FF6B6B !important; }
+  .kpi-l   { font-size: 10px !important; color: rgba(255,255,255,.7) !important; }
+
+  /* ── ACTES ROWS ── */
+  .ar {
+    background: var(--mp-surface) !important;
+    border: 1px solid var(--mp-border) !important;
+    border-radius: 12px !important;
+    padding: 10px 13px !important;
+  }
+
+  .ac {
+    background: rgba(0,229,184,.08) !important;
+    border: 1px solid rgba(0,229,184,.18) !important;
+    color: var(--mp-accent) !important;
+    border-radius: 8px !important;
+    font-size: 11px !important;
+  }
+
+  .ac.mj {
+    background: rgba(255,184,48,.08) !important;
+    border-color: rgba(255,184,48,.2) !important;
+    color: #FFB830 !important;
+  }
+
+  .ac.dp {
+    background: rgba(91,142,255,.1) !important;
+    border-color: rgba(91,142,255,.2) !important;
+    color: var(--mp-accent2) !important;
+  }
+
+  /* ── ROUTE ITEMS (tournée) ── */
+  .route-item {
+    background: var(--mp-surface) !important;
+    border: 1px solid var(--mp-border) !important;
+    border-radius: 14px !important;
+    padding: 12px 14px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .route-num {
+    background: rgba(0,229,184,.1) !important;
+    border: 1px solid rgba(0,229,184,.2) !important;
+    color: var(--mp-accent) !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+  }
+
+  /* ── TOTAUX COTATION ── */
+  .ta {
+    font-size: 42px !important;
+    letter-spacing: -1px !important;
+    background: linear-gradient(135deg, var(--mp-accent), var(--mp-accent2)) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+  }
+
+  /* ── TABLES ── */
+  .ht {
+    border: 1px solid var(--mp-border) !important;
+    border-radius: 16px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .ht table {
+    min-width: 640px !important;
+  }
+
+  th {
+    background: rgba(255,255,255,.03) !important;
+    color: rgba(255,255,255,.7) !important;
+    font-size: 10px !important;
+    letter-spacing: .08em !important;
+    padding: 10px 12px !important;
+    border-bottom: 1px solid var(--mp-border) !important;
+  }
+
+  td {
+    padding: 10px 12px !important;
+    border-bottom: 1px solid rgba(255,255,255,.04) !important;
+    font-size: 13px !important;
+  }
+
+  tbody tr:hover { background: rgba(255,255,255,.03) !important; }
+
+  /* ── AUTH ── */
+  .acard {
+    background: rgba(10,15,20,.97) !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    border-radius: 24px !important;
+    padding: 28px 20px !important;
+  }
+
+  .amark {
+    background: linear-gradient(135deg, var(--mp-accent), var(--mp-accent2)) !important;
+    box-shadow: 0 0 28px rgba(0,229,184,.3) !important;
+  }
+
+  .atabs {
+    background: rgba(255,255,255,.04) !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    border-radius: 12px !important;
+    padding: 3px !important;
+  }
+
+  .atab {
+    border-radius: 9px !important;
+    font-size: 13px !important;
+    color: rgba(255,255,255,.7) !important;
+    padding: 8px 20px !important;
+    transition: all .15s !important;
+  }
+
+  .atab.on {
+    background: rgba(0,229,184,.12) !important;
+    color: var(--mp-accent) !important;
+    border: 1px solid rgba(0,229,184,.2) !important;
+  }
+
+  .abtn {
+    background: linear-gradient(135deg, var(--mp-accent), var(--mp-accent2)) !important;
+    color: #000 !important;
+    border-radius: 14px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    padding: 14px !important;
+    box-shadow: 0 4px 20px rgba(0,229,184,.25) !important;
+  }
+
+  /* ── PRIVACY NOTICE ── */
+  .priv {
+    background: rgba(91,142,255,.06) !important;
+    border: 1px solid rgba(91,142,255,.15) !important;
+    border-radius: 12px !important;
+  }
+  .priv p { color: rgba(91,142,255,.8) !important; }
+
+  /* ── BADGES ── */
+  .badge {
+    background: rgba(0,229,184,.1) !important;
+    border: 1px solid rgba(0,229,184,.2) !important;
+    color: var(--mp-accent) !important;
+    border-radius: 20px !important;
+  }
+
+  /* ── MODALS ── */
+  .mc, .vmc {
+    background: #0D1218 !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    border-radius: 24px !important;
+  }
+
+  /* ── LIVE CARD ── */
+  .live-card {
+    background: linear-gradient(135deg, rgba(0,229,184,.08), rgba(91,142,255,.04)) !important;
+    border: 1px solid rgba(0,229,184,.18) !important;
+    border-radius: 18px !important;
+  }
+
+  .live-badge {
+    background: rgba(0,229,184,.1) !important;
+    border-color: rgba(0,229,184,.2) !important;
+    color: var(--mp-accent) !important;
+    border-radius: 20px !important;
+  }
+
+  /* ── CA PILL ── */
+  .ca-pill {
+    background: rgba(0,229,184,.08) !important;
+    border: 1px solid rgba(0,229,184,.18) !important;
+    color: var(--mp-accent) !important;
+    border-radius: 20px !important;
+    font-size: 12px !important;
+    padding: 4px 12px !important;
+  }
+
+  /* ── DREB BADGES ── */
+  .dreb {
+    background: rgba(91,142,255,.1) !important;
+    border: 1px solid rgba(91,142,255,.2) !important;
+    color: var(--mp-accent2) !important;
+    border-radius: 20px !important;
+    font-size: 11px !important;
+    padding: 3px 10px !important;
+  }
+
+  /* ── AI BOXES ── */
+  .ai.in {
+    background: rgba(0,229,184,.06) !important;
+    border-color: rgba(0,229,184,.15) !important;
+    color: rgba(0,229,184,.85) !important;
+    border-radius: 12px !important;
+  }
+
+  .ai.er {
+    background: rgba(255,107,107,.06) !important;
+    border-color: rgba(255,107,107,.15) !important;
+    color: #FF8585 !important;
+    border-radius: 12px !important;
+  }
+
+  .ai.wa {
+    background: rgba(255,184,48,.06) !important;
+    border-color: rgba(255,184,48,.15) !important;
+    color: #FFC84A !important;
+    border-radius: 12px !important;
+  }
+
+  .ai.su {
+    background: rgba(0,229,184,.05) !important;
+    border-color: rgba(0,229,184,.15) !important;
+    color: rgba(0,229,184,.8) !important;
+    border-radius: 12px !important;
+  }
+
+  /* ── SCROLLBAR ── */
+  .main::-webkit-scrollbar { width: 0; }
+
+  /* ── FAB VOICE ── */
+  #voicebtn {
+    background: linear-gradient(135deg, var(--mp-accent), var(--mp-accent2)) !important;
+    box-shadow: 0 4px 20px rgba(0,229,184,.3) !important;
+    border: none !important;
+  }
+
+  /* ── DROP ZONE ── */
+  .drop-zone {
+    border: 2px dashed rgba(255,255,255,.08) !important;
+    border-radius: 18px !important;
+  }
+
+  .drop-zone:hover, .drop-zone.drag {
+    border-color: var(--mp-accent) !important;
+    background: rgba(0,229,184,.04) !important;
+  }
+
+  /* ── ADMIN NOTICE ── */
+  .admin-notice {
+    background: rgba(91,142,255,.06) !important;
+    border: 1px solid rgba(91,142,255,.15) !important;
+    color: rgba(91,142,255,.8) !important;
+    border-radius: 12px !important;
+  }
+
+  /* ── SECTION ROWS ── */
+  .secrow { border-bottom: 1px solid rgba(255,255,255,.05) !important; }
+  .secdot.ok   { background: var(--mp-accent) !important; box-shadow: 0 0 6px var(--mp-accent) !important; }
+  .secdot.live { background: var(--mp-accent2) !important; box-shadow: 0 0 6px var(--mp-accent2) !important; }
+
+}
