@@ -387,3 +387,23 @@ const today = new Date().toISOString().split('T')[0];
 ['f-ds', 'f-pr-dt'].forEach(id => { const e = $(id); if (e) e.value = today; });
 updateNavMode();
 checkAuth();
+
+/* ════════════════════════════════════════════════
+   💎 SUBSCRIPTION — réappliquer les verrous après
+   chaque événement pouvant modifier l'état de la nav
+   (login, navigation, re-render admin, etc.)
+════════════════════════════════════════════════ */
+document.addEventListener('ami:login', () => {
+  setTimeout(() => {
+    if (typeof SUB !== 'undefined') {
+      SUB.applyUILocks();
+      if (typeof _updateAboTrialPill === 'function') _updateAboTrialPill();
+    }
+  }, 200);
+});
+
+document.addEventListener('ui:navigate', () => {
+  if (typeof SUB !== 'undefined') {
+    setTimeout(() => SUB.applyUILocks(), 50);
+  }
+});

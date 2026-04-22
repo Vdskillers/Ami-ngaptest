@@ -277,13 +277,11 @@ function showApp(){
   // Correction Leaflet après changement de layout
   setTimeout(()=>{ if(typeof depMap!=='undefined'&&depMap) depMap.invalidateSize(); },250);
 
-  // ── 💎 Bootstrap subscription (gating features + essai 30j) ──
-  // Idempotent : gère nurse (essai 30j + verrous) et admin (bypass + sim).
+  // ── 💎 Bootstrap subscription (async : fetch /webhook/subscription-status) ──
   if (typeof SUB !== 'undefined' && S?.user?.id) {
-    try { SUB.bootstrap(S.user.id, S?.role); }
-    catch(e) { console.warn('[auth] SUB.bootstrap failed:', e); }
-    // Mettre à jour la pastille "XXj" dans la nav
-    _updateAboTrialPill();
+    SUB.bootstrap(S.user.id, S?.role)
+      .then(() => { _updateAboTrialPill(); })
+      .catch(e => console.warn('[auth] SUB.bootstrap:', e));
   }
 
   // Dispatcher l'event de login pour les modules qui en dépendent (copilote, etc.)

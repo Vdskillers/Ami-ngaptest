@@ -1664,3 +1664,199 @@ tbody tr:hover{background:var(--c)}tbody tr:last-child td{border-bottom:none}
   .sub-admin-buttons{flex-direction:column}
   .sub-admin-btn{width:100%}
 }
+
+/* ══════════════════════════════════════════════════════
+   💎 SUBSCRIPTION v2.0 — Admin panel & mode app
+══════════════════════════════════════════════════════ */
+
+/* ─── Bandeau mode test sur page abonnement ─── */
+.sub-mode-banner{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 20px;border-radius:var(--rl);margin-bottom:22px
+}
+.sub-mode-banner.test{
+  background:linear-gradient(135deg,rgba(0,212,170,.08),rgba(0,212,170,.02));
+  border:1px solid rgba(0,212,170,.3)
+}
+
+/* ─── Carte "Mode application" dans panel admin ─── */
+.adm-app-mode-card{
+  background:linear-gradient(135deg,var(--c),rgba(0,212,170,.02));
+  border:1px solid var(--b);
+  border-radius:var(--rl);
+  padding:18px 22px;
+  margin-bottom:18px
+}
+.adm-appmode-head{
+  display:flex;align-items:center;gap:24px;flex-wrap:wrap;
+  justify-content:space-between
+}
+.adm-appmode-label{
+  font-family:var(--fm);font-size:10px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--m);margin-bottom:4px
+}
+.adm-appmode-value{
+  font-family:var(--fs);font-size:24px;font-weight:normal
+}
+.adm-appmode-value.test   {color:var(--a)}
+.adm-appmode-value.payant {color:var(--w)}
+.adm-appmode-sub{
+  color:var(--m);font-size:13px;margin-top:4px;max-width:500px;line-height:1.5
+}
+.adm-appmode-toggle-wrap{
+  display:flex;flex-direction:column;align-items:center;gap:6px
+}
+.adm-appmode-toggle{
+  position:relative;display:inline-block;width:64px;height:34px;cursor:pointer
+}
+.adm-appmode-toggle input{opacity:0;width:0;height:0}
+.adm-appmode-slider{
+  position:absolute;inset:0;background:var(--s);
+  border:1px solid var(--b);border-radius:34px;
+  transition:all .25s
+}
+.adm-appmode-slider::before{
+  content:'';position:absolute;height:26px;width:26px;
+  left:3px;top:3px;background:var(--a);border-radius:50%;
+  transition:all .25s
+}
+.adm-appmode-toggle input:checked + .adm-appmode-slider{
+  background:var(--w);border-color:var(--w)
+}
+.adm-appmode-toggle input:checked + .adm-appmode-slider::before{
+  transform:translateX(28px);background:#000
+}
+.adm-appmode-toggle-label{
+  font-family:var(--fm);font-size:11px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;color:var(--m)
+}
+.adm-appmode-warn{
+  background:rgba(255,181,71,.08);border:1px solid rgba(255,181,71,.25);
+  border-radius:var(--r);padding:12px 16px;margin-top:14px;
+  font-size:12px;line-height:1.5;color:#ffc97a
+}
+.adm-appmode-info{
+  background:rgba(0,212,170,.05);border:1px solid rgba(0,212,170,.2);
+  border-radius:var(--r);padding:12px 16px;margin-top:14px;
+  font-size:12px;line-height:1.5;color:var(--a)
+}
+
+/* ─── Pill d'abonnement dans la liste des comptes ─── */
+.acc-info-col{
+  display:flex;flex-direction:column;gap:6px;flex:1;min-width:0
+}
+.acc-sub-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 9px;border-radius:20px;border:1px solid;
+  font-size:10px;font-family:var(--fm);font-weight:700;
+  letter-spacing:.5px;text-transform:uppercase;
+  width:fit-content;max-width:100%
+}
+.acc-sub-label{flex-shrink:0}
+.acc-sub-days{
+  font-size:9px;font-weight:600;opacity:.85;
+  padding-left:6px;border-left:1px solid currentColor
+}
+.acc-sub-days.urgent{color:#ffb547}
+
+/* ─── Bouton 💎 dans la liste ─── */
+.bxs.b-sub{
+  background:rgba(198,120,221,.1);border:1px solid rgba(198,120,221,.3);
+  color:#c678dd;padding:5px 8px;font-size:14px
+}
+.bxs.b-sub:hover{
+  background:rgba(198,120,221,.2);border-color:#c678dd
+}
+
+/* ─── Modale override tier (admin) ─── */
+.adm-sub-ovr-overlay{
+  position:fixed;inset:0;z-index:2100;
+  background:rgba(11,15,20,.88);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;
+  padding:20px;opacity:0;transition:opacity .2s
+}
+.adm-sub-ovr-overlay.open{display:flex}
+.adm-sub-ovr-overlay.visible{opacity:1}
+.adm-sub-ovr-card{
+  background:var(--c);border:1px solid var(--b);border-radius:var(--rl);
+  padding:28px 26px 22px;max-width:520px;width:100%;
+  max-height:90vh;overflow-y:auto;
+  box-shadow:0 24px 80px rgba(0,0,0,.8);
+  position:relative;
+  transform:scale(.96);transition:transform .2s
+}
+.adm-sub-ovr-overlay.visible .adm-sub-ovr-card{transform:scale(1)}
+.adm-sub-ovr-close{
+  position:absolute;top:12px;right:14px;
+  width:32px;height:32px;display:grid;place-items:center;
+  font-size:22px;color:var(--m);cursor:pointer;border-radius:8px;
+  transition:all .15s
+}
+.adm-sub-ovr-close:hover{background:var(--s);color:var(--t)}
+.adm-sub-ovr-title{
+  font-family:var(--fs);font-size:22px;margin-bottom:4px;color:var(--t)
+}
+.adm-sub-ovr-user{
+  color:var(--a);font-size:14px;font-weight:700;margin-bottom:14px
+}
+.adm-sub-ovr-current{
+  background:var(--s);border:1px solid var(--b);border-radius:var(--r);
+  padding:10px 14px;font-size:13px;margin-bottom:18px;color:var(--m)
+}
+.adm-sub-ovr-current b{margin-left:4px}
+.adm-sub-ovr-section-title{
+  font-family:var(--fm);font-size:10px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--m);margin:14px 0 8px;font-weight:700
+}
+.adm-sub-ovr-tiers{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:8px;margin-bottom:12px
+}
+.adm-sub-ovr-tier-btn{
+  background:var(--s);border:1px solid var(--b);
+  padding:10px 12px;border-radius:var(--r);
+  font-family:var(--ff);font-size:12px;font-weight:700;
+  cursor:pointer;transition:all .15s;color:var(--t);
+  text-align:center
+}
+.adm-sub-ovr-tier-btn:hover:not(:disabled){
+  transform:translateY(-1px);filter:brightness(1.2)
+}
+.adm-sub-ovr-tier-btn.current,
+.adm-sub-ovr-tier-btn:disabled{
+  opacity:.5;cursor:not-allowed
+}
+.adm-sub-ovr-quick{
+  display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px
+}
+.adm-sub-ovr-quick-btn{
+  flex:1;min-width:110px;
+  background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.25);
+  color:var(--a);
+  padding:8px 12px;border-radius:8px;font-family:var(--fm);font-size:11px;
+  font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px
+}
+.adm-sub-ovr-quick-btn:hover{
+  background:rgba(0,212,170,.15)
+}
+.adm-sub-ovr-quick-btn.danger{
+  background:rgba(255,181,71,.08);border-color:rgba(255,181,71,.25);color:var(--w)
+}
+.adm-sub-ovr-quick-btn.danger:hover{background:rgba(255,181,71,.15)}
+.adm-sub-ovr-note{
+  background:rgba(79,168,255,.05);border:1px solid rgba(79,168,255,.2);
+  border-radius:var(--r);padding:10px 14px;font-size:12px;
+  color:var(--a2);line-height:1.5
+}
+
+/* Mobile */
+@media(max-width:768px){
+  .adm-appmode-head{flex-direction:column;align-items:flex-start;gap:16px}
+  .adm-appmode-toggle-wrap{flex-direction:row;gap:12px;width:100%;justify-content:flex-end}
+  .adm-sub-ovr-card{padding:22px 18px 18px}
+  .adm-sub-ovr-tiers{grid-template-columns:1fr 1fr}
+  .adm-sub-ovr-quick-btn{min-width:0;width:100%}
+  .acc-sub-pill{font-size:9px;padding:2px 7px}
+}
+/* Fix : .acc-name garde sa typo mais ne doit plus être flex:1 quand il est dans .acc-info-col */
+.acc-info-col .acc-name{flex:none;font-size:15px;font-weight:500}
