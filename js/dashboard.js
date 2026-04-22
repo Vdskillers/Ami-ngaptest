@@ -920,19 +920,22 @@ function forecastRevenue(daily) {
 ════════════════════════════════════════════════ */
 
 async function loadDashCabinet() {
+  // ⚡ Cette fonction peut être appelée depuis 2 contextes :
+  //   1. View-cabinet (l'ancien wrapper #dash-cabinet-section pour Objectif CA)
+  //   2. La modale Stats consolidées (depuis cabinet.js : openCabinetStatsModal)
+  //   On rend `section` optionnel : on gère son display si présent, sinon on continue.
   const section = document.getElementById('dash-cabinet-section');
-  if (!section) return;
 
   const cab = APP.get ? APP.get('cabinet') : null;
   if (!cab?.id) {
-    section.style.display = 'none';
+    if (section) section.style.display = 'none';
     return;
   }
-  section.style.display = 'block';
+  if (section) section.style.display = 'block';
 
   const kpisEl = document.getElementById('dash-cabinet-kpis');
   const revsEl = document.getElementById('dash-cabinet-ide-revenues');
-  if (!kpisEl) return;
+  if (!kpisEl) return;  // IDs absents (modale fermée + section cachée) → rien à faire
 
   let members = cab.members || [];
   const nbIDE     = members.length;

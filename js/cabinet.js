@@ -1895,6 +1895,15 @@ async function openCabinetStatsModal() {
     const d = await apiCall('/webhook/cabinet-consolidated-stats', {});
     if (!d.ok) throw new Error(d.error || 'Erreur');
     _renderCabinetStats(modal, d);
+
+    // 🏥 Peupler les 3 sections déplacées depuis view-cabinet :
+    //   loadDashCabinet remplit #dash-cabinet-kpis + #dash-cabinet-ide-revenues
+    //   et appelle runCabinetSimulator() qui remplit #dash-cabinet-simulator-result
+    //   Délai pour laisser le DOM s'attacher (les IDs viennent juste d'être injectés)
+    setTimeout(() => {
+      try { if (typeof loadDashCabinet === 'function') loadDashCabinet(); }
+      catch (err) { console.warn('[modal stats - loadDashCabinet]', err.message); }
+    }, 50);
   } catch (e) {
     modal.querySelector('.cab-stats-card').innerHTML = `
       <div class="cab-stats-close" onclick="closeCabinetStatsModal()">×</div>
@@ -1981,6 +1990,39 @@ function _renderCabinetStats(modal, d) {
         </tbody>
       </table>
     </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         🏥 Sections déplacées depuis view-cabinet :
+         (1) Statistiques cabinet Multi-IDE  (2) Revenus par infirmière  (3) Simulateur revenus
+         IDs identiques à l'ancien #dash-cabinet-section pour que loadDashCabinet() les peuple
+    ════════════════════════════════════════════════════════════ -->
+    <div style="border-top:1px solid var(--b);margin:22px 0 18px"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+      <div class="cab-stats-section-title" style="margin-bottom:0">
+        Statistiques cabinet 🏥 Multi-IDE
+      </div>
+      <button class="btn bs bsm" onclick="loadDashCabinet()">↻ Actualiser</button>
+    </div>
+
+    <!-- KPIs cabinet (peuplé par loadDashCabinet) -->
+    <div id="dash-cabinet-kpis" class="sg" style="grid-template-columns:repeat(auto-fill,minmax(175px,1fr));margin-bottom:24px"></div>
+
+    <!-- Revenus par IDE -->
+    <div style="border-top:1px solid var(--b);margin-bottom:18px"></div>
+    <div class="cab-stats-section-title">Revenus par infirmière</div>
+    <div id="dash-cabinet-ide-revenues" style="margin-bottom:24px"></div>
+
+    <!-- Simulateur revenus cabinet -->
+    <div style="border-top:1px solid var(--b);margin-bottom:18px"></div>
+    <div class="cab-stats-section-title">Simulateur revenus cabinet <span class="dash-section-badge">IA</span></div>
+    <p style="font-size:12px;color:var(--m);margin-bottom:14px">Projettez vos revenus mensuels en ajustant les paramètres.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+      <div class="af"><label>Patients/jour/IDE</label><input type="number" id="sim-patients-jour" value="12" min="1" max="30" oninput="runCabinetSimulator()"></div>
+      <div class="af"><label>Nb IDEs</label><input type="number" id="sim-nb-ide" value="2" min="1" max="10" oninput="runCabinetSimulator()"></div>
+      <div class="af"><label>Montant moyen/acte (€)</label><input type="number" id="sim-montant-moyen" value="8.50" step="0.5" oninput="runCabinetSimulator()"></div>
+      <div class="af"><label>Jours travaillés/mois</label><input type="number" id="sim-jours" value="22" min="1" max="31" oninput="runCabinetSimulator()"></div>
+    </div>
+    <div id="dash-cabinet-simulator-result" style="margin-bottom:24px"></div>
 
     <div class="cab-stats-note">
       🔒 <strong>RGPD :</strong> Seuls les codes NGAP et montants agrégés sont exposés. Aucune donnée patient identifiable.
