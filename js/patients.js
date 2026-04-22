@@ -875,9 +875,10 @@ function _patTabRender(tab, id, p, notes) {
                   ${sourceBadge}${syncIcon}${idIdx}
                   ${c.soin?`<span style="font-size:11px;color:var(--m)">· ${c.soin.slice(0,40)}</span>`:''}
                 </div>
-                <div style="display:flex;gap:6px">
-                  <button class="btn bs bsm" style="font-size:10px;padding:3px 8px" onclick="editCotationPatient('${id}',${realIdx})">✏️</button>
-                  <button class="btn bs bsm" style="font-size:10px;padding:3px 8px;color:var(--d);border-color:rgba(255,95,109,.3)" onclick="deleteCotationPatient('${id}',${realIdx})">🗑️</button>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button class="btn bs bsm" style="font-size:10px;padding:3px 8px" onclick="printCotationPatient('${id}',${realIdx})" title="Télécharger la facture PDF">📥 PDF</button>
+                  <button class="btn bs bsm" style="font-size:10px;padding:3px 8px" onclick="editCotationPatient('${id}',${realIdx})" title="Éditer la cotation">✏️</button>
+                  <button class="btn bs bsm" style="font-size:10px;padding:3px 8px;color:var(--d);border-color:rgba(255,95,109,.3)" onclick="deleteCotationPatient('${id}',${realIdx})" title="Supprimer la cotation">🗑️</button>
                 </div>
               </div>
               <div style="margin-bottom:6px">${invHtml}</div>
@@ -1299,6 +1300,89 @@ async function deleteAllSoinNotes(patientId) {
   await openPatientDetail(patientId);
   showToastSafe('🗑️ Historique des soins supprimé.');
   _syncNotesIntoPatient(patientId).catch(() => {});
+}
+
+/* ════════════════════════════════════════════════════════════════
+   📥 TÉLÉCHARGEMENT PDF d'UNE COTATION INDIVIDUELLE (fiche patient)
+   ────────────────────────────────────────────────────────────────
+   Accessible depuis Carnet → fiche patient → onglet 🧾 Cotations
+   → bouton 📥 PDF sur chaque ligne.
+
+   Résout le bug "impossible de télécharger le PDF de certaines cotations"
+   en :
+     1. Récupérant la cotation directement depuis IDB (source de vérité)
+     2. Reconstruisant l'objet complet attendu par printInv()
+     3. Générant un numéro de facture temporaire si invoice_number absent
+        (cas : cotation en fallback local, cotation admin en mode test,
+         cotation jamais synchronisée avec n8n)
+     4. Attachant les infos patient (nom) pour affichage dans le PDF
+   Fonctionne pour TOUTES les cotations, quelle que soit leur origine.
+════════════════════════════════════════════════════════════════ */
+async function printCotationPatient(patientId, cotationIdx) {
+  try {
+    const rows = await _idbGetAll(PATIENTS_STORE);
+    const row  = rows.find(r => r.id === patientId);
+    if (!row) {
+      showToastSafe('❌ Patient introuvable.');
+      return;
+    }
+    const p = { ...(_dec(row._data) || {}), id: row.id, nom: row.nom, prenom: row.prenom };
+    const c = p.cotations?.[cotationIdx];
+    if (!c) {
+      showToastSafe('❌ Cotation introuvable dans la fiche patient.');
+      return;
+    }
+
+    // ── Reconstruction robuste des parts AMO / AMC / Patient ──
+    // Les anciennes cotations peuvent ne pas avoir part_* stockées → recalcul
+    const total = parseFloat(c.total || 0);
+    const part_amo     = parseFloat(c.part_amo)     || (total * 0.6);
+    const part_amc     = parseFloat(c.part_amc)     || 0;
+    const part_patient = parseFloat(c.part_patient) || (total - part_amo - part_amc);
+
+    // ── Numéro de facture : priorité à l'existant, fallback temporaire sinon ──
+    // Format fallback : TMP-YYYYMMDD-<4 derniers chars patient id>-<idx>
+    const d = new Date(c.date || Date.now());
+    const dateStr = d.toISOString().slice(0, 10).replace(/-/g, '');
+    const invNum = c.invoice_number
+      || `TMP-${dateStr}-${String(patientId).slice(-4)}-${cotationIdx}`;
+
+    // ── Construction de l'objet attendu par printInv() ──
+    const factureData = {
+      actes:          c.actes || [],
+      total,
+      part_amo,
+      part_amc,
+      part_patient,
+      invoice_number: invNum,
+      date_soin:      c.date ? new Date(c.date).toLocaleDateString('fr-FR') : '',
+      dre_requise:    !!c.dre_requise,
+      ngap_version:   c.ngap_version || '',
+      patient:        `${p.prenom || ''} ${p.nom || ''}`.trim(),
+      prescripteur:   c.prescripteur || null,
+      // Signature PNG si disponible (même chemin que cotation.js)
+      _sig_html:      c._sig_html || '',
+    };
+
+    // ── Appel printInv (défini dans cotation.js) ──
+    if (typeof printInv === 'function') {
+      await printInv(factureData);
+      // Petit feedback UX selon que l'invoice_number est officiel ou temporaire
+      if (!c.invoice_number) {
+        showToastSafe('📥 PDF généré avec n° provisoire (cotation pas encore synchronisée).');
+      }
+    } else if (typeof _doPrint === 'function') {
+      // Fallback direct si cotation.js expose _doPrint mais pas printInv
+      const u = (typeof S !== 'undefined') ? S?.user || {} : {};
+      await _doPrint(factureData, u);
+    } else {
+      showToastSafe('❌ Module de génération PDF indisponible.');
+      console.warn('[printCotationPatient] printInv et _doPrint absents');
+    }
+  } catch (e) {
+    console.error('[printCotationPatient]', e);
+    showToastSafe('❌ Erreur lors de la génération du PDF.');
+  }
 }
 
 /* ── Éditer une cotation dans la fiche patient ── */

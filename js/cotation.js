@@ -719,7 +719,7 @@ function renderCotCabinet(d) {
       <!-- Actions par IDE -->
       <div style="padding:8px 14px;border-top:1px solid var(--b);display:flex;gap:8px;flex-wrap:wrap;background:var(--s)">
         ${cot.invoice_number ? `<button class="btn bv bsm" onclick="openSignatureModal('${cot.invoice_number}')">✍️ Signature patient</button>` : ''}
-        ${cot.invoice_number ? `<button class="btn bs bsm" onclick="printInv(${JSON.stringify({...cot,total:cot.total}).replace(/'/g,'&#39;')})">📥 Facture</button>` : ''}
+        <button class="btn bs bsm" onclick='printInv(${JSON.stringify({...cot,total:cot.total}).replace(/'/g, "&#39;")})' title="${cot.invoice_number ? 'Télécharger la facture' : 'Télécharger — n° provisoire (cotation pas encore synchronisée)'}">📥 Facture${cot.invoice_number ? '' : ' <span style=\"font-size:9px;opacity:.7\">(provisoire)</span>'}</button>
       </div>
     </div>`;
   }).join('');
