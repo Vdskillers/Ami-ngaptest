@@ -277,8 +277,48 @@ function showApp(){
   // Correction Leaflet après changement de layout
   setTimeout(()=>{ if(typeof depMap!=='undefined'&&depMap) depMap.invalidateSize(); },250);
 
+  // ── 💎 Bootstrap subscription (gating features + essai 30j) ──
+  // Idempotent : gère nurse (essai 30j + verrous) et admin (bypass + sim).
+  if (typeof SUB !== 'undefined' && S?.user?.id) {
+    try { SUB.bootstrap(S.user.id, S?.role); }
+    catch(e) { console.warn('[auth] SUB.bootstrap failed:', e); }
+    // Mettre à jour la pastille "XXj" dans la nav
+    _updateAboTrialPill();
+  }
+
   // Dispatcher l'event de login pour les modules qui en dépendent (copilote, etc.)
   setTimeout(()=>{ document.dispatchEvent(new CustomEvent('ami:login', { detail: { role: S?.role } })); }, 150);
+}
+
+/* ── Pastille "15j" dans l'item nav "Mon abonnement" ───────────────
+   Met à jour l'indicateur visuel de jours d'essai restants. */
+function _updateAboTrialPill() {
+  const pill = document.getElementById('abo-trial-pill');
+  if (!pill || typeof SUB === 'undefined') return;
+  const st = SUB.getState();
+  if (st.isAdmin && st.isAdminSim) {
+    pill.textContent = 'SIM';
+    pill.style.display = '';
+    pill.style.background = 'rgba(255,95,109,.18)';
+    pill.style.color = '#FF7A85';
+  } else if (st.isTrial && st.daysLeft > 0) {
+    pill.textContent = st.daysLeft + 'j';
+    pill.style.display = '';
+    pill.style.background = st.daysLeft <= 7 ? 'rgba(255,181,71,.2)' : 'rgba(0,212,170,.18)';
+    pill.style.color = st.daysLeft <= 7 ? 'var(--w)' : 'var(--a)';
+  } else if (st.locked) {
+    pill.textContent = '🔒';
+    pill.style.display = '';
+    pill.style.background = 'rgba(255,95,109,.18)';
+    pill.style.color = '#FF7A85';
+  } else if (!st.isAdmin) {
+    pill.textContent = '✓';
+    pill.style.display = '';
+    pill.style.background = 'rgba(0,212,170,.18)';
+    pill.style.color = 'var(--a)';
+  } else {
+    pill.style.display = 'none';
+  }
 }
 function switchTab(t){['l','r'].forEach(x=>{$('tab-'+x).classList.toggle('on',x===t);$('pan-'+x).style.display=x===t?'block':'none';});hideM('le','re','ro');}
 async function login(){

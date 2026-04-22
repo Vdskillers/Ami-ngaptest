@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AMI NGAP">
 <meta name="mobile-web-app-capable" content="yes">
-<title>AMI TEST — Sandbox (ne pas utiliser en production)</title>
+<title>AMI — Cotation NGAP</title>
 <meta name="description" content="Cotation NGAP intelligente pour infirmiers — IA · RAG BM25 · Tarifs 2026">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230b0f14'/><text y='.9em' font-size='80' font-family='sans-serif' font-weight='bold' fill='%2300d4aa' x='12'>A</text></svg>">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -281,12 +281,6 @@
 </style>
 </head>
 <body>
-
-<!-- ⚠️ BANDEAU SANDBOX — Ne jamais retirer sur cette branche -->
-<div id="sandbox-banner" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(90deg,#ff3b3b,#cc1e1e);color:#fff;text-align:center;padding:5px 10px;font:600 11px/1.4 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.6px;text-transform:uppercase;box-shadow:0 2px 8px rgba(255,59,59,.4);pointer-events:none;user-select:none">
-  ⚠️ Version TEST · Sandbox DEV · Backend partagé avec la prod — ne pas diffuser
-</div>
-<style>body{padding-top:24px!important}@media(max-width:600px){body{padding-top:28px!important}#sandbox-banner{font-size:10px;padding:6px 8px}}</style>
 
 <!-- LANDING PAGE -->
 <div id="lp-ov">
@@ -812,6 +806,7 @@
     <!-- Actions : Mon compte + Retour + Déconnexion -->
     <div class="adm-top-actions">
       <button class="bs bsm" onclick="openPM()">👤 Mon compte</button>
+      <button class="bs bsm" id="adm-sim-tier-btn" onclick="openTierSimulator()" title="Simuler un tier d'abonnement pour tester les verrous" style="background:rgba(198,120,221,.08);border-color:rgba(198,120,221,.3);color:#c678dd">💎 Simuler tier</button>
       <button class="bs bsm" onclick="goToApp()">← Retour à l'app</button>
       <button class="bout bsm" onclick="logout()">⏻ Déconnexion</button>
     </div>
@@ -838,6 +833,17 @@
 
     <!-- ═══ ONGLET : COMPTES ═══ -->
     <div class="adm-tab-section" data-tab="comptes">
+      <!-- 💎 Statut simulation tier (n'apparaît que si simulation active) -->
+      <div id="adm-sim-status" style="display:none;background:linear-gradient(135deg,rgba(198,120,221,.08),rgba(198,120,221,.02));border:1px solid rgba(198,120,221,.3);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;align-items:center;gap:14px;flex-wrap:wrap">
+        <span style="font-size:20px">💎</span>
+        <div style="flex:1;min-width:200px">
+          <div style="font-weight:700;color:#c678dd;margin-bottom:2px">Simulation de tier active</div>
+          <div id="adm-sim-status-text" style="font-size:12px;color:var(--m)">—</div>
+        </div>
+        <button class="bs bsm" onclick="SUB.clearAdminSim(); updateAdmSimStatus()" style="font-size:11px;padding:6px 12px">Arrêter la simulation</button>
+        <button class="bs bsm" onclick="openTierSimulator()" style="font-size:11px;padding:6px 12px">Changer</button>
+      </div>
+
       <!-- Liste des comptes avec statut et actions -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
         <div class="lbl">👥 Comptes infirmiers</div>
@@ -1170,6 +1176,7 @@
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Système</div>
       <div class="ni nurse-only" data-v="ngap-ref"><span class="nic">📚</span> Référentiel NGAP</div>
+      <div class="ni" data-v="mon-abo"><span class="nic">💎</span> Mon abonnement <span id="abo-trial-pill" style="display:none;background:rgba(0,212,170,.18);color:var(--a);border-radius:20px;font-size:9px;padding:1px 7px;margin-left:4px;font-family:var(--fm);font-weight:700"></span></div>
       <div class="ni" data-v="aide"><span class="nic">📖</span> Aide & Docs</div>
       <div class="ni nurse-only" data-v="contact"><span class="nic">💬</span> Contact Admin <span id="contact-badge" style="display:none;background:#ef4444;color:#fff;border-radius:20px;font-size:9px;padding:1px 6px;margin-left:4px;font-family:var(--fm)">!</span></div>
       <div class="ni nurse-only" data-v="sec"><span class="nic">🛡️</span> Sécurité</div>
@@ -3135,6 +3142,12 @@
       <div id="compliance-root"></div>
     </section>
 
+    <!-- 💎 Mon abonnement — rendu dynamique par subscription.js -->
+    <section class="view" id="view-mon-abo">
+      <!-- Contenu injecté dynamiquement par SUB.renderAbonnementPage() -->
+      <div style="padding:60px 20px;text-align:center;color:var(--m)">Chargement…</div>
+    </section>
+
   </main>
 </div>
 
@@ -3148,6 +3161,7 @@
 
 <!-- Modules fonctionnels -->
 <script src="js/auth.js?v=3.8"></script>
+<script src="js/subscription.js?v=1.0"></script><!-- 💎 Gating features + essai 30j + paywall -->
 <script src="js/cabinet.js?v=3.9"></script><!-- Mode cabinet multi-IDE + sync sélective + 🛡️ consentements partagés -->
 <script src="js/security.js?v=3.8"></script><!-- RGPD + AES + PIN + Consentement -->
 <script src="js/admin.js?v=3.8"></script>
