@@ -893,6 +893,18 @@
 
     <!-- ═══ ONGLET : COMPTES ═══ -->
     <div class="adm-tab-section" data-tab="comptes">
+      <!-- ════════════════════════════════════════════════════════
+           💎 MODE APPLICATION — pilotage TEST / PAYANT (admin-only)
+           Rendu par admin.js : loadAdmAppMode() remplit #adm-app-mode-card
+           au chargement de la vue admin (appelée dans loadAdm).
+           ════════════════════════════════════════════════════════ -->
+      <div id="adm-app-mode-card" class="adm-appmode-card" style="margin-bottom:22px">
+        <div style="text-align:center;padding:16px;color:var(--m);font-size:12px">
+          <div class="spin spinw" style="width:18px;height:18px;margin:0 auto 8px"></div>
+          Chargement du mode application…
+        </div>
+      </div>
+
       <!-- Liste des comptes avec statut et actions -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
         <div class="lbl">👥 Comptes infirmiers</div>
@@ -2153,7 +2165,7 @@
             <th>Actes</th>
             <th>Total</th>
             <th>Statut</th>
-            <th>IDE(s)</th>
+            <th class="hist-col-ide">IDE(s)</th>
             <th>Alertes</th>
             <th></th>
             <th></th>
@@ -3321,6 +3333,18 @@ async function hist() {
   const stats = document.getElementById('hstats');
   if (!tbody) return;
 
+  // 🏥 Colonne IDE(s) : visible uniquement si membre d'un cabinet multi-IDE.
+  //   L'admin en bypass réel la voit aussi (pour debug/test).
+  //   L'admin en simulation suit la logique "IDEL simulée" : si pas cabinet member, masqué.
+  (function _toggleIdeCol() {
+    const st = (typeof SUB !== 'undefined' && SUB.getState) ? SUB.getState() : null;
+    const showIdeCol = st
+      ? (st.cabinetMember || (st.isAdmin && !st.isAdminSim))
+      : true;  // fallback si SUB pas chargé : on affiche (non-régression)
+    const histTable = document.querySelector('#view-his .ht table');
+    if (histTable) histTable.classList.toggle('hist-hide-ide', !showIdeCol);
+  })();
+
   tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px"><div class="spin spinw" style="width:24px;height:24px;margin:0 auto"></div></td></tr>';
 
   const q       = (document.getElementById('hq')?.value || '').toLowerCase().trim();
@@ -3469,7 +3493,7 @@ async function hist() {
         <td style="max-width:160px">${actesHtml}</td>
         <td class="pt-ca" style="white-space:nowrap">${parseFloat(r.total||0).toFixed(2)}&nbsp;€</td>
         <td>${statutHtml}</td>
-        <td>${idesHtml}</td>
+        <td class="hist-col-ide">${idesHtml}</td>
         <td>${alertsHtml}</td>
         <td><button class="btn bs bsm hist-edit-btn" style="font-size:10px;padding:3px 8px"
           data-hist-id="${r.id}"
@@ -3864,6 +3888,10 @@ function _addNotifItem(type, title, msg) {
   const dot = document.getElementById('top-notif-dot');
   if (dot) dot.classList.add('show');
 }
+/* 💎 Exposition globale pour les modules externes (subscription.js, cabinet.js, etc.)
+   qui poussent des notifications dans le panneau 🔔 (ex: J-7 trial, promotion cabinet…) */
+window._addNotifItem = _addNotifItem;
+window.notify = _addNotifItem;
 function _renderNotifPanel() {
   const list = document.getElementById('notif-list');
   if (!list) return;
