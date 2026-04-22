@@ -60,7 +60,6 @@ window.SUB = (function(){
     compte_rendu:        { tier:'PRO', label:'Compte-rendu de passage',      desc:'Générateur automatique de CR patient.' },
     consentements:       { tier:'PRO', label:'Consentements éclairés',       desc:'Gestion traçabilité RGPD.' },
     copilote_ia:         { tier:'PRO', label:'Copilote IA',                  desc:'Assistant conversationnel NGAP via xAI Grok.' },
-    compliance_engine:   { tier:'PRO', label:'Moteur de conformité',         desc:'Scoring 4 piliers, auto-correction.' },
     transmissions:       { tier:'PRO', label:'Transmissions infirmières',    desc:'Journal de transmissions chiffré.' },
     ordonnances:         { tier:'PRO', label:'Gestion ordonnances',          desc:'Cycle de vie des ordos patient.' },
     charges_calc:        { tier:'PRO', label:'Calcul charges & net',         desc:'Projection net/brut, URSSAF, CARPIMKO.' },
@@ -69,6 +68,9 @@ window.SUB = (function(){
     cabinet_multi_ide:   { tier:'CABINET', label:'Cabinet multi-IDE',         desc:'Gestion d\'un cabinet 2 à 6 infirmières.' },
     planning_shared:     { tier:'CABINET', label:'Planning partagé',          desc:'Coordination des tournées du cabinet.' },
     transmissions_shared:{ tier:'CABINET', label:'Transmissions partagées',   desc:'Journal collaboratif du cabinet.' },
+    cabinet_manage_members:  { tier:'CABINET', label:'Gestion des membres',    desc:'Inviter, promouvoir et retirer des membres du cabinet (titulaire/gestionnaire uniquement).' },
+    cabinet_consolidated_stats: { tier:'CABINET', label:'Stats consolidées cabinet', desc:'Vue CA, actes et performance de toutes les IDE du cabinet (titulaire/gestionnaire uniquement).' },
+    compliance_engine:   { tier:'CABINET', label:'Conformité cabinet',        desc:'Moteur de conformité du cabinet : scoring 4 piliers, auto-correction, risque prédictif (titulaire/gestionnaire uniquement).' },
     optimisation_ca_plus:{ tier:'PREMIUM', label:'Optimisation CA+',          desc:'Revenue engine premium.' },
     protection_legale_plus:{ tier:'PREMIUM', label:'Protection médico-légale+', desc:'Certificats forensiques horodatés.' },
     sla_support:         { tier:'PREMIUM', label:'SLA support',               desc:'Support prioritaire < 2h.' },
@@ -137,7 +139,8 @@ window.SUB = (function(){
         isAdmin:  role === 'admin',
         simTier:  (role === 'admin') ? sessionStorage.getItem(STORAGE_ADMIN_SIM) : null,
         cabinetMember: !!data.cabinet_member,
-        cabinetSize:   data.cabinet_size || 0
+        cabinetSize:   data.cabinet_size || 0,
+        cabinetRole:   data.cabinet_role || null
       };
     } catch (e) {
       console.warn('[SUB] bootstrap failed, fallback mode TEST:', e.message);
@@ -149,12 +152,15 @@ window.SUB = (function(){
         simTier: (role === 'admin') ? sessionStorage.getItem(STORAGE_ADMIN_SIM) : null,
         cabinetMember: false,
         cabinetSize: 0,
+        cabinetRole: null,
         _fallback: true
       };
     }
 
     _applyTrialBanner();
     setTimeout(applyUILocks, 100);
+    setTimeout(_checkExpirationNotification, 500);  // 💎 J-7 notification
+    setTimeout(_checkCabinetRoleChange, 700);       // 🏥 Promo/démo cabinet notification
     return _state;
   }
 
@@ -185,25 +191,61 @@ window.SUB = (function(){
       simTier: _state.simTier,
       cabinetMember: !!_state.cabinetMember,
       cabinetSize: _state.cabinetSize || 0,
+      cabinetRole: _state.cabinetRole || null,
+      isCabinetManager: ['titulaire','gestionnaire'].includes(_state.cabinetRole || ''),
       fallback: !!_state._fallback
     };
+  }
+
+  /** Helper : true si l'user est titulaire ou gestionnaire du cabinet */
+  function isCabinetManager() {
+    if (!_state) return false;
+    return ['titulaire','gestionnaire'].includes(_state.cabinetRole || '');
+  }
+
+  /** Helper : retourne 'titulaire' | 'gestionnaire' | 'membre' | null */
+  function cabinetRole() {
+    return _state?.cabinetRole || null;
   }
 
   function hasAccess(featId) {
     if (!featId) return true;
     if (!_state) return false;
-    // Mode TEST global = tout accessible pour tous
-    if (_state.appMode === 'TEST') return true;
-    // Admin sans sim = bypass total
-    if (_state.isAdmin && !_state.simTier) return true;
 
-    const tier = _state.isAdmin ? _state.simTier : _state.tier;
+    // ⚡ Admin en SIMULATION active : la simulation prime sur tout (même mode TEST)
+    //   Permet de tester les verrous tier par tier sans désactiver le mode test global.
+    if (_state.isAdmin && _state.simTier) {
+      const simTier = _state.simTier;
+      // Features manager-only : en sim, on autorise pour CABINET+ (cohérent avec la matrice)
+      const MANAGER_ONLY_SIM = ['cabinet_manage_members', 'cabinet_consolidated_stats', 'compliance_engine'];
+      if (MANAGER_ONLY_SIM.includes(featId)) {
+        return ['CABINET','PREMIUM','COMPTABLE','TRIAL'].includes(simTier);
+      }
+      const matrix = ACCESS_MATRIX[simTier];
+      return matrix ? matrix(featId) : false;
+    }
+
+    // Mode TEST global = tout accessible pour tous (hors admin en sim, déjà traité)
+    if (_state.appMode === 'TEST') return true;
+
+    // Admin sans sim = bypass total
+    if (_state.isAdmin) return true;
+
+    const tier = _state.tier;
+
+    // 💎 Features manager cabinet : réservées aux titulaire/gestionnaire
+    //   Pour éviter qu'un simple membre accède à la gestion / conformité cabinet.
+    const MANAGER_ONLY = ['cabinet_manage_members', 'cabinet_consolidated_stats', 'compliance_engine'];
+    if (MANAGER_ONLY.includes(featId)) {
+      if (!isCabinetManager()) return false;
+      if (_state.cabinetMember) return true;  // bonus cabinet couvre ce cas
+      return ['CABINET','PREMIUM','COMPTABLE'].includes(tier);
+    }
 
     // 💎 Bonus cabinet : si l'user est membre d'un cabinet ≥ 2 IDE,
     //   il a accès aux features CABINET (planning_shared, transmissions_shared, cabinet_multi_ide)
-    //   quel que soit son tier souscrit (le tier reste inchangé pour la facturation).
-    //   Ne s'applique que si l'user n'est pas LOCKED et pas en simulation admin.
-    if (_state.cabinetMember && !_state.isAdmin && tier !== 'LOCKED') {
+    //   quel que soit son tier souscrit.
+    if (_state.cabinetMember && tier !== 'LOCKED') {
       if (FEATURES[featId]?.tier === 'CABINET') return true;
     }
 
@@ -328,7 +370,8 @@ window.SUB = (function(){
 
   function applyUILocks() {
     const st = getState();
-    const modeTest = st.appMode === 'TEST';
+    // Mode TEST désactive les locks SAUF si admin en simulation (pour tester les verrous)
+    const modeTest = st.appMode === 'TEST' && !st.isAdminSim;
 
     document.querySelectorAll('.ni[data-v]').forEach(el => {
       const v = el.dataset.v;
@@ -417,8 +460,8 @@ window.SUB = (function(){
 
   const PLAN_DETAILS = {
     ESSENTIEL: { subtitle:'IDEL solo débutante', features:['Cotation NGAP intelligente','Carnet patients chiffré','Tournée basique + import calendrier','Trésorerie & remboursements','Rapport mensuel','Signatures électroniques','Journal kilométrique','Support standard'] },
-    PRO:       { subtitle:'IDEL solo active', features:['✨ Tout AMI Essentiel','Dashboard & statistiques','Simulateur audit CPAM','Copilote IA (xAI Grok)','BSI, Pilulier, Constantes','Alertes médicamenteuses','Compte-rendu + Consentements','Tournée IA (VRPTW + 2-opt)','Moteur de conformité'], popular:true },
-    CABINET:   { subtitle:'Cabinet 2 à 6 IDE', features:['✨ Tout AMI Pro','Mode cabinet multi-IDE','Planning partagé','Transmissions collaboratives','Répartition intelligente','Consentements partagés','Audit consolidé cabinet'] },
+    PRO:       { subtitle:'IDEL solo active', features:['✨ Tout AMI Essentiel','Dashboard & statistiques','Simulateur audit CPAM','Copilote IA (xAI Grok)','BSI, Pilulier, Constantes','Alertes médicamenteuses','Compte-rendu + Consentements','Tournée IA (VRPTW + 2-opt)'], popular:true },
+    CABINET:   { subtitle:'Cabinet 2 à 6 IDE', features:['✨ Tout AMI Pro','Mode cabinet multi-IDE','Planning partagé','Transmissions collaboratives','Répartition intelligente','Consentements partagés','🧠 Conformité cabinet (manager)','📊 Stats consolidées (manager)','🛠️ Gestion des membres (titulaire)'] },
     PREMIUM:   { subtitle:'IDEL haut volume (add-on)', features:['✨ S\'ajoute à Pro ou Cabinet','Optimisation CA avancée','Détection CA sous-déclaré','Protection médico-légale renforcée','Certificats forensiques horodatés','SLA support prioritaire < 2h','Rapport juridique mensuel'] },
     COMPTABLE: { subtitle:'Expert-comptable santé', features:['Dashboard consolidé multi-IDEL','Export liasse fiscale (2035)','Scoring risque portfolio','Vue anonymisée patient','Alertes anomalies cabinet','Rapports trimestriels'] }
   };
@@ -429,7 +472,9 @@ window.SUB = (function(){
     const st = getState();
 
     let modeBanner = '';
-    if (st.appMode === 'TEST') {
+    // Bandeau "Mode test" : visible uniquement si TEST global ET admin n'est PAS en simulation
+    //   (en simulation, l'admin teste les verrous, afficher "mode test" serait confus)
+    if (st.appMode === 'TEST' && !st.isAdminSim) {
       modeBanner = `
         <div class="sub-mode-banner test">
           <span style="font-size:22px">🧪</span>
@@ -591,10 +636,141 @@ window.SUB = (function(){
     _installNavGate();
   }
 
-  /* ───── 13. EXPORT ──────────────────────────────────────── */
+  /* ───── 13. NOTIFICATIONS J-7 (expiration) ──────────────── */
+
+  /**
+   * Poussée de notification 7 jours (et moins) avant expiration.
+   * Gère deux cas :
+   *   - Essai gratuit qui se termine
+   *   - Abonnement payant qui arrive à échéance
+   * Dismissable : stocke la dernière dismissal dans localStorage (24h cooldown).
+   */
+  function _checkExpirationNotification() {
+    if (!_state) return;
+    const st = getState();
+
+    // Pas de notif en mode TEST, admin, ou déjà locked
+    if (st.appMode === 'TEST' || st.isAdmin || st.locked) return;
+
+    let notifType = null;       // 'trial' | 'paid'
+    let daysRemaining = null;
+    let endDate = null;
+
+    if (st.isTrial && st.daysLeft != null && st.daysLeft <= 7 && st.daysLeft > 0) {
+      notifType = 'trial';
+      daysRemaining = st.daysLeft;
+      endDate = st.trialEnd;
+    } else if (st.paidUntil && !st.isTrial) {
+      const days = Math.ceil((new Date(st.paidUntil).getTime() - Date.now()) / (1000*60*60*24));
+      if (days > 0 && days <= 7) {
+        notifType = 'paid';
+        daysRemaining = days;
+        endDate = st.paidUntil;
+      }
+    }
+
+    if (!notifType) return;
+
+    // Cooldown 24h : si déjà notifié aujourd'hui, on skip
+    const dismissKey = `ami_sub_notif_${notifType}_${_userId}`;
+    const lastDismissed = localStorage.getItem(dismissKey);
+    if (lastDismissed) {
+      const ageH = (Date.now() - parseInt(lastDismissed, 10)) / (1000*60*60);
+      if (ageH < 24) return;
+    }
+
+    // Builder notification
+    const title = notifType === 'trial'
+      ? `⏱️ Essai gratuit — ${daysRemaining} jour${daysRemaining>1?'s':''} restant${daysRemaining>1?'s':''}`
+      : `💳 Abonnement expire dans ${daysRemaining} jour${daysRemaining>1?'s':''}`;
+    const msg = notifType === 'trial'
+      ? `Votre essai se termine le ${new Date(endDate).toLocaleDateString('fr-FR')}. Choisissez un plan pour conserver l'accès.`
+      : `Votre abonnement expire le ${new Date(endDate).toLocaleDateString('fr-FR')}. Pensez à le renouveler pour éviter l'interruption.`;
+
+    const severity = daysRemaining <= 3 ? 'warning' : 'info';
+    _notify(severity, title, msg);
+
+    // Enregistrer le timestamp de la dernière notif (pour cooldown 24h)
+    localStorage.setItem(dismissKey, String(Date.now()));
+  }
+
+  /**
+   * Wrapper sur le système de notifications existant (_addNotifItem dans index.html).
+   * Fallback : si le panneau n'est pas dispo, log console.
+   */
+  function _notify(type, title, msg) {
+    if (typeof window.notify === 'function') { window.notify(type, title, msg); return; }
+    if (typeof window._addNotifItem === 'function') { window._addNotifItem(type, title, msg); return; }
+    console.info(`[SUB notif] ${type.toUpperCase()} — ${title}`, msg);
+  }
+
+  /**
+   * 🏥 Détecte un changement de rôle cabinet (promotion / rétrogradation / ajout / retrait)
+   * par rapport au dernier rôle connu (stocké en localStorage par user).
+   * Notifie via le panneau notifications à la prochaine connexion.
+   */
+  function _checkCabinetRoleChange() {
+    if (!_state || !_userId) return;
+    const currentRole = _state.cabinetRole || null;  // 'titulaire'|'gestionnaire'|'membre'|null
+    const key = `ami_last_cab_role_${_userId}`;
+    const lastKnown = localStorage.getItem(key);   // string ou null
+
+    // Première connexion connue : juste mémoriser, pas de notif
+    if (lastKnown === null && currentRole === null) return;
+    if (lastKnown === null) {
+      localStorage.setItem(key, currentRole || '');
+      return;
+    }
+
+    // Pas de changement → rien
+    const normalized = currentRole || '';
+    if (lastKnown === normalized) return;
+
+    // Changement détecté : construire le message selon la transition
+    const ROLE_LABELS = { titulaire:'⭐ Titulaire', gestionnaire:'🛠️ Gestionnaire', membre:'👤 Membre' };
+    let title = '', msg = '', severity = 'info';
+
+    if (!lastKnown && currentRole) {
+      // Rejoint un cabinet
+      title = `🏥 Vous avez rejoint un cabinet`;
+      msg = `Votre rôle : ${ROLE_LABELS[currentRole] || currentRole}. Retrouvez les options de gestion dans la section Cabinet.`;
+      severity = 'success';
+    } else if (lastKnown && !currentRole) {
+      // Quitté un cabinet
+      title = `🏥 Vous n'êtes plus dans un cabinet`;
+      msg = `Votre rôle précédent (${ROLE_LABELS[lastKnown] || lastKnown}) a été révoqué.`;
+      severity = 'info';
+    } else if (lastKnown === 'membre' && currentRole === 'gestionnaire') {
+      title = `🎉 Promotion cabinet`;
+      msg = `Vous êtes désormais 🛠️ Gestionnaire du cabinet. Vous pouvez maintenant gérer les membres et consulter la conformité cabinet.`;
+      severity = 'success';
+    } else if (lastKnown === 'gestionnaire' && currentRole === 'membre') {
+      title = `ℹ️ Changement de rôle cabinet`;
+      msg = `Vous êtes désormais 👤 Membre standard du cabinet. L'accès à la gestion a été retiré.`;
+      severity = 'info';
+    } else if (lastKnown === 'membre' && currentRole === 'titulaire') {
+      title = `👑 Vous êtes maintenant titulaire`;
+      msg = `La propriété du cabinet vous a été transférée.`;
+      severity = 'success';
+    } else if (lastKnown === 'titulaire' && currentRole !== 'titulaire') {
+      title = `ℹ️ Transfert de propriété cabinet`;
+      msg = `Vous n'êtes plus titulaire. Rôle actuel : ${ROLE_LABELS[currentRole] || currentRole}.`;
+      severity = 'info';
+    } else {
+      // Cas générique
+      title = `🏥 Rôle cabinet modifié`;
+      msg = `${ROLE_LABELS[lastKnown]||lastKnown} → ${ROLE_LABELS[currentRole]||currentRole}`;
+    }
+
+    _notify(severity, title, msg);
+    localStorage.setItem(key, normalized);
+  }
+
+  /* ───── 14. EXPORT ──────────────────────────────────────── */
 
   return {
     getState, currentTier, hasAccess, requireAccess,
+    isCabinetManager, cabinetRole,
     bootstrap, refresh, upgrade,
     setAdminSim, clearAdminSim,
     showPaywall, applyUILocks, renderAbonnementPage,

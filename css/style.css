@@ -1866,3 +1866,66 @@ tbody tr:hover{background:var(--c)}tbody tr:last-child td{border-bottom:none}
   background:linear-gradient(135deg,rgba(255,181,71,.08),rgba(255,181,71,.02));
   border:1px solid rgba(255,181,71,.3)
 }
+
+/* ══════════════════════════════════════════════════════
+   📊 Modale stats consolidées cabinet (cabinet.js)
+══════════════════════════════════════════════════════ */
+.cab-stats-overlay{
+  position:fixed;inset:0;z-index:2200;
+  background:rgba(11,15,20,.88);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;
+  padding:20px;opacity:0;transition:opacity .2s
+}
+.cab-stats-overlay.open{display:flex}
+.cab-stats-overlay.visible{opacity:1}
+.cab-stats-card{
+  background:var(--c);border:1px solid var(--b);border-radius:var(--rl);
+  padding:28px 26px 22px;max-width:780px;width:100%;
+  max-height:90vh;overflow-y:auto;
+  box-shadow:0 24px 80px rgba(0,0,0,.8);
+  position:relative;
+  transform:scale(.96);transition:transform .2s
+}
+.cab-stats-overlay.visible .cab-stats-card{transform:scale(1)}
+.cab-stats-close{
+  position:absolute;top:12px;right:14px;width:32px;height:32px;
+  display:grid;place-items:center;font-size:22px;color:var(--m);
+  cursor:pointer;border-radius:8px;transition:all .15s
+}
+.cab-stats-close:hover{background:var(--s);color:var(--t)}
+.cab-stats-title{
+  font-family:var(--fs);font-size:22px;margin-bottom:4px;color:var(--t)
+}
+.cab-stats-sub{
+  font-family:var(--fm);font-size:11px;color:var(--m);
+  letter-spacing:.5px;margin-bottom:18px
+}
+.cab-stats-kpis{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:10px;margin-bottom:18px
+}
+.cab-stats-kpi{
+  background:var(--s);border:1px solid var(--b);border-radius:var(--r);
+  padding:14px 16px;text-align:center
+}
+.cab-stats-kpi-val{
+  font-family:var(--fs);font-size:24px;font-weight:normal;margin-bottom:4px
+}
+.cab-stats-kpi-lbl{
+  font-family:var(--fm);font-size:10px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--m)
+}
+.cab-stats-section-title{
+  font-family:var(--fm);font-size:10px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--m);margin:12px 0 8px;font-weight:700
+}
+.cab-stats-note{
+  background:rgba(79,168,255,.05);border:1px solid rgba(79,168,255,.2);
+  border-radius:var(--r);padding:10px 14px;font-size:12px;
+  color:var(--a2);line-height:1.5
+}
+@media(max-width:768px){
+  .cab-stats-card{padding:22px 18px 18px}
+  .cab-stats-title{font-size:19px}
+  .cab-stats-kpi-val{font-size:20px}
+}

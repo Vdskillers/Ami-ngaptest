@@ -606,7 +606,16 @@ function renderAccs(list){
         sub = `<span class="acc-sub-days ${lowStock?'urgent':''}">${daysRem}j payé${daysRem>1?'s':''}</span>`;
       }
       const ovrIcon = hasOverride ? ' 🛠️' : '';
-      const cabIcon = a.cabinet_member ? ` <span title="Membre d'un cabinet ${a.cabinet_size} IDE — bonus CABINET actif" style="cursor:help">🏥</span>` : '';
+      // Rôle cabinet : afficher un marqueur selon le rôle
+      let cabIcon = '';
+      if (a.cabinet_member) {
+        const roleLabels = { titulaire: '⭐ Titulaire', gestionnaire: '🛠️ Gestionnaire', membre: 'Membre' };
+        const roleLabel = roleLabels[a.cabinet_role] || 'Membre';
+        const tooltip = `Cabinet ${a.cabinet_size} IDE — ${roleLabel}`;
+        // Icône différenciée : 🏥 pour membre standard, ⭐ pour titulaire, 🛠️ pour gestionnaire
+        const icon = a.cabinet_role === 'titulaire' ? '⭐' : (a.cabinet_role === 'gestionnaire' ? '🛠️' : '🏥');
+        cabIcon = ` <span title="${tooltip}" style="cursor:help">${icon}</span>`;
+      }
       subPill = `<div class="acc-sub-pill" style="background:${tierColor}22;border-color:${tierColor}55;color:${tierColor}">
         <span class="acc-sub-label">${tierLabel}${ovrIcon}${cabIcon}</span>
         ${sub}

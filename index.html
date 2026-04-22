@@ -3839,7 +3839,13 @@ function _addNotifItem(type, title, msg) {
   // Dot visible
   const dot = document.getElementById('top-notif-dot');
   if (dot) dot.classList.add('show');
+  // Afficher le bouton cloche s'il était masqué
+  const btn = document.getElementById('top-notif-btn');
+  if (btn) btn.style.display = 'inline-flex';
 }
+// 💎 Exposer globalement pour subscription.js et autres modules
+window._addNotifItem = _addNotifItem;
+window.notify = _addNotifItem;
 function _renderNotifPanel() {
   const list = document.getElementById('notif-list');
   if (!list) return;

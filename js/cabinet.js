@@ -304,15 +304,37 @@ function _renderCabinetDashboard(root, d) {
   const membersHTML = members.map(m => {
     const isMe = m.id === APP.user?.id;
     const syncWith = prefs.with[m.id] !== false; // true par défaut pour les membres
+    const role = m.role || 'membre';
+
+    // Icônes + labels par rôle
+    const ROLE_VIEW = {
+      titulaire:    { icon:'⭐', label:'⭐ Titulaire',    color:'#ffb547' },
+      gestionnaire: { icon:'🛠️', label:'🛠️ Gestionnaire', color:'#c678dd' },
+      membre:       { icon:'👤', label:'👤 Membre',       color:'#4fa8ff' }
+    };
+    const rv = ROLE_VIEW[role] || ROLE_VIEW.membre;
+
+    // Boutons de gestion : visibles uniquement si l'user courant est TITULAIRE,
+    // et seulement sur les autres membres (pas sur lui-même)
+    let mgmtBtns = '';
+    if (myRole === 'titulaire' && !isMe) {
+      if (role === 'membre') {
+        mgmtBtns = `<button class="btn bs bsm" onclick="cabinetPromoteMember('${m.id}','${(m.prenom+' '+m.nom).trim().replace(/'/g,"\\'")}')"  title="Promouvoir en gestionnaire" style="padding:6px 10px;font-size:11px">⬆️ Promouvoir</button>`;
+      } else if (role === 'gestionnaire') {
+        mgmtBtns = `<button class="btn bs bsm" onclick="cabinetDemoteMember('${m.id}','${(m.prenom+' '+m.nom).trim().replace(/'/g,"\\'")}')" title="Rétrograder en membre standard" style="padding:6px 10px;font-size:11px;background:rgba(255,181,71,.08);border-color:rgba(255,181,71,.3);color:var(--w)">⬇️ Rétrograder</button>`;
+      }
+    }
+
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--b)">
-        <div style="width:36px;height:36px;border-radius:50%;background:rgba(0,212,170,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">
-          ${m.role === 'titulaire' ? '👑' : '👤'}
+        <div style="width:36px;height:36px;border-radius:50%;background:${rv.color}22;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">
+          ${rv.icon}
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:14px">${m.prenom} ${m.nom} ${isMe ? '<span style="font-size:10px;color:var(--a);font-family:var(--fm)">(moi)</span>' : ''}</div>
-          <div style="font-size:11px;color:var(--m);font-family:var(--fm)">${m.role === 'titulaire' ? '👑 Titulaire' : '👤 Membre'}</div>
+          <div style="font-size:11px;color:${rv.color};font-family:var(--fm)">${rv.label}</div>
         </div>
+        ${mgmtBtns}
         ${!isMe ? `
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--m);cursor:pointer;flex-shrink:0">
           <input type="checkbox" id="sync-with-${m.id}" ${syncWith ? 'checked' : ''}
@@ -362,7 +384,7 @@ function _renderCabinetDashboard(root, d) {
         <div>
           <div style="font-size:20px;font-family:var(--fs);font-weight:700">🏥 ${cab.nom}</div>
           <div style="font-size:12px;color:var(--m);font-family:var(--fm);margin-top:2px">
-            ${myRole === 'titulaire' ? '👑 Titulaire' : '👤 Membre'} · ${members.length} membre(s)
+            ${myRole === 'titulaire' ? '⭐ Titulaire' : (myRole === 'gestionnaire' ? '🛠️ Gestionnaire' : '👤 Membre')} · ${members.length} membre(s)
           </div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -374,6 +396,26 @@ function _renderCabinetDashboard(root, d) {
       <div class="ai in" style="font-size:12px">
         💡 <strong>Titulaire :</strong> Partagez l'ID du cabinet avec vos collègues pour qu'elles rejoignent.
         <span style="font-family:var(--fm);font-size:11px;color:var(--a);word-break:break-all">${cab.id}</span>
+      </div>` : ''}
+      ${['titulaire','gestionnaire'].includes(myRole) ? `
+      <!-- 🛠️ Outils manager cabinet (titulaire/gestionnaire uniquement) -->
+      <div style="margin-top:14px;padding:14px;background:linear-gradient(135deg,rgba(198,120,221,.06),rgba(198,120,221,.02));border:1px solid rgba(198,120,221,.25);border-radius:12px">
+        <div style="font-family:var(--fm);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#c678dd;font-weight:700;margin-bottom:10px">
+          🛠️ Outils manager cabinet
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn bs bsm" onclick="openCabinetStatsModal()"
+                  style="background:rgba(0,212,170,.08);border-color:rgba(0,212,170,.3);color:var(--a)">
+            📊 Stats consolidées
+          </button>
+          <button class="btn bs bsm" onclick="navTo('compliance')"
+                  style="background:rgba(198,120,221,.08);border-color:rgba(198,120,221,.3);color:#c678dd">
+            🧠 Conformité cabinet
+          </button>
+        </div>
+        <div style="font-size:11px;color:var(--m);margin-top:8px;line-height:1.5">
+          Accès réservé aux ⭐ titulaires et 🛠️ gestionnaires. Les simples membres (👤) ne voient pas ces fonctionnalités.
+        </div>
       </div>` : ''}
     </div>
 
@@ -1783,3 +1825,171 @@ window.cabinetPullSync      = cabinetPullSync;
 window.cabinetSyncStatus    = cabinetSyncStatus;
 window.cabinetCotation      = cabinetCotation;
 window.cabinetTournee       = cabinetTournee;
+
+/* ════════════════════════════════════════════════
+   🏥 CABINET MANAGER — actions (promotion/rétrogradation + stats)
+   ────────────────────────────────────────────────
+   Réservé aux TITULAIRES pour promouvoir/rétrograder.
+   Stats consolidées : titulaires ET gestionnaires.
+════════════════════════════════════════════════ */
+
+async function cabinetPromoteMember(memberId, memberName) {
+  if (!confirm(`Promouvoir ${memberName} en 🛠️ Gestionnaire ?\n\nLe gestionnaire pourra :\n• Gérer les membres du cabinet\n• Consulter les stats consolidées\n• Accéder à la conformité cabinet\n\nLes simples membres ne peuvent pas être rétrogradés par un gestionnaire.`)) return;
+  try {
+    const d = await apiCall('/webhook/cabinet-promote-member', { infirmiere_id: memberId });
+    if (!d.ok) throw new Error(d.error || 'Erreur');
+    if (typeof showToast === 'function') showToast(`✅ ${memberName} est maintenant gestionnaire.`, 'ok');
+    else alert(`✅ ${memberName} est maintenant gestionnaire.`);
+    await renderCabinetSection();
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('❌ ' + e.message, 'err');
+    else alert('❌ ' + e.message);
+  }
+}
+
+async function cabinetDemoteMember(memberId, memberName) {
+  if (!confirm(`Rétrograder ${memberName} en 👤 Membre standard ?\n\nCette personne perdra immédiatement :\n• L'accès à la gestion des membres\n• L'accès aux stats consolidées\n• L'accès à la conformité cabinet`)) return;
+  try {
+    const d = await apiCall('/webhook/cabinet-demote-member', { infirmiere_id: memberId });
+    if (!d.ok) throw new Error(d.error || 'Erreur');
+    if (typeof showToast === 'function') showToast(`✅ ${memberName} a été rétrogradé.`, 'ok');
+    else alert(`✅ ${memberName} a été rétrogradé en membre standard.`);
+    await renderCabinetSection();
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('❌ ' + e.message, 'err');
+    else alert('❌ ' + e.message);
+  }
+}
+
+/* ────────────────────────────────────────────────
+   📊 Modale stats consolidées cabinet
+──────────────────────────────────────────────── */
+
+async function openCabinetStatsModal() {
+  // Créer ou réutiliser la modale
+  let modal = document.getElementById('cabinet-stats-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'cabinet-stats-modal';
+    modal.className = 'cab-stats-overlay';
+    modal.addEventListener('click', e => { if (e.target === modal) closeCabinetStatsModal(); });
+    document.body.appendChild(modal);
+  }
+
+  // Loading state
+  modal.innerHTML = `
+    <div class="cab-stats-card">
+      <div class="cab-stats-close" onclick="closeCabinetStatsModal()">×</div>
+      <h2 class="cab-stats-title">📊 Stats consolidées du cabinet</h2>
+      <div style="text-align:center;padding:40px 20px;color:var(--m)">
+        <div class="spin" style="width:24px;height:24px;margin:0 auto 12px;border-color:var(--a) transparent transparent transparent"></div>
+        Chargement des données agrégées…
+      </div>
+    </div>
+  `;
+  modal.classList.add('open');
+  setTimeout(() => modal.classList.add('visible'), 10);
+
+  // Fetch data
+  try {
+    const d = await apiCall('/webhook/cabinet-consolidated-stats', {});
+    if (!d.ok) throw new Error(d.error || 'Erreur');
+    _renderCabinetStats(modal, d);
+  } catch (e) {
+    modal.querySelector('.cab-stats-card').innerHTML = `
+      <div class="cab-stats-close" onclick="closeCabinetStatsModal()">×</div>
+      <h2 class="cab-stats-title">📊 Stats consolidées du cabinet</h2>
+      <div style="text-align:center;padding:40px 20px;color:var(--d)">
+        ⚠️ Erreur : ${e.message}
+      </div>
+    `;
+  }
+}
+
+function closeCabinetStatsModal() {
+  const modal = document.getElementById('cabinet-stats-modal');
+  if (!modal) return;
+  modal.classList.remove('visible');
+  setTimeout(() => modal.classList.remove('open'), 200);
+}
+
+function _renderCabinetStats(modal, d) {
+  const ROLE_LABELS = { titulaire:'⭐ Titulaire', gestionnaire:'🛠️ Gestionnaire', membre:'👤 Membre' };
+  const ROLE_COLORS = { titulaire:'#ffb547', gestionnaire:'#c678dd', membre:'#4fa8ff' };
+
+  const perIdeRows = (d.per_ide || [])
+    .sort((a,b) => b.ca_30j - a.ca_30j)
+    .map(ide => {
+      const roleLabel = ROLE_LABELS[ide.role] || ide.role;
+      const roleColor = ROLE_COLORS[ide.role] || 'var(--m)';
+      const topCodes = (ide.top_codes || []).map(c =>
+        `<span style="background:var(--s);padding:2px 7px;border-radius:10px;font-size:10px;font-family:var(--fm);margin-right:4px">${c.code}×${c.count}</span>`
+      ).join('');
+      return `
+        <tr>
+          <td style="padding:10px 8px;border-bottom:1px solid var(--b)">
+            <div style="font-weight:600;font-size:13px">${ide.prenom} ${ide.nom}</div>
+            <div style="font-size:10px;color:${roleColor};font-family:var(--fm);margin-top:2px">${roleLabel}</div>
+          </td>
+          <td style="padding:10px 8px;border-bottom:1px solid var(--b);text-align:right;font-family:var(--fm);font-weight:600;color:var(--a)">
+            ${(ide.ca_30j || 0).toFixed(2)} €
+          </td>
+          <td style="padding:10px 8px;border-bottom:1px solid var(--b);text-align:center;font-family:var(--fm);color:var(--m)">
+            ${ide.nb_actes_30j || 0}
+          </td>
+          <td style="padding:10px 8px;border-bottom:1px solid var(--b)">
+            ${topCodes || '<span style="color:var(--m);font-size:10px">—</span>'}
+          </td>
+        </tr>`;
+    }).join('');
+
+  modal.querySelector('.cab-stats-card').innerHTML = `
+    <div class="cab-stats-close" onclick="closeCabinetStatsModal()">×</div>
+    <h2 class="cab-stats-title">📊 Stats consolidées du cabinet</h2>
+    <div class="cab-stats-sub">30 derniers jours · ${d.members_count} membre${d.members_count>1?'s':''}</div>
+
+    <!-- KPIs globaux -->
+    <div class="cab-stats-kpis">
+      <div class="cab-stats-kpi">
+        <div class="cab-stats-kpi-val" style="color:var(--a)">${(d.total_ca_30j || 0).toFixed(2)} €</div>
+        <div class="cab-stats-kpi-lbl">CA cabinet (30j)</div>
+      </div>
+      <div class="cab-stats-kpi">
+        <div class="cab-stats-kpi-val" style="color:var(--a2)">${d.total_actes_30j || 0}</div>
+        <div class="cab-stats-kpi-lbl">Actes facturés</div>
+      </div>
+      <div class="cab-stats-kpi">
+        <div class="cab-stats-kpi-val" style="color:var(--w)">${((d.total_ca_30j || 0) / Math.max(1, d.members_count)).toFixed(2)} €</div>
+        <div class="cab-stats-kpi-lbl">CA moyen / IDE</div>
+      </div>
+    </div>
+
+    <!-- Table par IDE -->
+    <div class="cab-stats-section-title">Performance par IDE</div>
+    <div style="overflow-x:auto;background:var(--s);border:1px solid var(--b);border-radius:var(--r);margin-bottom:14px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--c)">
+            <th style="padding:10px 8px;text-align:left;font-family:var(--fm);font-size:11px;letter-spacing:.5px;color:var(--m);text-transform:uppercase">IDE</th>
+            <th style="padding:10px 8px;text-align:right;font-family:var(--fm);font-size:11px;letter-spacing:.5px;color:var(--m);text-transform:uppercase">CA 30j</th>
+            <th style="padding:10px 8px;text-align:center;font-family:var(--fm);font-size:11px;letter-spacing:.5px;color:var(--m);text-transform:uppercase">Actes</th>
+            <th style="padding:10px 8px;text-align:left;font-family:var(--fm);font-size:11px;letter-spacing:.5px;color:var(--m);text-transform:uppercase">Top codes NGAP</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${perIdeRows || '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--m)">Aucune donnée sur les 30 derniers jours</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cab-stats-note">
+      🔒 <strong>RGPD :</strong> Seuls les codes NGAP et montants agrégés sont exposés. Aucune donnée patient identifiable.
+    </div>
+  `;
+}
+
+/* Expose globalement pour onclick inline */
+window.cabinetPromoteMember = cabinetPromoteMember;
+window.cabinetDemoteMember  = cabinetDemoteMember;
+window.openCabinetStatsModal = openCabinetStatsModal;
+window.closeCabinetStatsModal = closeCabinetStatsModal;
