@@ -1,11 +1,12 @@
-/* sw.js — AMI NGAP Service Worker v3.8
+/* sw.js — AMI NGAP Service Worker v3.8-TEST (SANDBOX)
+   ⚠️ VERSION SANDBOX — NE PAS DIFFUSER
    ✅ Fix: ne cache JAMAIS les requêtes POST (crash "method unsupported")
-   ✅ Chemins relatifs pour GitHub Pages /Ami-ngap/
+   ✅ Chemins relatifs pour GitHub Pages /Ami-ngaptest/
    ✅ Cache uniquement GET
-   ✅ v3.8 — purge totale du cache après rollback domaine personnalisé
+   ✅ Préfixe cache isolé (amitest-) pour ne pas entrer en conflit avec la PWA prod
 */
 
-const CACHE_VERSION = 'ami-v3.8';
+const CACHE_VERSION = 'amitest-v3.8';
 const CACHE_STATIC  = CACHE_VERSION + '-static';
 const CACHE_TILES   = CACHE_VERSION + '-tiles';
 
