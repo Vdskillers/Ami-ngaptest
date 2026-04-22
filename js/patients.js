@@ -604,7 +604,10 @@ async function loadPatients() {
       </div>
       <div class="acc-acts">
         <button class="bxs b-unblk" onclick="event.stopPropagation();coterDepuisPatient('${p.id}')">⚡ Coter</button>
-        <button class="bxs" onclick="event.stopPropagation();_importSinglePatient('${p.id}')" title="Ajouter à la tournée IA — géocode et importe ce patient dans la tournée optimisée" style="background:rgba(0,212,170,.1);color:var(--a);border:1px solid rgba(0,212,170,.2)">🗺️ Tournée</button>
+        ${(typeof SUB === 'undefined' || SUB.hasAccess('tournee_ia_vrptw'))
+          ? `<button class="bxs" onclick="event.stopPropagation();_importSinglePatient('${p.id}','tur')" title="Ajouter à la tournée IA — géocode et importe ce patient dans la tournée optimisée" style="background:rgba(0,212,170,.1);color:var(--a);border:1px solid rgba(0,212,170,.2)">🗺️ Tournée</button>`
+          : ''}
+        <button class="bxs" onclick="event.stopPropagation();_importSinglePatient('${p.id}','live')" title="Ajouter au pilotage journée — à utiliser avec le point de départ GPS" style="background:rgba(79,168,255,.1);color:var(--a2);border:1px solid rgba(79,168,255,.25)">📍 Pilotage</button>
         <button class="bxs b-del" onclick="event.stopPropagation();deletePatient('${p.id}','${fullName.replace(/'/g,'')}')">🗑️</button>
       </div>
     </div>`;
@@ -1987,7 +1990,10 @@ async function openPatientImportPicker() {
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <span id="picker-count" style="font-size:12px;color:var(--m);font-family:var(--fm);flex:1">0 patient(s) sélectionné(s)</span>
         <button onclick="_selectAllPickerPatients()" class="btn bs bsm">☑️ Tout sélectionner</button>
-        <button onclick="_importPickerPatients()" class="btn bp bsm" id="btn-picker-import">📥 Importer dans la tournée</button>
+        ${(typeof SUB === 'undefined' || SUB.hasAccess('tournee_ia_vrptw'))
+          ? `<button onclick="_importPickerPatients('tur')" class="btn bp bsm" id="btn-picker-import-tur" title="Importer dans la Tournée optimisée par IA">📥 Tournée IA</button>`
+          : ''}
+        <button onclick="_importPickerPatients('live')" class="btn bp bsm" id="btn-picker-import-live" style="background:rgba(79,168,255,.15);color:var(--a2);border-color:rgba(79,168,255,.4)" title="Importer dans le Pilotage journée (point de départ GPS)">📍 Pilotage journée</button>
       </div>
     </div>`;
 
@@ -2172,11 +2178,12 @@ async function _geocodePatients(patients, onProgress) {
   return { patients: results, geocoded, failed };
 }
 
-async function _importPickerPatients() {
+async function _importPickerPatients(target) {
+  target = target || 'tur';
   if (_selectedPatientIds.size === 0) { showToastSafe('⚠️ Sélectionnez au moins un patient.'); return; }
 
   const rows = await _idbGetAll(PATIENTS_STORE);
-  const selected = rows
+  const allSelected = rows
     .filter(r => _selectedPatientIds.has(r.id))
     .map(r => {
       const p = { id: r.id, nom: r.nom, prenom: r.prenom, ...(_dec(r._data)||{}) };
@@ -2212,8 +2219,34 @@ async function _importPickerPatients() {
       };
     });
 
+  // ── Filtre OBLIGATOIRE : rejeter les patients sans adresse exploitable ──
+  // S'applique aux 2 cibles (Tournée IA + Pilotage journée) — le routage et
+  // le point de départ GPS nécessitent tous deux une adresse géocodable.
+  const hasRealAddr = p => p.adresse && p.adresse !== 'France' && p.adresse.trim().length >= 4;
+  const selected = allSelected.filter(hasRealAddr);
+  const rejected = allSelected.filter(p => !hasRealAddr(p));
+
+  if (selected.length === 0) {
+    showToastSafe(`⚠️ Aucun des patients sélectionnés n'a d'adresse renseignée. Ouvrez la fiche patient (rue + CP + ville) puis réessayez.`);
+    return;
+  }
+
+  if (rejected.length > 0) {
+    const names = rejected.slice(0, 3).map(p => `${p.prenom||''} ${p.nom}`.trim()).join(', ')
+                + (rejected.length > 3 ? `, +${rejected.length - 3}` : '');
+    const ok = confirm(
+      `⚠️ ${rejected.length} patient(s) sans adresse seront IGNORÉS :\n${names}\n\n` +
+      `Seuls les ${selected.length} patient(s) avec adresse seront importés dans le ${target === 'live' ? 'pilotage journée' : 'tournée'}.\n\n` +
+      `Continuer ?`
+    );
+    if (!ok) return;
+  }
+
   // Afficher progression géocodage dans la modale
-  const btn = document.getElementById('btn-picker-import');
+  //   Le bouton actif dépend du target (tur = btn-picker-import-tur, live = btn-picker-import-live)
+  const btnId = target === 'live' ? 'btn-picker-import-live' : 'btn-picker-import-tur';
+  const btnLabel = target === 'live' ? '📍 Pilotage journée' : '📥 Tournée IA';
+  const btn = document.getElementById(btnId);
   const cnt = document.getElementById('picker-count');
   const withAddr = selected.filter(p => p.adresse && p.adresse !== 'France').length;
 
@@ -2228,7 +2261,7 @@ async function _importPickerPatients() {
       }
     );
 
-    if (btn) { btn.disabled = false; btn.textContent = '📥 Importer dans la tournée'; }
+    if (btn) { btn.disabled = false; btn.textContent = btnLabel; }
 
     const msg = ok > 0
       ? `✅ ${ok} adresse(s) géocodée(s)${failed > 0 ? ` · ⚠️ ${failed} sans coordonnées` : ''}`
@@ -2244,25 +2277,23 @@ async function _importPickerPatients() {
 
     showToastSafe(`✅ ${geocoded.length} patient(s) importé(s) — ${ok} position(s) GPS résolue(s).`);
   } else {
-    // Pas d'adresses → import direct sans géocodage
-    if (typeof storeImportedData === 'function') {
-      storeImportedData({ patients: selected, total: selected.length, source: 'Carnet patients' });
-    } else {
-      APP.importedData = { patients: selected, total: selected.length, source: 'Carnet patients' };
-    }
-    showToastSafe(`⚠️ ${selected.length} patient(s) importé(s) sans adresse GPS — ajoutez des adresses dans le carnet.`);
+    // Safety net : ne devrait jamais être atteint grâce au filtre hasRealAddr ci-dessus
+    showToastSafe(`⚠️ Aucune adresse exploitable — opération annulée.`);
+    return;
   }
 
   // Fermer modale
   const modal = document.getElementById('patient-import-picker-modal');
   if (modal) modal.style.display = 'none';
 
-  // Naviguer vers la Tournée IA
-  if (typeof navTo === 'function') navTo('tur', null);
+  // Naviguer vers la vue cible (tur = Tournée IA, live = Pilotage journée)
+  if (typeof navTo === 'function') navTo(target, null);
 }
 
-/* Import rapide d'un seul patient (depuis la liste) */
-async function _importSinglePatient(id) {
+/* Import rapide d'un seul patient (depuis la liste)
+   @param target 'tur' (Tournée IA) | 'live' (Pilotage journée) — défaut 'tur' pour rétrocompat */
+async function _importSinglePatient(id, target) {
+  target = target || 'tur';
   const rows = await _idbGetAll(PATIENTS_STORE);
   const row  = rows.find(r => r.id === id);
   if (!row) return;
@@ -2342,9 +2373,10 @@ async function _importSinglePatient(id) {
   }
 
   const gpsMsg = lat ? ` (📍 GPS résolu)` : ` (⚠️ adresse sans coordonnées GPS — tournée moins précise)`;
-  showToastSafe(`🗺️ ${(p.prenom||'')} ${p.nom} ajouté(e) à la tournée${gpsMsg}.`);
-  // Naviguer vers la tournée
-  if (typeof navTo === 'function') navTo('tur', null);
+  const targetMsg = target === 'live' ? 'pilotage journée' : 'tournée';
+  showToastSafe(`🗺️ ${(p.prenom||'')} ${p.nom} ajouté(e) à la ${targetMsg}${gpsMsg}.`);
+  // Naviguer vers la vue cible (tur = Tournée IA, live = Pilotage journée)
+  if (typeof navTo === 'function') navTo(target, null);
 }
 
 /* Géocoder l'adresse d'un patient et sauvegarder lat/lng dans l'IDB */

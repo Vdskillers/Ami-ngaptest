@@ -1929,3 +1929,6 @@ tbody tr:hover{background:var(--c)}tbody tr:last-child td{border-bottom:none}
   .cab-stats-title{font-size:19px}
   .cab-stats-kpi-val{font-size:20px}
 }
+
+/* ─── Historique : masquer colonne IDE(s) si pas membre cabinet ─── */
+.hist-hide-ide .hist-col-ide { display: none !important; }

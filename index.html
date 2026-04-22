@@ -806,7 +806,6 @@
     <!-- Actions : Mon compte + Retour + Déconnexion -->
     <div class="adm-top-actions">
       <button class="bs bsm" onclick="openPM()">👤 Mon compte</button>
-      <button class="bs bsm" id="adm-sim-tier-btn" onclick="openTierSimulator()" title="Simuler un tier d'abonnement pour tester les verrous" style="background:rgba(198,120,221,.08);border-color:rgba(198,120,221,.3);color:#c678dd">💎 Simuler tier</button>
       <button class="bs bsm" onclick="goToApp()">← Retour à l'app</button>
       <button class="bout bsm" onclick="logout()">⏻ Déconnexion</button>
     </div>
@@ -833,25 +832,6 @@
 
     <!-- ═══ ONGLET : COMPTES ═══ -->
     <div class="adm-tab-section" data-tab="comptes">
-      <!-- 💎 Mode application — switch global TEST ↔ PAYANT -->
-      <div id="adm-app-mode-card" class="adm-app-mode-card">
-        <div style="text-align:center;padding:18px;color:var(--m);font-size:13px">
-          <div class="spin spinw" style="width:18px;height:18px;margin:0 auto 8px"></div>
-          Chargement du mode application…
-        </div>
-      </div>
-
-      <!-- 💎 Statut simulation tier (n'apparaît que si simulation active) -->
-      <div id="adm-sim-status" style="display:none;background:linear-gradient(135deg,rgba(198,120,221,.08),rgba(198,120,221,.02));border:1px solid rgba(198,120,221,.3);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;align-items:center;gap:14px;flex-wrap:wrap">
-        <span style="font-size:20px">💎</span>
-        <div style="flex:1;min-width:200px">
-          <div style="font-weight:700;color:#c678dd;margin-bottom:2px">Simulation de tier active</div>
-          <div id="adm-sim-status-text" style="font-size:12px;color:var(--m)">—</div>
-        </div>
-        <button class="bs bsm" onclick="SUB.clearAdminSim(); updateAdmSimStatus()" style="font-size:11px;padding:6px 12px">Arrêter la simulation</button>
-        <button class="bs bsm" onclick="openTierSimulator()" style="font-size:11px;padding:6px 12px">Changer</button>
-      </div>
-
       <!-- Liste des comptes avec statut et actions -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
         <div class="lbl">👥 Comptes infirmiers</div>
@@ -1184,7 +1164,6 @@
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Système</div>
       <div class="ni nurse-only" data-v="ngap-ref"><span class="nic">📚</span> Référentiel NGAP</div>
-      <div class="ni" data-v="mon-abo"><span class="nic">💎</span> Mon abonnement <span id="abo-trial-pill" style="display:none;background:rgba(0,212,170,.18);color:var(--a);border-radius:20px;font-size:9px;padding:1px 7px;margin-left:4px;font-family:var(--fm);font-weight:700"></span></div>
       <div class="ni" data-v="aide"><span class="nic">📖</span> Aide & Docs</div>
       <div class="ni nurse-only" data-v="contact"><span class="nic">💬</span> Contact Admin <span id="contact-badge" style="display:none;background:#ef4444;color:#fff;border-radius:20px;font-size:9px;padding:1px 6px;margin-left:4px;font-family:var(--fm)">!</span></div>
       <div class="ni nurse-only" data-v="sec"><span class="nic">🛡️</span> Sécurité</div>
@@ -2104,7 +2083,7 @@
             <th>Actes</th>
             <th>Total</th>
             <th>Statut</th>
-            <th>IDE(s)</th>
+            <th id="hist-th-ide" class="hist-col-ide">IDE(s)</th>
             <th>Alertes</th>
             <th></th>
             <th></th>
@@ -3150,12 +3129,6 @@
       <div id="compliance-root"></div>
     </section>
 
-    <!-- 💎 Mon abonnement — rendu dynamique par subscription.js -->
-    <section class="view" id="view-mon-abo">
-      <!-- Contenu injecté dynamiquement par SUB.renderAbonnementPage() -->
-      <div style="padding:60px 20px;text-align:center;color:var(--m)">Chargement…</div>
-    </section>
-
   </main>
 </div>
 
@@ -3169,7 +3142,6 @@
 
 <!-- Modules fonctionnels -->
 <script src="js/auth.js?v=3.8"></script>
-<script src="js/subscription.js?v=1.0"></script><!-- 💎 Gating features + essai 30j + paywall -->
 <script src="js/cabinet.js?v=3.9"></script><!-- Mode cabinet multi-IDE + sync sélective + 🛡️ consentements partagés -->
 <script src="js/security.js?v=3.8"></script><!-- RGPD + AES + PIN + Consentement -->
 <script src="js/admin.js?v=3.8"></script>
@@ -3296,6 +3268,18 @@ async function hist() {
   const tbody = document.getElementById('htb');
   const stats = document.getElementById('hstats');
   if (!tbody) return;
+
+  // 🏥 Colonne IDE(s) : visible uniquement si membre d'un cabinet multi-IDE.
+  //   L'admin en bypass réel la voit aussi (pour debug/test).
+  //   L'admin en simulation suit la logique "IDEL simulée" : si pas cabinet member, masqué.
+  (function _toggleIdeCol() {
+    const st = (typeof SUB !== 'undefined' && SUB.getState) ? SUB.getState() : null;
+    const showIdeCol = st
+      ? (st.cabinetMember || (st.isAdmin && !st.isAdminSim))
+      : true;  // fallback si SUB pas chargé : on affiche (non-régression)
+    const histTable = document.querySelector('#view-his .ht table');
+    if (histTable) histTable.classList.toggle('hist-hide-ide', !showIdeCol);
+  })();
 
   tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px"><div class="spin spinw" style="width:24px;height:24px;margin:0 auto"></div></td></tr>';
 
@@ -3445,7 +3429,7 @@ async function hist() {
         <td style="max-width:160px">${actesHtml}</td>
         <td class="pt-ca" style="white-space:nowrap">${parseFloat(r.total||0).toFixed(2)}&nbsp;€</td>
         <td>${statutHtml}</td>
-        <td>${idesHtml}</td>
+        <td class="hist-col-ide">${idesHtml}</td>
         <td>${alertsHtml}</td>
         <td><button class="btn bs bsm hist-edit-btn" style="font-size:10px;padding:3px 8px"
           data-hist-id="${r.id}"
@@ -3839,13 +3823,7 @@ function _addNotifItem(type, title, msg) {
   // Dot visible
   const dot = document.getElementById('top-notif-dot');
   if (dot) dot.classList.add('show');
-  // Afficher le bouton cloche s'il était masqué
-  const btn = document.getElementById('top-notif-btn');
-  if (btn) btn.style.display = 'inline-flex';
 }
-// 💎 Exposer globalement pour subscription.js et autres modules
-window._addNotifItem = _addNotifItem;
-window.notify = _addNotifItem;
 function _renderNotifPanel() {
   const list = document.getElementById('notif-list');
   if (!list) return;
