@@ -33,7 +33,7 @@ window.SUB = (function(){
     PRO:       { label:'AMI Pro',              price:'39 € HT / mois',     priority:2,   color:'#00d4aa' },
     CABINET:   { label:'AMI Cabinet',          price:'29 € HT / IDE / mois', priority:3, color:'#ffb547' },
     PREMIUM:   { label:'AMI Premium',          price:'+15 € HT / mois',    priority:4,   color:'#c678dd' },
-    COMPTABLE: { label:'AMI Comptable',        price:'99 € HT + 5 €/IDEL', priority:5,   color:'#ff5f6d' },
+    COMPTABLE: { label:'AMI Comptable',        price:'99 € HT / mois', priority:5,   color:'#ff5f6d', pricingDetail:'20 IDEL incluses · +5 € HT par IDEL supplémentaire' },
     LOCKED:    { label:'Aucun abonnement',     price:'—',                 priority:0,   color:'#6a8099' },
     ADMIN:     { label:'Admin (bypass)',       price:'—',                 priority:999, color:'#ff5f6d' }
   };
@@ -463,7 +463,7 @@ window.SUB = (function(){
     PRO:       { subtitle:'IDEL solo active', features:['✨ Tout AMI Essentiel','Dashboard & statistiques','Simulateur audit CPAM','Copilote IA (xAI Grok)','BSI, Pilulier, Constantes','Alertes médicamenteuses','Compte-rendu + Consentements','Tournée IA (VRPTW + 2-opt)'], popular:true },
     CABINET:   { subtitle:'Cabinet 2 à 6 IDE', features:['✨ Tout AMI Pro','Mode cabinet multi-IDE','Planning partagé','Transmissions collaboratives','Répartition intelligente','Consentements partagés','🧠 Conformité cabinet (manager)','📊 Stats consolidées (manager)','🛠️ Gestion des membres (titulaire)'] },
     PREMIUM:   { subtitle:'IDEL haut volume (add-on)', features:['✨ S\'ajoute à Pro ou Cabinet','Optimisation CA avancée','Détection CA sous-déclaré','Protection médico-légale renforcée','Certificats forensiques horodatés','SLA support prioritaire < 2h','Rapport juridique mensuel'] },
-    COMPTABLE: { subtitle:'Expert-comptable santé', features:['Dashboard consolidé multi-IDEL','Export liasse fiscale (2035)','Scoring risque portfolio','Vue anonymisée patient','Alertes anomalies cabinet','Rapports trimestriels'] }
+    COMPTABLE: { subtitle:'Cabinet d\'expertise comptable santé', features:['Dashboard consolidé multi-IDEL (jusqu\'à 20 incluses)','Export FEC + liasse fiscale 2035','Générateur 2042-C-PRO · URSSAF · CARPIMKO','Scoring risque portfolio client','Alertes anomalies NGAP en masse','Connecteurs Cegid · EBP · Quadra','Vue anonymisée (pseudo-FEC)','Rapports trimestriels automatiques'] }
   };
 
   function renderAbonnementPage() {
@@ -539,8 +539,16 @@ window.SUB = (function(){
         </div>`;
     }
 
-    const planCards = Object.entries(PLAN_DETAILS).map(([key, detail]) => {
+    // 💎 Groupement des plans en 2 familles distinctes (Option A)
+    //   → IDEL : Essentiel, Pro, Cabinet, Premium (achetés par l'infirmière elle-même)
+    //   → Expert-comptable : Comptable (acheté par un cabinet comptable, pricing per-seat)
+    const IDEL_PLANS = ['ESSENTIEL','PRO','CABINET','PREMIUM'];
+    const COMPTA_PLANS = ['COMPTABLE'];
+
+    function _renderPlanCard(key) {
+      const detail = PLAN_DETAILS[key];
       const tinfo = TIERS[key];
+      if (!detail || !tinfo) return '';
       const isCurrent = !st.isAdmin && st.tier === key;
       const popularBadge = detail.popular ? '<div class="sub-plan-popular">⭐ Le plus choisi</div>' : '';
       let btnLabel, btnAction;
@@ -548,6 +556,10 @@ window.SUB = (function(){
       else if (isCurrent) { btnLabel = 'Plan actuel'; btnAction = ''; }
       else { btnLabel = 'Choisir ce plan'; btnAction = `SUB._confirmUpgrade('${key}')`; }
       const featuresList = detail.features.map(f => `<li>${f}</li>`).join('');
+      // Détail de pricing (ex: "20 IDEL incluses · +5 € HT/IDEL supplémentaire" pour Comptable)
+      const pricingDetail = tinfo.pricingDetail
+        ? `<div class="sub-plan-price-detail">${tinfo.pricingDetail}</div>`
+        : '';
 
       return `
         <div class="sub-plan-card ${detail.popular?'popular':''} ${isCurrent?'current':''}" data-tier="${key}">
@@ -556,6 +568,7 @@ window.SUB = (function(){
             <div class="sub-plan-name" style="color:${tinfo.color}">${tinfo.label}</div>
             <div class="sub-plan-subtitle">${detail.subtitle}</div>
             <div class="sub-plan-price">${tinfo.price}</div>
+            ${pricingDetail}
           </div>
           <ul class="sub-plan-features">${featuresList}</ul>
           <button class="sub-plan-cta ${isCurrent?'current':''}" ${isCurrent?'disabled':''}
@@ -564,7 +577,10 @@ window.SUB = (function(){
             ${btnLabel}
           </button>
         </div>`;
-    }).join('');
+    }
+
+    const idelCards   = IDEL_PLANS.map(_renderPlanCard).join('');
+    const comptaCards = COMPTA_PLANS.map(_renderPlanCard).join('');
 
     let adminPanel = '';
     if (st.isAdmin) {
@@ -595,7 +611,27 @@ window.SUB = (function(){
         ${cabinetBanner}
         ${header}
         ${adminPanel}
-        <div class="sub-plans-grid">${planCards}</div>
+
+        <!-- 👩‍⚕️ Famille IDEL — plans achetés par l'infirmière elle-même -->
+        <div class="sub-plans-group-header">
+          <div class="sub-plans-group-title">
+            <span style="font-size:22px">👩‍⚕️</span>
+            <span>Pour les infirmières libérales</span>
+          </div>
+          <div class="sub-plans-group-sub">Abonnements individuels — l'IDEL choisit et paie son plan.</div>
+        </div>
+        <div class="sub-plans-grid">${idelCards}</div>
+
+        <!-- 🧑‍💼 Famille Expert-comptable — plan multi-IDEL pour cabinets comptables -->
+        <div class="sub-plans-group-header compta">
+          <div class="sub-plans-group-title">
+            <span style="font-size:22px">🧑‍💼</span>
+            <span>Pour les experts-comptables santé</span>
+          </div>
+          <div class="sub-plans-group-sub">Plan multi-cabinets pour les experts-comptables qui gèrent plusieurs IDEL clientes. Tarifs en per-seat : <b>à partir de 10 € HT / IDEL / mois</b> pour un portefeuille de 20 clientes.</div>
+        </div>
+        <div class="sub-plans-grid compta">${comptaCards}</div>
+
         <div class="sub-abo-footer">
           <div class="sub-abo-footer-item"><div class="sub-abo-footer-ic">🔒</div><div><b>Paiement sécurisé</b><div class="sub-abo-footer-sub">Stripe · SEPA · CB</div></div></div>
           <div class="sub-abo-footer-item"><div class="sub-abo-footer-ic">↩️</div><div><b>Résiliable à tout moment</b><div class="sub-abo-footer-sub">Sans engagement</div></div></div>

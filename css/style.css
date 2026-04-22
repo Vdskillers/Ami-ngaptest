@@ -1932,3 +1932,42 @@ tbody tr:hover{background:var(--c)}tbody tr:last-child td{border-bottom:none}
 
 /* ─── Historique : masquer colonne IDE(s) si pas membre cabinet ─── */
 .hist-hide-ide .hist-col-ide { display: none !important; }
+
+/* ─── Mon abonnement : séparation IDEL / Expert-comptable ─── */
+.sub-plans-group-header{
+  margin:28px 0 14px;
+  padding:14px 18px;
+  background:linear-gradient(135deg,rgba(0,212,170,.05),rgba(0,212,170,.02));
+  border-left:3px solid var(--a);
+  border-radius:10px;
+}
+.sub-plans-group-header.compta{
+  background:linear-gradient(135deg,rgba(255,95,109,.06),rgba(255,95,109,.02));
+  border-left-color:#ff5f6d;
+  margin-top:36px;
+}
+.sub-plans-group-title{
+  display:flex;align-items:center;gap:10px;
+  font-family:var(--fs);font-size:18px;font-weight:700;color:var(--t);
+  margin-bottom:4px;
+}
+.sub-plans-group-sub{
+  font-size:12px;color:var(--m);font-family:var(--fm);line-height:1.55;
+}
+.sub-plans-group-sub b{color:var(--t);font-weight:600}
+
+/* Comptable : grille à 1 colonne large centrée (1 seul plan) */
+.sub-plans-grid.compta{
+  grid-template-columns:minmax(280px,420px);
+  justify-content:center;
+}
+
+/* Détail de prix sous le tarif principal (ex: "20 IDEL incluses...") */
+.sub-plan-price-detail{
+  font-size:11px;color:var(--m);font-family:var(--fm);
+  margin-top:6px;line-height:1.4;
+  padding:6px 10px;
+  background:rgba(79,168,255,.05);
+  border-radius:6px;
+  border:1px solid rgba(79,168,255,.12);
+}
