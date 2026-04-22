@@ -2079,3 +2079,231 @@ tbody tr:hover{background:var(--c)}tbody tr:last-child td{border-bottom:none}
   width: 100%;
   justify-content: center;
 }
+
+/* ════════════════════════════════════════════════════════
+   💎 PREMIUM add-on — Styles des 3 modules (+15€ HT/mois)
+   ca-sous-declare.js · forensic-cert.js · rapport-juridique.js
+═════════════════════════════════════════════════════════ */
+
+/* Badge "PREMIUM" dans les titres des vues */
+.sub-feat-pill {
+  display: inline-block;
+  background: linear-gradient(135deg, #c678dd, #9b59b6);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  margin-left: 8px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(198,120,221,.3);
+}
+
+/* ─── KPI row commun aux 3 modules ─── */
+.dash-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+.dash-kpi {
+  background: var(--s);
+  border: 1px solid var(--b);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.dash-kpi-label {
+  font-size: 11px;
+  color: var(--m);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.dash-kpi-val {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--t);
+  font-family: var(--fm);
+}
+
+/* ═══ ca-sous-declare.js ═══ */
+.sdc-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--b);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--s);
+  transition: opacity .2s;
+}
+.sdc-main { min-width: 0; }
+.sdc-pat {
+  font-weight: 600;
+  color: var(--t);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+.sdc-sub {
+  font-size: 12px;
+  color: var(--m);
+  margin-top: 2px;
+}
+.sdc-gain {
+  font-weight: 700;
+  color: #10b981;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* ═══ forensic-cert.js ═══ */
+.fc-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--b);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--s);
+}
+.fc-main { min-width: 0; }
+.fc-title {
+  font-weight: 600;
+  color: var(--t);
+  font-size: 14px;
+}
+.fc-sub {
+  font-size: 12px;
+  color: var(--m);
+  margin: 2px 0 4px;
+}
+.fc-hash {
+  font-family: var(--fm);
+  font-size: 11px;
+  color: var(--a);
+  background: rgba(0,212,170,.08);
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+  word-break: break-all;
+  cursor: help;
+}
+.fc-actions { display: flex; gap: 6px; }
+.fc-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.fc-badge.ok { background: rgba(16,185,129,.15); color: #10b981; }
+.fc-badge.ko { background: rgba(239,68,68,.15); color: #ef4444; }
+
+/* ═══ rapport-juridique.js ═══ */
+.rj-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--b);
+  margin-bottom: 16px;
+}
+.rj-toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--m);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.rj-toolbar select {
+  background: var(--s);
+  border: 1px solid var(--b);
+  color: var(--t);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.rj-report h3 {
+  color: var(--a);
+  border-bottom: 1px solid var(--b);
+  padding-bottom: 6px;
+  margin-top: 18px;
+}
+.rj-report h4 {
+  margin-top: 16px;
+  color: var(--t);
+  font-size: 14px;
+}
+.rj-table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.rj-table th, .rj-table td {
+  border: 1px solid var(--b);
+  padding: 6px 14px;
+  text-align: left;
+}
+.rj-table th {
+  background: var(--s);
+  color: var(--m);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+.rj-reco {
+  margin: 8px 0;
+  padding-left: 20px;
+  line-height: 1.7;
+  color: var(--t);
+}
+.rj-reco li {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.rj-foot {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--b);
+  font-size: 11px;
+  color: var(--m);
+  font-style: italic;
+}
+
+/* ═══ Petit bouton inline commun ═══ */
+.btn-mini {
+  background: var(--s);
+  border: 1px solid var(--b);
+  color: var(--t);
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-mini:hover:not(:disabled) {
+  background: var(--b);
+  border-color: var(--a);
+}
+.btn-mini:disabled { opacity: 0.4; cursor: default; }
+
+/* ═══ Responsive mobile pour les 3 vues ═══ */
+@media (max-width: 680px) {
+  .sdc-row { grid-template-columns: 1fr; gap: 6px; }
+  .sdc-gain { font-size: 13px; }
+  .fc-row { grid-template-columns: 1fr; }
+  .fc-actions { justify-content: flex-end; }
+  .rj-toolbar { flex-direction: column; align-items: stretch; }
+}

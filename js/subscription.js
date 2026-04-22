@@ -396,7 +396,11 @@ window.SUB = (function(){
     'outils-charges':'charges_calc','outils-modeles':'modeles_soins',
     'outils-simulation':'simulateur_maj','cabinet':'cabinet_multi_ide',
     'transmissions':'transmissions','compliance':'compliance_engine',
-    'ngap-ref':'ngap_ref','contact':'contact_admin','mon-abo':null
+    'ngap-ref':'ngap_ref','contact':'contact_admin','mon-abo':null,
+    // 💎 PREMIUM add-on (+15€ HT/mois)
+    'ca-sous-declare':'ca_sous_declare',
+    'forensic-cert':'forensic_certificates',
+    'rapport-juridique':'rapport_juridique_mensuel'
   };
 
   function _featureForView(v) { return NAV_FEATURE_MAP[v] || null; }

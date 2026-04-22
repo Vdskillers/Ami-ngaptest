@@ -1240,6 +1240,16 @@
       <div class="slbl">Cabinet</div>
       <div class="ni nurse-only" id="nav-cabinet-item" data-v="cabinet"><span class="nic">🏥</span> Cabinet &amp; synchronisation <span id="cabinet-nav-badge" style="display:none;background:rgba(0,212,170,.2);color:var(--a);border-radius:20px;font-size:9px;padding:1px 7px;margin-left:4px;font-family:var(--fm)">0</span></div>
     </div>
+    <!-- ═══ 💎 Section Premium (add-on +15€ HT/mois) ═══
+         applyUILocks() de subscription.js verrouille automatiquement
+         les items si l'user n'a pas l'add-on PREMIUM actif.
+    ═════════════════════════════════════════════════════ -->
+    <div class="sl" style="margin-top:8px">
+      <div class="slbl">💎 Premium</div>
+      <div class="ni nurse-only" data-v="ca-sous-declare"><span class="nic">💸</span> Détection CA sous-déclaré</div>
+      <div class="ni nurse-only" data-v="forensic-cert"><span class="nic">🛡️</span> Certificats forensiques</div>
+      <div class="ni nurse-only" data-v="rapport-juridique"><span class="nic">⚖️</span> Rapport juridique mensuel</div>
+    </div>
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Système</div>
       <div class="ni" data-v="mon-abo"><span class="nic">💎</span> Mon abonnement <span id="sub-nav-pill" style="display:none"></span></div>
@@ -1297,6 +1307,10 @@
       <button class="bn-item nurse-only" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="contact" onclick="navTo('contact',this);toggleMobileMenu()"><span class="bn-ic">💬</span>Contact</button>
       <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="aide" onclick="navTo('aide',this);toggleMobileMenu()"><span class="bn-ic">📖</span>Aide</button>
       <button class="bn-item nurse-only" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="sec" onclick="navTo('sec',this);toggleMobileMenu()"><span class="bn-ic">🛡️</span>Sécurité</button>
+      <!-- 💎 Vues PREMIUM (add-on) — fond violet léger pour les distinguer -->
+      <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="ca-sous-declare" onclick="navTo('ca-sous-declare',this);toggleMobileMenu()"><span class="bn-ic">💸</span>CA sous-déc.</button>
+      <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="forensic-cert" onclick="navTo('forensic-cert',this);toggleMobileMenu()"><span class="bn-ic">🛡️</span>Forensique</button>
+      <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="rapport-juridique" onclick="navTo('rapport-juridique',this);toggleMobileMenu()"><span class="bn-ic">⚖️</span>Rap. juridique</button>
       <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="mon-abo" onclick="navTo('mon-abo',this);toggleMobileMenu()"><span class="bn-ic">💎</span>Mon abo</button>
       <button id="btn-install-mobile" class="bn-item" style="display:none;background:var(--ad);border:1px solid rgba(0,212,170,.3);border-radius:12px;padding:12px 4px;height:auto;flex:none;color:var(--a)" onclick="installApp()"><span class="bn-ic">📱</span>Installer</button>
       <button id="btn-profil-mobile" class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" onclick="openPM();toggleMobileMenu()"><span class="bn-ic">👤</span>Profil</button>
@@ -3199,6 +3213,31 @@
       </div>
     </section>
 
+    <!-- ═══ 💎 VUES PREMIUM (add-on +15€ HT/mois) ═══
+         Rendues par ca-sous-declare.js / forensic-cert.js / rapport-juridique.js
+         via l'événement ui:navigate. Accès gated par SUB.requireAccess().
+    ═══════════════════════════════════════════════ -->
+    <section class="view" id="view-ca-sous-declare">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement de la détection CA sous-déclaré…
+      </div>
+    </section>
+
+    <section class="view" id="view-forensic-cert">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement des certificats forensiques…
+      </div>
+    </section>
+
+    <section class="view" id="view-rapport-juridique">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement du rapport juridique mensuel…
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -3264,6 +3303,12 @@
 <script src="js/consentements.js?v=3.9"></script><!-- 🛡️ v2.0 : cabinet sync + versionning + hash SHA-256 + check avant acte -->
 <script src="js/compliance-engine.js?v=3.9"></script><!-- 🧠 Scoring 4 piliers + auto-correction + risque prédictif + ranking patients -->
 <script src="js/subscription.js?v=3.9"></script><!-- 💎 Module SUB : abonnements, paywall, simulation tier, gating features -->
+<!-- ═══ 💎 Modules PREMIUM add-on (+15€ HT/mois) ═══
+     Tous gated par SUB.hasAccess(). Les non-PREMIUM voient le paywall.
+═════════════════════════════════════════════════ -->
+<script src="js/ca-sous-declare.js?v=1.0"></script><!-- 💸 Détection CA sous-déclaré (PREMIUM) -->
+<script src="js/forensic-cert.js?v=1.0"></script><!-- 🛡️ Certificats forensiques horodatés (PREMIUM) -->
+<script src="js/rapport-juridique.js?v=1.0"></script><!-- ⚖️ Rapport juridique mensuel (PREMIUM) -->
 <script src="js/alertes-medicaments.js?v=3.8"></script>
 <script src="js/audit-cpam.js?v=3.9"></script>
 

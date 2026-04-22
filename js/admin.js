@@ -1027,6 +1027,17 @@ function openSubOverrideModal(userId, userName, currentTier, daysLeft) {
         <button class="adm-sub-ovr-quick-btn danger" onclick="resetSubToTrial('${userId}')">↺ Réinitialiser (essai 30j)</button>
       </div>
 
+      <div class="adm-sub-ovr-section-title">💎 Add-on PREMIUM (+15 € HT/mois)</div>
+      <div class="adm-sub-ovr-note" style="margin-bottom:10px">
+        S'ajoute à Pro ou Cabinet. Débloque : optimisation CA avancée, détection CA sous-déclaré, protection médico-légale+, certificats forensiques, SLA < 2h, rapport juridique mensuel.
+      </div>
+      <div class="adm-sub-ovr-quick">
+        <button class="adm-sub-ovr-quick-btn" style="background:rgba(198,120,221,.12);border-color:rgba(198,120,221,.4);color:#c678dd" onclick="enablePremiumAddon('${userId}',1)">+ Activer 1 mois</button>
+        <button class="adm-sub-ovr-quick-btn" style="background:rgba(198,120,221,.12);border-color:rgba(198,120,221,.4);color:#c678dd" onclick="enablePremiumAddon('${userId}',6)">+ Activer 6 mois</button>
+        <button class="adm-sub-ovr-quick-btn" style="background:rgba(198,120,221,.12);border-color:rgba(198,120,221,.4);color:#c678dd" onclick="enablePremiumAddon('${userId}',12)">+ Activer 12 mois</button>
+        <button class="adm-sub-ovr-quick-btn danger" onclick="disablePremiumAddon('${userId}')">✕ Désactiver add-on</button>
+      </div>
+
       <div class="adm-sub-ovr-note">
         <b>ℹ️ Note :</b> Ces modifications sont appliquées immédiatement en base. L'infirmière verra le nouveau statut à sa prochaine connexion (ou après rafraîchissement).
       </div>
@@ -1098,6 +1109,60 @@ async function resetSubToTrial(userId) {
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   💎 ADD-ON PREMIUM (+15€ HT/mois)
+   ──────────────────────────────────────────────────────────
+   S'ajoute à un abonnement Pro ou Cabinet pour débloquer :
+     - Optimisation CA avancée
+     - Détection CA sous-déclaré
+     - Protection médico-légale renforcée
+     - Certificats forensiques horodatés
+     - SLA support prioritaire < 2h
+     - Rapport juridique mensuel
+══════════════════════════════════════════════════════════ */
+
+/** Active l'add-on PREMIUM pour N mois (défaut 1) */
+async function enablePremiumAddon(userId, months) {
+  months = months || 1;
+  const label = months === 1 ? '1 mois' : `${months} mois`;
+  if (!confirm(`Activer l'add-on PREMIUM pour ${label} sur cet utilisateur ?\n\n(Débloque les 6 fonctionnalités PREMIUM en plus de son forfait actuel.)`)) return;
+  try {
+    const d = await wpost('/webhook/admin-subscription-override', {
+      infirmiere_id: userId,
+      action: 'premium_addon_on',
+      months: months
+    });
+    if (!d.ok) throw new Error(d.error || 'Erreur');
+    const until = d.premium_addon_until
+      ? new Date(d.premium_addon_until).toLocaleDateString('fr-FR')
+      : 'sans limite';
+    admAlert(`✓ Add-on PREMIUM activé jusqu'au ${until}.`, 'o');
+    closeSubOverrideModal();
+    loadAdmComptes();
+  } catch (e) {
+    console.error('[admin-premium-addon-on] FAILED', { userId, error: e.message });
+    admAlert(`Échec activation add-on : ${e.message}`, 'e');
+  }
+}
+
+/** Désactive l'add-on PREMIUM */
+async function disablePremiumAddon(userId) {
+  if (!confirm(`Désactiver l'add-on PREMIUM pour cet utilisateur ?\n\n(Les 6 fonctionnalités PREMIUM ne seront plus accessibles.)`)) return;
+  try {
+    const d = await wpost('/webhook/admin-subscription-override', {
+      infirmiere_id: userId,
+      action: 'premium_addon_off'
+    });
+    if (!d.ok) throw new Error(d.error || 'Erreur');
+    admAlert(`✓ Add-on PREMIUM désactivé.`, 'o');
+    closeSubOverrideModal();
+    loadAdmComptes();
+  } catch (e) {
+    console.error('[admin-premium-addon-off] FAILED', { userId, error: e.message });
+    admAlert(`Échec désactivation : ${e.message}`, 'e');
+  }
+}
+
 /* Expose globalement pour onclick inline */
 window.loadAdmAppMode = loadAdmAppMode;
 window.toggleAppMode = toggleAppMode;
@@ -1106,3 +1171,5 @@ window.closeSubOverrideModal = closeSubOverrideModal;
 window.applySubOverride = applySubOverride;
 window.extendSubTrial = extendSubTrial;
 window.resetSubToTrial = resetSubToTrial;
+window.enablePremiumAddon = enablePremiumAddon;
+window.disablePremiumAddon = disablePremiumAddon;
