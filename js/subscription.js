@@ -183,6 +183,21 @@ window.SUB = (function(){
     setTimeout(applyUILocks, 100);
     setTimeout(_checkExpirationNotification, 500);  // 💎 J-7 notification
     setTimeout(_checkCabinetRoleChange, 700);       // 🏥 Promo/démo cabinet notification
+
+    // 🔧 Auto-fermer le paywall s'il s'était ouvert à tort pendant le bootstrap.
+    //    Cas typique : au login, l'user clique "Carnet patients" AVANT que
+    //    SUB.bootstrap() ait fini → paywall affiché. Dès que _state arrive,
+    //    si l'accès à la feature ciblée est finalement autorisé, on ferme.
+    setTimeout(() => {
+      const modal = document.getElementById('sub-paywall');
+      if (modal && modal.classList.contains('open')) {
+        const featId = modal.dataset.featId;
+        if (featId && hasAccess(featId)) {
+          console.info('[SUB] bootstrap OK → fermeture auto paywall %s', featId);
+          _closePaywall();
+        }
+      }
+    }, 150);
     return _state;
   }
 
@@ -234,7 +249,14 @@ window.SUB = (function(){
 
   function hasAccess(featId) {
     if (!featId) return true;
-    if (!_state) return false;
+
+    // ⚠️ Race condition : si bootstrap() n'a pas encore résolu (_state === null),
+    //    on est OPTIMISTE et on laisse passer. Sinon, après login, le temps que
+    //    le worker réponde, le premier clic de l'utilisateur afficherait un
+    //    paywall sur toutes les features ESSENTIEL — même en mode TEST.
+    //    Bootstrap remplit _state au pire quelques ms plus tard ; s'il échoue
+    //    complètement, le fallback met appMode='TEST' donc tout reste accessible.
+    if (!_state) return true;
 
     // ⚡ Admin en SIMULATION active : la simulation prime sur tout (même mode TEST)
     //   Permet de tester les verrous tier par tier sans désactiver le mode test global.
@@ -446,6 +468,16 @@ window.SUB = (function(){
   /* ───── 10. PAYWALL ──────────────────────────────────────── */
 
   function showPaywall(featId) {
+    // Log diagnostic : pourquoi le paywall s'affiche ? Très utile quand un user
+    // voit un paywall alors qu'il pense être en mode TEST.
+    console.info('[SUB] showPaywall(%s) — state:', featId, {
+      appMode: _state?.appMode || '(not loaded)',
+      tier: _state?.tier,
+      isTrial: _state?.isTrial,
+      isAdmin: _state?.isAdmin,
+      premiumAddon: _state?.premiumAddon,
+      locked: _state?.locked
+    });
     const feat = FEATURES[featId];
     const tierReq = _requiredTierFor(featId);
     const tinfo = TIERS[tierReq];
@@ -459,6 +491,7 @@ window.SUB = (function(){
       modal.addEventListener('click', e => { if (e.target === modal) _closePaywall(); });
       document.body.appendChild(modal);
     }
+    modal.dataset.featId = featId;
 
     const canContinueTrial = st.isTrial && st.daysLeft > 0;
 
