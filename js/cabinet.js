@@ -310,14 +310,22 @@ function _renderCabinetDashboard(root, d) {
     };
     const rv = ROLE_VIEW[role] || ROLE_VIEW.membre;
 
+    // 🛡️ Diagnostic : logguer tout membre avec un ID problématique
+    if (!m.id || typeof m.id !== 'string' || m.id.trim() === '') {
+      console.warn('[cabinet] ⚠️ Membre avec id manquant/invalide :', m);
+    }
+
     // Boutons de gestion : visibles uniquement si l'user courant est TITULAIRE,
-    // et seulement sur les autres membres (pas sur lui-même)
+    // et seulement sur les autres membres (pas sur lui-même).
+    // Utilise data-* attributes + classes dédiées pour brancher un listener
+    // ensuite (évite tout problème d'escape HTML inline).
     let mgmtBtns = '';
+    const safeName = (m.prenom + ' ' + m.nom).trim();
     if (myRole === 'titulaire' && !isMe) {
       if (role === 'membre') {
-        mgmtBtns = `<button class="btn bs bsm" onclick="cabinetPromoteMember('${m.id}','${(m.prenom+' '+m.nom).trim().replace(/'/g,"\\'")}')"  title="Promouvoir en gestionnaire" style="padding:6px 10px;font-size:11px">⬆️ Promouvoir</button>`;
+        mgmtBtns = `<button class="btn bs bsm cab-mgmt-promote" data-member-id="${m.id || ''}" data-member-name="${safeName.replace(/"/g,'&quot;')}" title="Promouvoir en gestionnaire" style="padding:6px 10px;font-size:11px">⬆️ Promouvoir</button>`;
       } else if (role === 'gestionnaire') {
-        mgmtBtns = `<button class="btn bs bsm" onclick="cabinetDemoteMember('${m.id}','${(m.prenom+' '+m.nom).trim().replace(/'/g,"\\'")}')" title="Rétrograder en membre standard" style="padding:6px 10px;font-size:11px;background:rgba(255,181,71,.08);border-color:rgba(255,181,71,.3);color:var(--w)">⬇️ Rétrograder</button>`;
+        mgmtBtns = `<button class="btn bs bsm cab-mgmt-demote" data-member-id="${m.id || ''}" data-member-name="${safeName.replace(/"/g,'&quot;')}" title="Rétrograder en membre standard" style="padding:6px 10px;font-size:11px;background:rgba(255,181,71,.08);border-color:rgba(255,181,71,.3);color:var(--w)">⬇️ Rétrograder</button>`;
       }
     }
 
@@ -495,6 +503,23 @@ function _renderCabinetDashboard(root, d) {
         <div class="ai in">⚠️ Aucune synchronisation automatique sans votre accord</div>
       </div>
     </div>`;
+
+  // 🛠️ Listeners sur les boutons promote/demote — attaché APRÈS innerHTML
+  //    (les onclick inline étaient fragiles : problèmes d'escape, perte de contexte, etc.)
+  root.querySelectorAll('.cab-mgmt-promote').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.memberId || '';
+      const name = btn.dataset.memberName || '(inconnu)';
+      cabinetPromoteMember(id, name);
+    });
+  });
+  root.querySelectorAll('.cab-mgmt-demote').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.memberId || '';
+      const name = btn.dataset.memberName || '(inconnu)';
+      cabinetDemoteMember(id, name);
+    });
+  });
 
   // ✅ Affichage automatique de l'état de synchro après rendu
   // Utilise le tracking local en priorité — visible sans avoir à cliquer
@@ -1830,28 +1855,48 @@ window.cabinetTournee       = cabinetTournee;
 ════════════════════════════════════════════════ */
 
 async function cabinetPromoteMember(memberId, memberName) {
+  console.info('[cabinet] Promotion demandée — memberId:', memberId, '(type:', typeof memberId, ') name:', memberName);
+  // 🛡️ Protection : si memberId est vide/undefined/null, ne pas appeler le worker
+  const cleanId = String(memberId || '').trim();
+  if (!cleanId || cleanId === 'undefined' || cleanId === 'null') {
+    console.error('[cabinet] memberId invalide :', memberId);
+    if (typeof showToast === 'function') showToast('❌ ID du membre introuvable. Rafraîchissez la page puis réessayez.', 'err');
+    else alert('❌ ID du membre introuvable. Rafraîchissez la page puis réessayez.');
+    return;
+  }
   if (!confirm(`Promouvoir ${memberName} en 🛠️ Gestionnaire ?\n\nLe gestionnaire pourra :\n• Gérer les membres du cabinet\n• Consulter les stats consolidées\n• Accéder à la conformité cabinet\n\nLes simples membres ne peuvent pas être rétrogradés par un gestionnaire.`)) return;
   try {
-    const d = await apiCall('/webhook/cabinet-promote-member', { infirmiere_id: memberId });
+    console.info('[cabinet] POST /webhook/cabinet-promote-member — body:', { infirmiere_id: cleanId });
+    const d = await apiCall('/webhook/cabinet-promote-member', { infirmiere_id: cleanId });
     if (!d.ok) throw new Error(d.error || 'Erreur');
     if (typeof showToast === 'function') showToast(`✅ ${memberName} est maintenant gestionnaire.`, 'ok');
     else alert(`✅ ${memberName} est maintenant gestionnaire.`);
     await renderCabinetSection();
   } catch (e) {
+    console.error('[cabinet] promotion KO:', e);
     if (typeof showToast === 'function') showToast('❌ ' + e.message, 'err');
     else alert('❌ ' + e.message);
   }
 }
 
 async function cabinetDemoteMember(memberId, memberName) {
+  console.info('[cabinet] Rétrogradation demandée — memberId:', memberId, 'name:', memberName);
+  const cleanId = String(memberId || '').trim();
+  if (!cleanId || cleanId === 'undefined' || cleanId === 'null') {
+    console.error('[cabinet] memberId invalide :', memberId);
+    if (typeof showToast === 'function') showToast('❌ ID du membre introuvable. Rafraîchissez la page puis réessayez.', 'err');
+    else alert('❌ ID du membre introuvable. Rafraîchissez la page puis réessayez.');
+    return;
+  }
   if (!confirm(`Rétrograder ${memberName} en 👤 Membre standard ?\n\nCette personne perdra immédiatement :\n• L'accès à la gestion des membres\n• L'accès aux stats consolidées\n• L'accès à la conformité cabinet`)) return;
   try {
-    const d = await apiCall('/webhook/cabinet-demote-member', { infirmiere_id: memberId });
+    const d = await apiCall('/webhook/cabinet-demote-member', { infirmiere_id: cleanId });
     if (!d.ok) throw new Error(d.error || 'Erreur');
     if (typeof showToast === 'function') showToast(`✅ ${memberName} a été rétrogradé.`, 'ok');
     else alert(`✅ ${memberName} a été rétrogradé en membre standard.`);
     await renderCabinetSection();
   } catch (e) {
+    console.error('[cabinet] rétrogradation KO:', e);
     if (typeof showToast === 'function') showToast('❌ ' + e.message, 'err');
     else alert('❌ ' + e.message);
   }
