@@ -219,11 +219,7 @@ window.SUB = (function(){
 
   function hasAccess(featId) {
     if (!featId) return true;
-    // ⚡ Bootstrap pas encore terminé (_state === null) : défaut permissif.
-    //   Le gating est appliqué après coup par applyUILocks() une fois _state hydraté.
-    //   Le défaut était `return false`, ce qui déclenchait un paywall au premier clic
-    //   avant la réponse async de /webhook/subscription-status → faux positif.
-    if (!_state) return true;
+    if (!_state) return false;
 
     // ⚡ Admin en SIMULATION active : la simulation prime sur tout (même mode TEST)
     //   Permet de tester les verrous tier par tier sans désactiver le mode test global.
@@ -669,9 +665,6 @@ window.SUB = (function(){
     if (typeof window.navTo !== 'function') { setTimeout(_installNavGate, 100); return; }
     const _orig = window.navTo;
     window.navTo = function(v, triggerEl) {
-      // ⚡ Bootstrap pas encore fini → laisser passer (pas de paywall injuste).
-      //   hasAccess() retourne déjà true dans ce cas, mais on explicite ici pour la lisibilité.
-      if (!_state) return _orig.call(this, v, triggerEl);
       const feat = _featureForView(v);
       if (feat && !hasAccess(feat)) { showPaywall(feat); return; }
       return _orig.call(this, v, triggerEl);

@@ -1056,6 +1056,13 @@
   <div class="mc">
     <div class="mh"><div class="mt">👤 Mon profil</div><button class="mx" onclick="closePM()">✕</button></div>
     <div class="msg e" id="pe"></div><div class="msg o" id="po"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         💎 État d'abonnement (rempli par _renderProfileSubStatus
+         dans profil.js · hydraté depuis SUB.getState())
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="pm-sub-status" class="pm-sub-card" style="display:none;margin-bottom:20px"></div>
+
     <div style="margin-bottom:20px">
       <div class="g2"><div class="af"><label for="p-fn">Prénom</label><input type="text" id="p-fn" name="firstname"></div><div class="af"><label for="p-ln">Nom</label><input type="text" id="p-ln" name="lastname"></div></div>
       <div class="g2"><div class="af"><label for="p-ad">N° ADELI</label><input type="text" id="p-ad" name="adeli"></div><div class="af"><label for="p-rp">RPPS</label><input type="text" id="p-rp" name="rpps"></div></div>

@@ -1971,3 +1971,111 @@ tbody tr:hover{background:var(--c)}tbody tr:last-child td{border-bottom:none}
   border-radius:6px;
   border:1px solid rgba(79,168,255,.12);
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   💎 État abonnement dans modale "Mon profil" (pm-sub-status)
+══════════════════════════════════════════════════════════════════ */
+.pm-sub-card {
+  background: linear-gradient(135deg, rgba(0,212,170,.04), rgba(0,212,170,.02));
+  border: 1px solid rgba(0,212,170,.15);
+  border-radius: var(--rl);
+  padding: 16px 18px;
+  overflow: hidden;
+}
+.pm-sub-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.pm-sub-header.urgent    { background-color: rgba(255,95,109,.03); }
+.pm-sub-header.locked    { background-color: rgba(255,95,109,.05); }
+.pm-sub-header.admin,
+.pm-sub-header.sim       { background-color: rgba(198,120,221,.04); }
+.pm-sub-header.test      { background-color: rgba(0,212,170,.04); }
+.pm-sub-ic {
+  font-size: 26px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.04);
+  border-radius: 10px;
+}
+.pm-sub-info { flex: 1; min-width: 0; }
+.pm-sub-label {
+  font-family: var(--fm);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--m);
+  margin-bottom: 4px;
+}
+.pm-sub-tier {
+  font-family: var(--fs);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--t);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+.pm-sub-sub {
+  font-size: 12px;
+  color: var(--m);
+  line-height: 1.5;
+}
+
+/* Barre de progression des jours restants */
+.pm-sub-progress {
+  margin-top: 12px;
+  height: 6px;
+  background: rgba(255,255,255,.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.pm-sub-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--a), var(--a2));
+  border-radius: 3px;
+  transition: width .4s ease;
+}
+.pm-sub-progress-bar.urgent {
+  background: linear-gradient(90deg, var(--w), var(--d));
+}
+
+/* Bandeaux d'info / warning / bonus */
+.pm-sub-warn {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(255,181,71,.08);
+  border: 1px solid rgba(255,181,71,.25);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--w);
+  line-height: 1.5;
+}
+.pm-sub-bonus {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(79,168,255,.06);
+  border: 1px solid rgba(79,168,255,.2);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--a2);
+  line-height: 1.5;
+}
+.pm-sub-bonus strong { color: var(--t); }
+.pm-sub-note {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--m);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.pm-sub-cta {
+  margin-top: 14px;
+  width: 100%;
+  justify-content: center;
+}
