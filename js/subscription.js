@@ -77,7 +77,7 @@ window.SUB = (function(){
     optimisation_ca_plus:    { tier:'PREMIUM', label:'Optimisation CA avancée',        desc:'Revenue engine premium : IA prédictive sur manques-à-gagner, suggestions d\'actes, upsell cotations.' },
     ca_sous_declare:         { tier:'PREMIUM', label:'Détection CA sous-déclaré',       desc:'Croisement longitudinal tournées/cotations/BSI pour détecter les actes non-cotés et récupérer le CA perdu.' },
     protection_legale_plus:  { tier:'PREMIUM', label:'Protection médico-légale+',       desc:'Couche renforcée : opposabilité CPAM, bouclier anti-redressement, archivage probant 10 ans.' },
-    forensic_certificates:   { tier:'PREMIUM', label:'Certificats forensiques',         desc:'Certificats horodatés RFC 3161, chaîne de preuve cryptographique SHA-256, export PDF opposable juridiquement.' },
+    forensic_certificates:   { tier:'PREMIUM', label:'Preuves légales opposables',      desc:'Bouclier anti-contrôle CPAM : certificats horodatés RFC 3161, chaîne de preuve SHA-256, PDF opposable juridiquement. Pour neutraliser un redressement en amont.' },
     sla_support:             { tier:'PREMIUM', label:'SLA support prioritaire < 2h',    desc:'Engagement contractuel de réponse support < 2h ouvrées, canal dédié premium.' },
     rapport_juridique_mensuel:{ tier:'PREMIUM', label:'Rapport juridique mensuel',      desc:'Synthèse mensuelle auditée : conformité, preuves collectées, exposition contentieux, recommandations DPO.' },
     dashboard_consolide: { tier:'COMPTABLE', label:'Dashboard consolidé',     desc:'Vue multi-IDEL pour cabinet comptable.' },
@@ -232,6 +232,14 @@ window.SUB = (function(){
       isCabinetManager: ['titulaire','gestionnaire'].includes(_state.cabinetRole || ''),
       premiumAddon: !!_state.premiumAddon,
       premiumAddonUntil: _state.premiumAddonUntil || null,
+      /* 💎 v2.1 — nouveaux flags exposés au front (UI premium omniprésent) */
+      premiumActive:  _premiumActive(),
+      premiumStatus:  premiumStatus(),          // 'active' | 'expired' | 'none'
+      premiumUntilMs: _state.premiumAddonUntil
+                        ? (typeof _state.premiumAddonUntil === 'number'
+                            ? _state.premiumAddonUntil
+                            : Date.parse(_state.premiumAddonUntil))
+                        : null,
       fallback: !!_state._fallback
     };
   }
@@ -245,6 +253,58 @@ window.SUB = (function(){
   /** Helper : retourne 'titulaire' | 'gestionnaire' | 'membre' | null */
   function cabinetRole() {
     return _state?.cabinetRole || null;
+  }
+
+  /* ─── 🔒 v2.1 — Check expiration Premium (anti cache stale) ──────
+     Le backend peut tarder à propager premiumAddon=false après expiration.
+     Cette fonction recoupe _state.premiumAddonUntil (timestamp ISO ou ms)
+     avec Date.now() pour éviter d'accorder un accès Premium expiré. */
+  function _premiumActive() {
+    if (!_state) return false;
+    if (!_state.premiumAddon) return false;
+    const until = _state.premiumAddonUntil;
+    if (!until) return true;           // pas de date limite = actif
+    const t = (typeof until === 'number') ? until : Date.parse(until);
+    if (isNaN(t)) return true;          // date mal formée → on fait confiance au flag
+    return Date.now() < t;
+  }
+
+  /** Statut Premium calculé — exposé au front pour badges/UI */
+  function premiumStatus() {
+    if (!_state) return 'none';
+    if (!_state.premiumAddon) return 'none';
+    if (!_state.premiumAddonUntil) return 'active';
+    return _premiumActive() ? 'active' : 'expired';
+  }
+
+  /* ─── 💎 v2.1 — Entitlements (flags métier) ──────────────────────
+     Plus propre que de checker des strings features partout. Scale bien
+     pour les futurs add-ons. Usage front :
+        if (SUB.entitlements().canOptimizeCA) { ... }
+     Les flags s'appuient sur hasAccess() donc la matrice reste unique. */
+  function entitlements() {
+    return {
+      // Pro-level
+      canUseDashboard:       hasAccess('dashboard_stats'),
+      canUseCopilot:         hasAccess('copilote_ia'),
+      canUseTourneeIA:       hasAccess('tournee_ia_vrptw'),
+      canUseBSI:             hasAccess('bsi'),
+      canUseAuditCPAM:       hasAccess('audit_cpam'),
+      // Premium-level
+      canOptimizeCA:         hasAccess('optimisation_ca_plus'),
+      canDetectFraud:        hasAccess('ca_sous_declare'),
+      hasLegalProtection:    hasAccess('protection_legale_plus'),
+      hasForensicCerts:      hasAccess('forensic_certificates'),
+      hasSLAPriority:        hasAccess('sla_support'),
+      hasLegalReport:        hasAccess('rapport_juridique_mensuel'),
+      // Cabinet-level
+      canManageCabinet:      hasAccess('cabinet_manage_members'),
+      hasCabinetStats:       hasAccess('cabinet_consolidated_stats'),
+      hasComplianceEngine:   hasAccess('compliance_engine'),
+      // Raccourcis d'état
+      premiumActive:         _premiumActive(),
+      premiumStatus:         premiumStatus()
+    };
   }
 
   function hasAccess(featId) {
@@ -299,7 +359,12 @@ window.SUB = (function(){
     //   Si l'user a souscrit l'add-on (_state.premiumAddon = true),
     //   il a accès aux features PREMIUM en plus de son tier de base.
     //   Cas où tier = 'PREMIUM' est déjà couvert par ACCESS_MATRIX.PREMIUM.
-    if (_state.premiumAddon && tier !== 'LOCKED') {
+    //
+    //   🔒 FIX v2.1 : vérification d'expiration côté front.
+    //   Si premium_addon_until est dépassé, on refuse l'accès même si
+    //   premiumAddon=true (cas d'un cache front stale ou d'une MAJ worker
+    //   retardée). Le backend reste la source de vérité via refresh().
+    if (_state.premiumAddon && tier !== 'LOCKED' && _premiumActive()) {
       if (FEATURES[featId]?.tier === 'PREMIUM') return true;
     }
 
@@ -532,7 +597,7 @@ window.SUB = (function(){
     ESSENTIEL: { subtitle:'IDEL solo débutante', features:['Cotation NGAP intelligente','Carnet patients chiffré','Tournée basique + import calendrier','Trésorerie & remboursements','Rapport mensuel','Signatures électroniques','Journal kilométrique','Support standard'] },
     PRO:       { subtitle:'IDEL solo active', features:['✨ Tout AMI Essentiel','Dashboard & statistiques','Simulateur audit CPAM','Copilote IA (xAI Grok)','BSI, Pilulier, Constantes','Alertes médicamenteuses','Compte-rendu + Consentements','Tournée IA (VRPTW + 2-opt)'], popular:true },
     CABINET:   { subtitle:'Cabinet 2 à 6 IDE', features:['✨ Tout AMI Pro','Mode cabinet multi-IDE','Planning partagé','Transmissions collaboratives','Répartition intelligente','Consentements partagés','🧠 Conformité cabinet (manager)','📊 Stats consolidées (manager)','🛠️ Gestion des membres (titulaire)'] },
-    PREMIUM:   { subtitle:'IDEL haut volume (add-on)', features:['✨ S\'ajoute à Pro ou Cabinet','Optimisation CA avancée','Détection CA sous-déclaré','Protection médico-légale renforcée','Certificats forensiques horodatés','SLA support prioritaire < 2h','Rapport juridique mensuel'] },
+    PREMIUM:   { subtitle:'Mode Expert Revenus · Se rembourse en 1 journée de tournée', features:['✨ S\'ajoute à Pro ou Cabinet','💸 Optimisation CA avancée (+120 à 300€/mois récupérés)','🚨 Détection pertes invisibles (actes non cotés)','⚖️ Protection juridique renforcée (anti-redressement)','🧾 Preuves légales opposables CPAM','⚡ Support prioritaire < 2h','📊 Rapport légal mensuel auditable'] },
     COMPTABLE: { subtitle:'Cabinet d\'expertise comptable santé', features:['Dashboard consolidé multi-IDEL (jusqu\'à 20 incluses)','Export FEC + liasse fiscale 2035','Générateur 2042-C-PRO · URSSAF · CARPIMKO','Scoring risque portfolio client','Alertes anomalies NGAP en masse','Connecteurs Cegid · EBP · Quadra','Vue anonymisée (pseudo-FEC)','Rapports trimestriels automatiques'] }
   };
 
@@ -877,6 +942,8 @@ window.SUB = (function(){
   return {
     getState, currentTier, hasAccess, requireAccess,
     isCabinetManager, cabinetRole,
+    /* 💎 v2.1 — Entitlements (flags métier scalables) */
+    entitlements, premiumStatus,
     bootstrap, refresh, upgrade,
     setAdminSim, clearAdminSim,
     showPaywall, applyUILocks, renderAbonnementPage,

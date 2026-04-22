@@ -1,0 +1,648 @@
+/* ════════════════════════════════════════════════
+   premium-intelligence.css — AMI v1.0
+   ────────────────────────────────────────────────
+   Styles pour les widgets du copilote financier +
+   juridique intelligent (PremiumIntel.*).
+
+   Tokens réutilisés depuis style.css :
+     --a (green), --a2 (blue), --w (orange), --d (red)
+     --t (text), --m (muted), --c (card), --b (border)
+══════════════════════════════════════════════════ */
+
+/* ─── Carte générique ──────────────────────────── */
+.pi-card {
+  background: var(--c);
+  border: 1px solid var(--b);
+  border-radius: var(--rl);
+  padding: 16px 18px;
+  margin: 12px 0;
+  font-family: var(--ff);
+  color: var(--t);
+  position: relative;
+  overflow: hidden;
+}
+
+.pi-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.pi-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.pi-icon-small {
+  font-size: 14px;
+}
+
+.pi-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--t);
+  line-height: 1.2;
+}
+
+.pi-card-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--m);
+  line-height: 1.3;
+}
+
+.pi-badge-premium {
+  margin-left: auto;
+  background: linear-gradient(135deg, #c678dd 0%, #8b5fbf 100%);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* ─── Boutons ──────────────────────────────────── */
+.pi-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-family: var(--ff);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform .15s, opacity .15s;
+  margin-top: 12px;
+  width: 100%;
+}
+
+.pi-btn:hover {
+  transform: translateY(-1px);
+  opacity: .92;
+}
+
+.pi-btn:active {
+  transform: translateY(0);
+}
+
+.pi-btn-primary {
+  background: var(--a);
+  color: #0b0f14;
+}
+
+.pi-btn-premium {
+  background: linear-gradient(135deg, #c678dd 0%, #8b5fbf 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(198,120,221,.25);
+}
+
+.pi-btn-ghost {
+  background: transparent;
+  color: var(--m);
+  border: 1px solid var(--b);
+}
+
+.pi-btn-large {
+  padding: 14px 20px;
+  font-size: 15px;
+}
+
+/* ─── 1. Loss card (post-cotation) ─────────────── */
+.pi-card-loss {
+  border-color: #c678dd44;
+  background: linear-gradient(135deg, var(--c) 0%, rgba(198,120,221,.04) 100%);
+}
+
+.pi-card-loss.pi-sev-high {
+  border-color: var(--d);
+  background: linear-gradient(135deg, var(--c) 0%, var(--dd) 100%);
+}
+
+.pi-card-loss.pi-sev-medium {
+  border-color: var(--w);
+  background: linear-gradient(135deg, var(--c) 0%, var(--wd) 100%);
+}
+
+.pi-insights {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.pi-insights li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--b);
+  font-size: 13px;
+}
+
+.pi-insights li:first-child {
+  border-top: none;
+}
+
+.pi-insight-msg {
+  color: var(--t);
+  flex: 1;
+}
+
+.pi-insight-gain {
+  color: var(--a);
+  font-weight: 700;
+  font-family: var(--fm);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* ─── 2. Risk gauge (URSSAF) ───────────────────── */
+.pi-card-risk {
+  border-color: var(--b);
+}
+
+.pi-gauge {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.pi-gauge-value {
+  font-size: 42px;
+  font-weight: 700;
+  font-family: var(--fs);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.pi-gauge-low .pi-gauge-value { color: var(--a); }
+.pi-gauge-medium .pi-gauge-value { color: var(--w); }
+.pi-gauge-high .pi-gauge-value { color: var(--d); }
+
+.pi-gauge-label {
+  font-size: 13px;
+  color: var(--m);
+  margin-bottom: 12px;
+}
+
+.pi-gauge-bar {
+  height: 6px;
+  background: var(--s);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pi-gauge-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .6s ease;
+}
+
+.pi-gauge-low .pi-gauge-fill { background: var(--a); }
+.pi-gauge-medium .pi-gauge-fill { background: var(--w); }
+.pi-gauge-high .pi-gauge-fill { background: var(--d); }
+
+.pi-gauge-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--b);
+}
+
+.pi-stat {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: var(--fm);
+}
+
+.pi-stat-crit { background: var(--dd); color: var(--d); }
+.pi-stat-med  { background: var(--wd); color: var(--w); }
+.pi-stat-good { background: var(--ad); color: var(--a); }
+
+/* ─── 3. Coach block ───────────────────────────── */
+.pi-card-coach {
+  border-color: var(--a2);
+  background: linear-gradient(135deg, var(--c) 0%, var(--a2d) 100%);
+}
+
+.pi-coach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pi-coach-item {
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--b);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.pi-coach-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--t);
+  margin-bottom: 4px;
+}
+
+.pi-coach-expl {
+  font-size: 13px;
+  color: var(--m);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.pi-coach-action {
+  font-size: 13px;
+  color: var(--a);
+  font-weight: 600;
+}
+
+/* ─── 4. Forecast card ─────────────────────────── */
+.pi-card-forecast {
+  border-color: #c678dd44;
+}
+
+.pi-forecast-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.pi-forecast-col {
+  text-align: center;
+  padding: 12px 8px;
+  background: var(--s);
+  border-radius: 10px;
+}
+
+.pi-forecast-col-opt {
+  background: linear-gradient(135deg, rgba(198,120,221,.12) 0%, rgba(198,120,221,.04) 100%);
+  border: 1px solid rgba(198,120,221,.3);
+}
+
+.pi-forecast-label {
+  font-size: 11px;
+  color: var(--m);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  font-family: var(--fm);
+}
+
+.pi-forecast-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--fs);
+  color: var(--t);
+}
+
+.pi-forecast-col-opt .pi-forecast-value {
+  color: #c678dd;
+}
+
+.pi-forecast-arrow {
+  font-size: 20px;
+  color: var(--m);
+}
+
+.pi-forecast-gain {
+  text-align: center;
+  padding: 10px;
+  background: var(--ad);
+  color: var(--a);
+  border-radius: 10px;
+  font-size: 15px;
+  margin-top: 8px;
+}
+
+.pi-forecast-gain strong {
+  font-family: var(--fm);
+}
+
+/* ─── 5. Elite score (gamification) ────────────── */
+.pi-card-elite {
+  --pi-elite-color: #4fa8ff;
+  border-color: var(--pi-elite-color);
+  background: linear-gradient(135deg, var(--c) 0%, rgba(79,168,255,.05) 100%);
+}
+
+.pi-elite-body {
+  text-align: center;
+  padding: 12px 0 8px;
+}
+
+.pi-elite-emoji {
+  font-size: 36px;
+  margin-bottom: 6px;
+}
+
+.pi-elite-score {
+  font-size: 42px;
+  font-weight: 700;
+  font-family: var(--fs);
+  color: var(--pi-elite-color);
+  line-height: 1;
+}
+
+.pi-elite-max {
+  font-size: 18px;
+  color: var(--m);
+  font-family: var(--fm);
+}
+
+.pi-elite-rank {
+  font-size: 14px;
+  color: var(--t);
+  font-weight: 600;
+  margin-top: 6px;
+  letter-spacing: .5px;
+}
+
+.pi-elite-bar {
+  height: 6px;
+  background: var(--s);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.pi-elite-fill {
+  height: 100%;
+  background: var(--pi-elite-color);
+  border-radius: 3px;
+  transition: width .8s ease;
+}
+
+.pi-elite-hint {
+  font-size: 12px;
+  color: var(--m);
+  text-align: center;
+  margin: 12px 0 0;
+  line-height: 1.4;
+}
+
+/* ─── 6. Pre-check (temps réel) ────────────────── */
+.pi-precheck {
+  background: var(--a2d);
+  border: 1px solid var(--a2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 8px 0;
+  font-family: var(--ff);
+}
+
+.pi-precheck-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--a2);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.pi-precheck-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pi-precheck-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.pi-precheck-msg {
+  color: var(--t);
+  flex: 1;
+}
+
+.pi-precheck-impact {
+  color: var(--a);
+  font-family: var(--fm);
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* ─── 7. Tournée optimizer ─────────────────────── */
+.pi-tournee-gain {
+  background: var(--ad);
+  color: var(--a);
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 15px;
+  margin: 10px 0;
+}
+
+.pi-tournee-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pi-tournee-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--s);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.pi-tournee-up {
+  background: var(--ad);
+}
+
+.pi-tournee-pat {
+  color: var(--t);
+  font-weight: 500;
+}
+
+.pi-tournee-delta {
+  font-family: var(--fm);
+  font-size: 12px;
+}
+
+.pi-up { color: var(--a); font-weight: 700; }
+.pi-neutral { color: var(--m); }
+
+/* ─── 8. Paywall modal ─────────────────────────── */
+.pi-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11,15,20,.85);
+  backdrop-filter: blur(10px);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .2s ease;
+  padding: 20px;
+}
+
+.pi-modal-overlay.open { display: flex; }
+.pi-modal-overlay.visible { opacity: 1; }
+
+.pi-modal-card {
+  background: var(--c);
+  border: 1px solid var(--bl);
+  border-radius: var(--rl);
+  max-width: 420px;
+  width: 100%;
+  padding: 28px 24px 24px;
+  position: relative;
+  box-shadow: 0 24px 72px rgba(0,0,0,.6);
+  transform: translateY(10px);
+  transition: transform .3s ease;
+}
+
+.pi-modal-overlay.visible .pi-modal-card {
+  transform: translateY(0);
+}
+
+.pi-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: var(--m);
+  font-size: 26px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 8px;
+}
+
+.pi-modal-close:hover { color: var(--t); }
+
+.pi-modal-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.pi-modal-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.pi-modal-title {
+  margin: 0;
+  font-family: var(--fs);
+  font-size: 24px;
+  color: var(--t);
+}
+
+.pi-modal-body {
+  margin: 16px 0 22px;
+  text-align: center;
+}
+
+.pi-modal-line {
+  margin: 6px 0;
+  font-size: 14px;
+  color: var(--m);
+}
+
+.pi-modal-line strong {
+  color: var(--a);
+  font-family: var(--fm);
+  font-size: 15px;
+}
+
+.pi-modal-tagline {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--t);
+  font-style: italic;
+}
+
+.pi-modal-tagline strong {
+  color: #c678dd;
+}
+
+.pi-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ─── 9. Upsell hint (partout) ─────────────────── */
+.pi-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(90deg, rgba(198,120,221,.1) 0%, rgba(198,120,221,.04) 100%);
+  border: 1px solid rgba(198,120,221,.3);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  margin: 8px 0;
+  transition: background .15s, border-color .15s;
+}
+
+.pi-hint:hover {
+  background: linear-gradient(90deg, rgba(198,120,221,.16) 0%, rgba(198,120,221,.06) 100%);
+  border-color: rgba(198,120,221,.5);
+}
+
+.pi-hint-icon { font-size: 16px; }
+
+.pi-hint-text {
+  flex: 1;
+  color: var(--t);
+}
+
+.pi-hint-text strong {
+  color: var(--a);
+  font-family: var(--fm);
+}
+
+.pi-hint-arrow {
+  color: #c678dd;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* ─── 10. Dashboard grid ───────────────────────── */
+.pi-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+
+/* ─── Mobile ───────────────────────────────────── */
+@media (max-width: 640px) {
+  .pi-card { padding: 14px 16px; }
+  .pi-gauge-value, .pi-elite-score { font-size: 36px; }
+  .pi-forecast-value { font-size: 18px; }
+  .pi-modal-card { padding: 22px 18px 20px; }
+  .pi-modal-title { font-size: 20px; }
+  .pi-modal-icon { font-size: 40px; }
+  .pi-dashboard-grid { grid-template-columns: 1fr; }
+}
