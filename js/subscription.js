@@ -80,9 +80,17 @@ window.SUB = (function(){
     forensic_certificates:   { tier:'PREMIUM', label:'Preuves légales opposables',      desc:'Bouclier anti-contrôle CPAM : certificats horodatés RFC 3161, chaîne de preuve SHA-256, PDF opposable juridiquement. Pour neutraliser un redressement en amont.' },
     sla_support:             { tier:'PREMIUM', label:'SLA support prioritaire < 2h',    desc:'Engagement contractuel de réponse support < 2h ouvrées, canal dédié premium.' },
     rapport_juridique_mensuel:{ tier:'PREMIUM', label:'Rapport juridique mensuel',      desc:'Synthèse mensuelle auditée : conformité, preuves collectées, exposition contentieux, recommandations DPO.' },
-    dashboard_consolide: { tier:'COMPTABLE', label:'Dashboard consolidé',     desc:'Vue multi-IDEL pour cabinet comptable.' },
-    export_fiscal:       { tier:'COMPTABLE', label:'Export fiscal',           desc:'Exports liasse fiscale, 2035.' },
-    scoring_risque:      { tier:'COMPTABLE', label:'Scoring risque portfolio', desc:'Scoring risque de chaque IDEL sous mandat.' }
+    /* ═══ 🧑‍💼 COMPTABLE — Expertise comptable santé (99 € HT/mois) ═══
+       8 features dédiées aux experts-comptables qui gèrent un portefeuille
+       d'IDEL clientes. Réservées aux abonnés COMPTABLE et aux admins (démo). */
+    dashboard_consolide: { tier:'COMPTABLE', label:'Dashboard consolidé multi-IDEL',  desc:'Vue agrégée du portefeuille (jusqu\'à 20 IDEL incluses) : CA, actes, alertes, conformité.' },
+    export_fiscal:       { tier:'COMPTABLE', label:'Export FEC + liasse fiscale 2035', desc:'Génération automatique du Fichier des Écritures Comptables et de la liasse fiscale 2035 BNC.' },
+    scoring_risque:      { tier:'COMPTABLE', label:'Scoring risque portfolio',         desc:'Scoring de risque CPAM/fiscal de chaque IDEL sous mandat avec recommandations.' },
+    generateur_2042:     { tier:'COMPTABLE', label:'Générateur 2042-C-PRO · URSSAF · CARPIMKO', desc:'Pré-remplissage automatique des déclarations sociales et fiscales par client.' },
+    alertes_ngap_masse:  { tier:'COMPTABLE', label:'Alertes anomalies NGAP en masse',  desc:'Détection d\'anomalies de cotation sur tout le portefeuille en un clic.' },
+    connecteurs_compta:  { tier:'COMPTABLE', label:'Connecteurs Cegid · EBP · Quadra', desc:'Export direct vers les principaux logiciels comptables du marché (FEC + journaux).' },
+    vue_anonymisee:      { tier:'COMPTABLE', label:'Vue anonymisée (pseudo-FEC)',      desc:'Vue RGPD-safe : aucune donnée patient identifiable, uniquement les flux financiers.' },
+    rapport_trimestriel: { tier:'COMPTABLE', label:'Rapports trimestriels automatiques', desc:'Génération automatique des rapports trimestriels pour chaque IDEL cliente.' }
   };
 
   const ACCESS_MATRIX = {
@@ -487,7 +495,17 @@ window.SUB = (function(){
     // 💎 PREMIUM add-on (+15€ HT/mois)
     'ca-sous-declare':'ca_sous_declare',
     'forensic-cert':'forensic_certificates',
-    'rapport-juridique':'rapport_juridique_mensuel'
+    'rapport-juridique':'rapport_juridique_mensuel',
+    // 🧑‍💼 COMPTABLE — Expertise comptable santé
+    'comptable-hub':'dashboard_consolide',          // hub = même verrou que le dashboard
+    'comptable-dashboard':'dashboard_consolide',
+    'comptable-export-fec':'export_fiscal',
+    'comptable-2042':'generateur_2042',
+    'comptable-scoring':'scoring_risque',
+    'comptable-alertes':'alertes_ngap_masse',
+    'comptable-connecteurs':'connecteurs_compta',
+    'comptable-anonymisee':'vue_anonymisee',
+    'comptable-trimestriel':'rapport_trimestriel'
   };
 
   function _featureForView(v) { return NAV_FEATURE_MAP[v] || null; }

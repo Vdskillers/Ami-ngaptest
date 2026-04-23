@@ -36,12 +36,23 @@ const FEATURES = {
   // COMPTABLE
   dashboard_consolide: { tier:'COMPTABLE' },
   export_fiscal:       { tier:'COMPTABLE' },
-  scoring_risque:      { tier:'COMPTABLE' }
+  scoring_risque:      { tier:'COMPTABLE' },
+  generateur_2042:     { tier:'COMPTABLE' },
+  alertes_ngap_masse:  { tier:'COMPTABLE' },
+  connecteurs_compta:  { tier:'COMPTABLE' },
+  vue_anonymisee:      { tier:'COMPTABLE' },
+  rapport_trimestriel: { tier:'COMPTABLE' }
 };
 
 const PREMIUM_FEATS = [
   'optimisation_ca_plus','ca_sous_declare','protection_legale_plus',
   'forensic_certificates','sla_support','rapport_juridique_mensuel'
+];
+
+const COMPTABLE_FEATS = [
+  'dashboard_consolide','export_fiscal','scoring_risque',
+  'generateur_2042','alertes_ngap_masse','connecteurs_compta',
+  'vue_anonymisee','rapport_trimestriel'
 ];
 
 const ACCESS_MATRIX = {
@@ -197,6 +208,72 @@ for (const f of PREMIUM_FEATS) {
   expect(`ADMIN sim=TRIAL → ${f}`,
     hasAccess(st({appMode:'PAYANT',tier:'ADMIN',isAdmin:true,simTier:'TRIAL'}), f), true);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   13. ⚡ ÉTANCHÉITÉ COMPTABLE — Plan AMI Comptable (99€ HT/mois)
+   Seuls COMPTABLE + ADMIN + TRIAL doivent y accéder.
+═══════════════════════════════════════════════════════════════ */
+console.log('\n═══ 13. COMPTABLE — étanchéité du plan AMI Comptable ═══');
+
+// 13.a : COMPTABLE accède à toutes ses 8 features
+for (const f of COMPTABLE_FEATS) {
+  expect(`COMPTABLE → ${f}`, hasAccess(st({tier:'COMPTABLE'}), f), true);
+}
+
+// 13.b : ESSENTIEL/PRO/CABINET/PREMIUM bloqués
+for (const tier of ['ESSENTIEL','PRO','CABINET']) {
+  for (const f of COMPTABLE_FEATS) {
+    expect(`${tier} → ${f} MUST BE BLOCKED`, hasAccess(st({tier}), f), false);
+  }
+}
+// PRO + premiumAddon : accès PREMIUM mais PAS COMPTABLE
+for (const f of COMPTABLE_FEATS) {
+  expect(`PRO+premiumAddon → ${f} MUST BE BLOCKED`,
+    hasAccess(st({tier:'PRO',premiumAddon:true}), f), false);
+}
+for (const f of COMPTABLE_FEATS) {
+  expect(`CABINET+premiumAddon → ${f} MUST BE BLOCKED`,
+    hasAccess(st({tier:'CABINET',cabinetMember:true,cabinetRole:'titulaire',premiumAddon:true}), f), false);
+}
+
+// 13.c : LOCKED bloqué
+for (const f of COMPTABLE_FEATS) {
+  expect(`LOCKED → ${f} MUST BE BLOCKED`, hasAccess(st({tier:'LOCKED'}), f), false);
+}
+
+// 13.d : TRIAL & ADMIN bypass total
+for (const f of COMPTABLE_FEATS) {
+  expect(`TRIAL → ${f}`, hasAccess(st({tier:'TRIAL'}), f), true);
+}
+for (const f of COMPTABLE_FEATS) {
+  expect(`ADMIN bypass → ${f}`,
+    hasAccess(st({appMode:'PAYANT',tier:'ADMIN',isAdmin:true}), f), true);
+}
+
+// 13.e : ADMIN sim=COMPTABLE → accès total COMPTABLE
+for (const f of COMPTABLE_FEATS) {
+  expect(`ADMIN sim=COMPTABLE → ${f}`,
+    hasAccess(st({appMode:'PAYANT',tier:'ADMIN',isAdmin:true,simTier:'COMPTABLE'}), f), true);
+}
+// ADMIN sim=PRO → bloque COMPTABLE
+for (const f of COMPTABLE_FEATS) {
+  expect(`ADMIN sim=PRO → ${f} MUST BE BLOCKED`,
+    hasAccess(st({appMode:'PAYANT',tier:'ADMIN',isAdmin:true,simTier:'PRO'}), f), false);
+}
+
+// 13.f : COMPTABLE n'a PAS accès à PREMIUM (étanchéité bidirectionnelle)
+for (const f of PREMIUM_FEATS) {
+  expect(`COMPTABLE → ${f} (PREMIUM) MUST BE BLOCKED`,
+    hasAccess(st({tier:'COMPTABLE'}), f), false);
+}
+// COMPTABLE n'a pas non plus accès aux features PRO/CABINET (sauf si cabinet member)
+expect('COMPTABLE → dashboard_stats (PRO) MUST BE BLOCKED',
+  hasAccess(st({tier:'COMPTABLE'}), 'dashboard_stats'), false);
+expect('COMPTABLE → cabinet_multi_ide (CABINET) MUST BE BLOCKED',
+  hasAccess(st({tier:'COMPTABLE'}), 'cabinet_multi_ide'), false);
+// Mais accède aux features ESSENTIEL (cohérent avec ACCESS_MATRIX existant)
+expect('COMPTABLE → cotation_ngap (ESSENTIEL) OK',
+  hasAccess(st({tier:'COMPTABLE'}), 'cotation_ngap'), true);
 
 /* ═══ Résumé ═══ */
 console.log('\n════════════════════════════════════════');

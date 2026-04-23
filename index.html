@@ -1251,6 +1251,23 @@
       <div class="ni nurse-only" data-v="forensic-cert"><span class="nic">🛡️</span> Certificats forensiques</div>
       <div class="ni nurse-only" data-v="rapport-juridique"><span class="nic">⚖️</span> Rapport juridique mensuel</div>
     </div>
+    <!-- ═══════════════════════════════════════════════════════
+         🧑‍💼 EXPERTISE COMPTABLE SANTÉ — Plan AMI Comptable
+         Réservé aux experts-comptables (tier COMPTABLE).
+         Visible aux admins (démo) — verrouillé pour les autres.
+    ═══════════════════════════════════════════════════════ -->
+    <div class="sl" id="nav-comptable-section" style="margin-top:8px">
+      <div class="slbl">🧑‍💼 Expertise comptable</div>
+      <div class="ni" data-v="comptable-hub"><span class="nic">🏛️</span> Vue d'ensemble cabinet</div>
+      <div class="ni" data-v="comptable-dashboard"><span class="nic">📊</span> Dashboard multi-IDEL</div>
+      <div class="ni" data-v="comptable-export-fec"><span class="nic">📑</span> Export FEC + 2035</div>
+      <div class="ni" data-v="comptable-2042"><span class="nic">🧾</span> Générateur 2042-C-PRO</div>
+      <div class="ni" data-v="comptable-scoring"><span class="nic">🎯</span> Scoring risque portfolio</div>
+      <div class="ni" data-v="comptable-alertes"><span class="nic">🚨</span> Alertes NGAP en masse</div>
+      <div class="ni" data-v="comptable-connecteurs"><span class="nic">🔌</span> Connecteurs Cegid/EBP/Quadra</div>
+      <div class="ni" data-v="comptable-anonymisee"><span class="nic">🛡️</span> Vue anonymisée (pseudo-FEC)</div>
+      <div class="ni" data-v="comptable-trimestriel"><span class="nic">📅</span> Rapports trimestriels</div>
+    </div>
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Système</div>
       <div class="ni" data-v="mon-abo"><span class="nic">💎</span> Mon abonnement <span id="sub-nav-pill" style="display:none"></span></div>
@@ -1312,6 +1329,8 @@
       <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="ca-sous-declare" onclick="navTo('ca-sous-declare',this);toggleMobileMenu()"><span class="bn-ic">💸</span>CA sous-déc.</button>
       <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="forensic-cert" onclick="navTo('forensic-cert',this);toggleMobileMenu()"><span class="bn-ic">🛡️</span>Forensique</button>
       <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="rapport-juridique" onclick="navTo('rapport-juridique',this);toggleMobileMenu()"><span class="bn-ic">⚖️</span>Rap. juridique</button>
+      <!-- 🧑‍💼 Expertise comptable santé (tier COMPTABLE + admin) — un seul bouton hub -->
+      <button class="bn-item" id="btn-comptable-mobile" style="background:rgba(255,95,109,.08);border:1px solid rgba(255,95,109,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="comptable-hub" onclick="navTo('comptable-hub',this);toggleMobileMenu()"><span class="bn-ic">🧑‍💼</span>Comptable</button>
       <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="mon-abo" onclick="navTo('mon-abo',this);toggleMobileMenu()"><span class="bn-ic">💎</span>Mon abo</button>
       <button id="btn-install-mobile" class="bn-item" style="display:none;background:var(--ad);border:1px solid rgba(0,212,170,.3);border-radius:12px;padding:12px 4px;height:auto;flex:none;color:var(--a)" onclick="installApp()"><span class="bn-ic">📱</span>Installer</button>
       <button id="btn-profil-mobile" class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" onclick="openPM();toggleMobileMenu()"><span class="bn-ic">👤</span>Profil</button>
@@ -3242,6 +3261,65 @@
       </div>
     </section>
 
+    <!-- ═══ 🧑‍💼 VUES EXPERTISE COMPTABLE — Plan AMI Comptable (99€ HT/mois) ═══
+         Rendues par comptable.js via l'événement ui:navigate.
+         Accès gated par SUB.requireAccess() — réservé tier COMPTABLE + admins.
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="view" id="view-comptable-hub">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement de la vue d'ensemble cabinet…
+      </div>
+    </section>
+    <section class="view" id="view-comptable-dashboard">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement du dashboard multi-IDEL…
+      </div>
+    </section>
+    <section class="view" id="view-comptable-export-fec">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement de l'export FEC + 2035…
+      </div>
+    </section>
+    <section class="view" id="view-comptable-2042">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement du générateur 2042-C-PRO…
+      </div>
+    </section>
+    <section class="view" id="view-comptable-scoring">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement du scoring de risque portfolio…
+      </div>
+    </section>
+    <section class="view" id="view-comptable-alertes">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement des alertes NGAP en masse…
+      </div>
+    </section>
+    <section class="view" id="view-comptable-connecteurs">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement des connecteurs comptables…
+      </div>
+    </section>
+    <section class="view" id="view-comptable-anonymisee">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement de la vue anonymisée…
+      </div>
+    </section>
+    <section class="view" id="view-comptable-trimestriel">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement des rapports trimestriels…
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -3313,6 +3391,7 @@
 <script src="js/ca-sous-declare.js?v=1.0"></script><!-- 💸 Détection CA sous-déclaré (PREMIUM) -->
 <script src="js/forensic-cert.js?v=1.0"></script><!-- 🛡️ Certificats forensiques horodatés (PREMIUM) -->
 <script src="js/rapport-juridique.js?v=1.0"></script><!-- ⚖️ Rapport juridique mensuel (PREMIUM) -->
+<script src="js/comptable.js?v=1.0"></script><!-- 🧑‍💼 Expertise comptable santé : 8 modules COMPTABLE (multi-IDEL, FEC, 2035, 2042, scoring, alertes, connecteurs, anonymisée, trimestriel) -->
 <script src="js/premium-intelligence.js?v=1.0"></script><!-- 💎 Copilote financier + juridique : loss/risk/forecast/coach/elite + précheck + tournée optimizer -->
 <script src="js/alertes-medicaments.js?v=3.8"></script>
 <script src="js/audit-cpam.js?v=3.9"></script>
