@@ -931,6 +931,11 @@
 
     <!-- ═══ ONGLET : COMPTES ═══ -->
     <div class="adm-tab-section" data-tab="comptes">
+      <!-- 🧪 Switch mode TEST ↔ PAYANT (rendu par admin.js → loadAdmAppMode) -->
+      <div class="adm-app-mode-card" id="adm-app-mode-card" style="background:linear-gradient(135deg,var(--c),rgba(0,212,170,.02));border:1px solid var(--b);border-radius:var(--rl);padding:18px 22px;margin-bottom:18px">
+        <div style="text-align:center;color:var(--m);font-size:12px">⏳ Chargement du mode application…</div>
+      </div>
+
       <!-- Liste des comptes avec statut et actions -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
         <div class="lbl">👥 Comptes infirmiers</div>
@@ -1207,8 +1212,8 @@
       <!-- Recherche globale (desktop) -->
       <button class="top-search-btn" id="top-search-btn" onclick="openGlobalSearch()" style="display:none">🔍 Rechercher <kbd>⌘K</kbd></button>
       <button class="bvoice" id="voice-topbtn" onclick="toggleVoice()">🎤 Vocal</button>
-      <!-- Notifications -->
-      <button class="top-notif-btn" id="top-notif-btn" onclick="toggleNotifPanel()" style="display:none" title="Notifications">
+      <!-- Notifications (visibilité contrôlée par l'overlay de login : tant que l'utilisateur n'est pas connecté, #auth-ov couvre toute la page) -->
+      <button class="top-notif-btn" id="top-notif-btn" onclick="toggleNotifPanel()" title="Notifications">
         🔔
         <div class="top-notif-dot" id="top-notif-dot"></div>
       </button>
@@ -1243,24 +1248,25 @@
       <div class="slbl">Outils pratiques</div>
       <div class="ni nurse-only" data-v="tresor"><span class="nic">💸</span> Trésorerie <span id="tresor-attente-badge" style="font-size:10px;color:var(--w);margin-left:4px;font-family:var(--fm)"></span><span class="ni-premium-badge" title="Contenu Premium intégré : Détection CA sous-déclaré">💎</span></div>
       <div class="ni nurse-only" data-v="rapport"><span class="nic">📄</span> <span class="ni-label">Rapport mensuel</span> <span class="ni-premium-badge" title="Contenu Premium intégré : Rapport juridique mensuel">💎</span></div>
-      <div class="ni nurse-only" data-v="dash"><span class="nic">📊</span> <span class="ni-label">Dashboard & Statistiques</span> <span class="ni-alert-badge red" id="nav-dash-badge" style="display:none"></span></div>
-      <div class="ni nurse-only" data-v="copilote"><span class="nic">🤖</span> <span class="ni-label">Copilote IA</span></div>
-      <div class="ni" data-v="compte-rendu"><span class="nic">📋</span> <span class="ni-label">Compte-rendu de passage</span></div>
+      <div class="ni nurse-only" data-v="dash"><span class="nic">📊</span> <span class="ni-label">Dashboard & Statistiques</span> <span class="ni-alert-badge red" id="nav-dash-badge" style="display:none"></span> <span class="ni-premium-badge" title="Module enrichi par votre abonnement Premium">💎</span></div>
+      <div class="ni nurse-only" data-v="copilote"><span class="nic">🤖</span> <span class="ni-label">Copilote IA</span> <span class="ni-premium-badge" title="Module enrichi par votre abonnement Premium">💎</span></div>
+      <div class="ni" data-v="compte-rendu"><span class="nic">📋</span> <span class="ni-label">Compte-rendu de passage</span> <span class="ni-premium-badge" title="Module enrichi par votre abonnement Premium">💎</span></div>
       <div class="ni" data-v="bsi"><span class="nic">🩺</span> BSI — Bilan soins infirmiers</div>
       <div class="ni" data-v="consentements"><span class="nic">✍️</span> Consentements éclairés</div>
       <div class="ni" data-v="alertes-med"><span class="nic">⚠️</span> Alertes médicamenteuses</div>
       <div class="ni" data-v="audit-cpam"><span class="nic">🔍</span> <span class="ni-label">Simulateur audit CPAM</span> <span class="ni-premium-badge" title="Contenu Premium intégré : Simulateur régulation CPAM">💎</span></div>
-      <div class="ni nurse-only" data-v="outils-charges"><span class="nic">💰</span> <span class="ni-label">Calcul charges & net</span></div>
+      <div class="ni nurse-only" data-v="outils-charges"><span class="nic">💰</span> <span class="ni-label">Calcul charges & net</span> <span class="ni-premium-badge" title="Module enrichi par votre abonnement Premium">💎</span></div>
       <div class="ni nurse-only" data-v="outils-modeles"><span class="nic">📝</span> Modèles de soins</div>
       <div class="ni nurse-only" data-v="outils-simulation"><span class="nic">⚡</span> Simulateur majoration</div>
     </div>
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Cabinet</div>
       <div class="ni nurse-only" id="nav-cabinet-item" data-v="cabinet"><span class="nic">🏥</span> Cabinet &amp; synchronisation <span id="cabinet-nav-badge" style="display:none;background:rgba(0,212,170,.2);color:var(--a);border-radius:20px;font-size:9px;padding:1px 7px;margin-left:4px;font-family:var(--fm)">0</span></div>
-      <div class="ni" data-v="transmissions"><span class="nic">📝</span> <span class="ni-label">Transmissions infirmières</span></div>
+      <div class="ni" data-v="transmissions"><span class="nic">📝</span> <span class="ni-label">Transmissions infirmières</span> <span class="ni-premium-badge" title="Module enrichi par votre abonnement Premium">💎</span></div>
     </div>
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Système</div>
+      <div class="ni" data-v="mon-abo"><span class="nic">💎</span> Mon abonnement <span id="sub-nav-pill" style="display:none"></span></div>
       <div class="ni nurse-only" data-v="ngap-ref"><span class="nic">📚</span> Référentiel NGAP</div>
       <div class="ni" data-v="aide"><span class="nic">📖</span> Aide & Docs</div>
       <div class="ni nurse-only" data-v="contact"><span class="nic">💬</span> Contact Admin <span id="contact-badge" style="display:none;background:#ef4444;color:#fff;border-radius:20px;font-size:9px;padding:1px 6px;margin-left:4px;font-family:var(--fm)">!</span></div>
@@ -1315,6 +1321,7 @@
       <button class="bn-item nurse-only" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="contact" onclick="navTo('contact',this);toggleMobileMenu()"><span class="bn-ic">💬</span>Contact</button>
       <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="aide" onclick="navTo('aide',this);toggleMobileMenu()"><span class="bn-ic">📖</span>Aide</button>
       <button class="bn-item nurse-only" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="sec" onclick="navTo('sec',this);toggleMobileMenu()"><span class="bn-ic">🛡️</span>Sécurité</button>
+      <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="mon-abo" onclick="navTo('mon-abo',this);toggleMobileMenu()"><span class="bn-ic">💎</span>Mon abo</button>
       <button id="btn-install-mobile" class="bn-item" style="display:none;background:var(--ad);border:1px solid rgba(0,212,170,.3);border-radius:12px;padding:12px 4px;height:auto;flex:none;color:var(--a)" onclick="installApp()"><span class="bn-ic">📱</span>Installer</button>
       <button id="btn-profil-mobile" class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" onclick="openPM();toggleMobileMenu()"><span class="bn-ic">👤</span>Profil</button>
       <button class="bn-item" style="background:rgba(255,95,109,.08);border:1px solid rgba(255,95,109,.2);border-radius:12px;padding:12px 4px;height:auto;flex:none;color:var(--d)" onclick="logout()"><span class="bn-ic">⏻</span>Quitter</button>
@@ -3217,6 +3224,17 @@
     <section class="view" id="view-audit-cpam">
       <div id="admin-audit-notice" class="admin-notice" style="display:none">🛡️ <strong>Mode admin — démo</strong> · Le simulateur analyse les cotations de votre compte admin. En production, chaque infirmière voit uniquement ses propres données.</div>
       <div id="audit-cpam-root"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         💎 MON ABONNEMENT — rendu par subscription.js
+              (SUB.renderAbonnementPage via ui:navigate)
+    ══════════════════════════════════════════ -->
+    <section class="view" id="view-mon-abo">
+      <div style="text-align:center;padding:40px;color:var(--m)">
+        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
+        Chargement de votre abonnement…
+      </div>
     </section>
 
     <!-- ═══ 💎 MOUNT POINTS CACHÉS — utilisés uniquement par les scripts
