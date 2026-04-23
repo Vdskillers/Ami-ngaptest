@@ -17,7 +17,6 @@
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/mobile-premium.css">
 <link rel="stylesheet" href="css/desktop-premium.css">
-<link rel="stylesheet" href="css/premium-intelligence.css?v=1.0"><!-- 💎 Widgets copilote financier + juridique -->
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#0b0f14">
@@ -185,54 +184,6 @@
   .lp-cab-cta button:hover{background:rgba(79,168,255,.22);transform:translateY(-1px)}
   .lp-cab-cta .lp-cab-cta-secondary{background:transparent;color:#7fc0ff}
 
-  /* ════════════════════════════════════════════════════════════════
-     🧑‍💼 SECTION EXPERTISE COMPTABLE SANTÉ — landing dédiée AMI Comptable
-     Conversion-focused : douleur → solution → bénéfices chiffrés → CTA
-  ════════════════════════════════════════════════════════════════ */
-  .lp-compta{background:linear-gradient(135deg,rgba(255,95,109,.07),rgba(255,95,109,.02));border:1px solid rgba(255,95,109,.22);border-radius:20px;padding:34px 32px;margin-bottom:52px;position:relative;overflow:hidden}
-  .lp-compta::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(255,95,109,.12),transparent 70%);pointer-events:none}
-  .lp-compta-badge{display:inline-block;background:rgba(255,95,109,.18);color:#FF7A85;font-family:var(--fm);font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:5px 12px;border-radius:12px;margin-bottom:14px;font-weight:700}
-  .lp-compta-h{font-family:var(--fs);font-size:clamp(24px,3.8vw,34px);color:#ffffff;line-height:1.1;margin-bottom:12px;letter-spacing:-.5px}
-  .lp-compta-h em{color:#FF7A85;font-style:italic}
-  .lp-compta-p{font-size:14.5px;color:#c8d8e4;line-height:1.65;margin-bottom:24px}
-
-  /* Bloc DOULEUR (problème) — fond noir-rouge */
-  .lp-compta-pain{background:rgba(0,0,0,.25);border-left:3px solid #FF5F6D;border-radius:10px;padding:16px 20px;margin-bottom:22px}
-  .lp-compta-pain-t{font-size:12px;color:#FF7A85;font-family:var(--fm);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-weight:700}
-  .lp-compta-pain ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
-  .lp-compta-pain li{font-size:13px;color:#d8e4ec;line-height:1.5;padding-left:18px;position:relative}
-  .lp-compta-pain li::before{content:'✗';color:#FF5F6D;position:absolute;left:0;font-weight:700}
-
-  /* Bloc BÉNÉFICES (solution) — grille features */
-  .lp-compta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
-  @media(max-width:640px){.lp-compta-grid{grid-template-columns:1fr}}
-  .lp-compta-feat{background:rgba(255,255,255,.025);border:1px solid rgba(255,95,109,.12);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;transition:all .2s}
-  .lp-compta-feat:hover{border-color:rgba(255,95,109,.3);transform:translateY(-1px)}
-  .lp-compta-feat-ic{font-size:22px;flex-shrink:0;line-height:1.1}
-  .lp-compta-feat-txt{flex:1;font-size:13px;color:#d8e4ec;line-height:1.5}
-  .lp-compta-feat-txt strong{color:#ffffff;display:block;margin-bottom:2px;font-weight:700}
-
-  /* Bloc ROI — KPIs chiffrés */
-  .lp-compta-roi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;padding:18px;background:rgba(255,95,109,.05);border-radius:12px;border:1px dashed rgba(255,95,109,.25)}
-  @media(max-width:640px){.lp-compta-roi{grid-template-columns:repeat(2,1fr)}}
-  .lp-compta-roi-item{text-align:center;padding:6px}
-  .lp-compta-roi-val{font-family:var(--fs);font-size:clamp(20px,3vw,26px);color:#FF7A85;font-weight:700;line-height:1.1;margin-bottom:4px}
-  .lp-compta-roi-lbl{font-size:11px;color:#a0bbd0;font-family:var(--fm);letter-spacing:.3px;line-height:1.3}
-
-  /* Pricing inline */
-  .lp-compta-price{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:rgba(0,0,0,.25);border:1px solid rgba(255,95,109,.2);border-radius:12px;padding:14px 18px;margin-bottom:22px}
-  .lp-compta-price-amt{font-family:var(--fs);font-size:26px;color:#ffffff;font-weight:700;line-height:1}
-  .lp-compta-price-amt span{color:#FF7A85;font-size:16px;font-weight:600;margin-left:4px}
-  .lp-compta-price-sep{width:1px;height:32px;background:rgba(255,255,255,.12)}
-  .lp-compta-price-info{font-size:12.5px;color:#c8d8e4;line-height:1.4;flex:1;min-width:200px}
-  .lp-compta-price-info strong{color:#FF7A85;display:block;font-size:11px;font-family:var(--fm);letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px}
-
-  /* CTA */
-  .lp-compta-cta{display:flex;gap:10px;flex-wrap:wrap}
-  .lp-compta-cta button{background:rgba(255,95,109,.16);color:#ffffff;border:1px solid rgba(255,95,109,.4);border-radius:12px;padding:13px 24px;font-family:var(--ff);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .18s}
-  .lp-compta-cta button:hover{background:rgba(255,95,109,.26);transform:translateY(-1px);box-shadow:0 6px 18px rgba(255,95,109,.18)}
-  .lp-compta-cta .lp-compta-cta-secondary{background:transparent;color:#FF7A85}
-
   /* ── FAQ ─────────────────────────────────────── */
   .lp-faq{display:flex;flex-direction:column;gap:8px;margin-bottom:52px}
   .lp-faq-item{background:rgba(14,20,30,.92);border:1px solid rgba(30,45,61,.95);border-radius:14px;overflow:hidden;transition:border-color .2s}
@@ -392,7 +343,6 @@
         <a class="lp-toc-link" href="#lp-sim">✦ Essayer</a>
         <a class="lp-toc-link" href="#lp-roi">Ce que tu gagnes</a>
         <a class="lp-toc-link" href="#lp-cabinet-sec">Cabinets</a>
-        <a class="lp-toc-link" href="#lp-compta-sec" style="color:#FF7A85">🧑‍💼 Experts-comptables</a>
         <a class="lp-toc-link" href="#lp-faq-sec">FAQ</a>
         <a class="lp-toc-link" href="#lp-security">Sécurité</a>
       </div>
@@ -762,129 +712,6 @@
       </div>
     </div>
 
-    <!-- ════════════════════════════════════════════════════════════════
-         🧑‍💼 EXPERTISE COMPTABLE SANTÉ — Section dédiée AMI Comptable
-         Cible : cabinets d'expertise comptable avec portefeuille IDEL
-         Approche : douleur → solution → bénéfices chiffrés → CTA
-    ════════════════════════════════════════════════════════════════ -->
-    <div id="lp-compta-sec" class="lp-compta">
-      <span class="lp-compta-badge">🧑‍💼 Édition expertise comptable santé</span>
-      <div class="lp-compta-h">Gérez 20 IDEL comme <em>1 seul dossier.</em><br>Sans erreur fiscale. Sans Excel. Sans perte de temps.</div>
-      <p class="lp-compta-p">
-        AMI Comptable automatise vos liasses 2035, détecte les risques CPAM en amont
-        et transforme votre portefeuille infirmier en machine rentable. Conçu pour
-        les cabinets d'expertise comptable santé qui veulent <strong>scaler sans recruter</strong>.
-      </p>
-
-      <!-- BLOC DOULEUR -->
-      <div class="lp-compta-pain">
-        <div class="lp-compta-pain-t">⚠ Vous perdez du temps là où vous devriez en gagner</div>
-        <ul>
-          <li>Retraitement Excel interminable pour chaque IDEL cliente</li>
-          <li>Risques CPAM invisibles jusqu'au contrôle (et là, c'est trop tard)</li>
-          <li>Dossiers hétérogènes, impossibles à standardiser à l'échelle</li>
-          <li>Liasses 2035 et 2042 répétitives qui pompent vos collaborateurs</li>
-          <li>Aucune vision globale du portefeuille en temps réel</li>
-        </ul>
-      </div>
-
-      <!-- BLOC BÉNÉFICES (8 features orientées résultat) -->
-      <div class="lp-compta-grid">
-        <div class="lp-compta-feat">
-          <div class="lp-compta-feat-ic">📊</div>
-          <div class="lp-compta-feat-txt">
-            <strong>Pilotage 20 IDEL en un seul écran</strong>
-            CA, actes, anomalies et conformité — vision instantanée du portefeuille.
-          </div>
-        </div>
-        <div class="lp-compta-feat">
-          <div class="lp-compta-feat-ic">📁</div>
-          <div class="lp-compta-feat-txt">
-            <strong>Liasses 2035 en 1 clic</strong>
-            FEC normé DGFiP + liasse BNC pré-remplie. Plus aucun retraitement manuel.
-          </div>
-        </div>
-        <div class="lp-compta-feat">
-          <div class="lp-compta-feat-ic">🧾</div>
-          <div class="lp-compta-feat-txt">
-            <strong>2042-C-PRO · URSSAF · CARPIMKO</strong>
-            Pré-remplissage automatique des déclarations sociales et fiscales par client.
-          </div>
-        </div>
-        <div class="lp-compta-feat">
-          <div class="lp-compta-feat-ic">⚠️</div>
-          <div class="lp-compta-feat-txt">
-            <strong>Risque CPAM anticipé</strong>
-            Scoring intelligent par cliente — détectez les anomalies AVANT le contrôle.
-          </div>
-        </div>
-        <div class="lp-compta-feat">
-          <div class="lp-compta-feat-ic">🚨</div>
-          <div class="lp-compta-feat-txt">
-            <strong>Anomalies NGAP en masse</strong>
-            Analyse batch sur tout le portefeuille. Erreurs détectées en 10 secondes.
-          </div>
-        </div>
-        <div class="lp-compta-feat">
-          <div class="lp-compta-feat-ic">🔗</div>
-          <div class="lp-compta-feat-txt">
-            <strong>Connecteurs Cegid · EBP · Quadra</strong>
-            Export direct vers les principaux logiciels comptables. Zéro retraitement.
-          </div>
-        </div>
-        <div class="lp-compta-feat">
-          <div class="lp-compta-feat-ic">🔒</div>
-          <div class="lp-compta-feat-txt">
-            <strong>Vue anonymisée RGPD-safe</strong>
-            Pseudo-FEC : aucune donnée patient exposée. Conforme art. 4.5 et 25 RGPD.
-          </div>
-        </div>
-        <div class="lp-compta-feat">
-          <div class="lp-compta-feat-ic">📈</div>
-          <div class="lp-compta-feat-txt">
-            <strong>Rapports trimestriels automatiques</strong>
-            Générés et prêts à envoyer à chaque cliente IDEL — chaque trimestre.
-          </div>
-        </div>
-      </div>
-
-      <!-- BLOC ROI CHIFFRÉ -->
-      <div class="lp-compta-roi">
-        <div class="lp-compta-roi-item">
-          <div class="lp-compta-roi-val">+6 à 10h</div>
-          <div class="lp-compta-roi-lbl">économisées / mois<br>par collaborateur</div>
-        </div>
-        <div class="lp-compta-roi-item">
-          <div class="lp-compta-roi-val">−80 %</div>
-          <div class="lp-compta-roi-lbl">d'erreurs fiscales<br>détectées en amont</div>
-        </div>
-        <div class="lp-compta-roi-item">
-          <div class="lp-compta-roi-val">×3</div>
-          <div class="lp-compta-roi-lbl">de capacité de traitement<br>sans recruter</div>
-        </div>
-        <div class="lp-compta-roi-item">
-          <div class="lp-compta-roi-val">0 €</div>
-          <div class="lp-compta-roi-lbl">de perte sur contrôle<br>CPAM anticipé</div>
-        </div>
-      </div>
-
-      <!-- PRICING INLINE -->
-      <div class="lp-compta-price">
-        <div class="lp-compta-price-amt">99 €<span> HT / mois</span></div>
-        <div class="lp-compta-price-sep"></div>
-        <div class="lp-compta-price-info">
-          <strong>20 IDEL incluses</strong>
-          +5 € HT par IDEL supplémentaire · Moins cher qu'1 heure de collaborateur
-        </div>
-      </div>
-
-      <!-- CTA -->
-      <div class="lp-compta-cta">
-        <button onclick="closeLanding()">🚀 Démarrer mon cabinet d'expertise</button>
-        <button class="lp-compta-cta-secondary" onclick="window.location.href='mailto:contact@ami-ngap.fr?subject=Démo%20AMI%20Comptable%20-%20cabinet%20d%27expertise%20santé&amp;body=Bonjour,%0A%0AJe souhaite voir AMI Comptable sur mon portefeuille IDEL actuel.%0A%0ANombre d%27IDEL au portefeuille : %0ALogiciel comptable utilisé : %0A%0AMerci.'">✉ Démo sur mon portefeuille</button>
-      </div>
-    </div>
-
     <!-- COMPARATIF -->
     <div class="lp-sec-label">🧠 AMI vs les autres</div>
     <div class="lp-compare">
@@ -1066,18 +893,6 @@
 
     <!-- ═══ ONGLET : COMPTES ═══ -->
     <div class="adm-tab-section" data-tab="comptes">
-      <!-- ════════════════════════════════════════════════════════
-           💎 MODE APPLICATION — pilotage TEST / PAYANT (admin-only)
-           Rendu par admin.js : loadAdmAppMode() remplit #adm-app-mode-card
-           au chargement de la vue admin (appelée dans loadAdm).
-           ════════════════════════════════════════════════════════ -->
-      <div id="adm-app-mode-card" class="adm-appmode-card" style="margin-bottom:22px">
-        <div style="text-align:center;padding:16px;color:var(--m);font-size:12px">
-          <div class="spin spinw" style="width:18px;height:18px;margin:0 auto 8px"></div>
-          Chargement du mode application…
-        </div>
-      </div>
-
       <!-- Liste des comptes avec statut et actions -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
         <div class="lbl">👥 Comptes infirmiers</div>
@@ -1229,13 +1044,6 @@
   <div class="mc">
     <div class="mh"><div class="mt">👤 Mon profil</div><button class="mx" onclick="closePM()">✕</button></div>
     <div class="msg e" id="pe"></div><div class="msg o" id="po"></div>
-
-    <!-- ═══════════════════════════════════════════════════════════
-         💎 État d'abonnement (rempli par _renderProfileSubStatus
-         dans profil.js · hydraté depuis SUB.getState())
-    ═══════════════════════════════════════════════════════════ -->
-    <div id="pm-sub-status" class="pm-sub-card" style="display:none;margin-bottom:20px"></div>
-
     <div style="margin-bottom:20px">
       <div class="g2"><div class="af"><label for="p-fn">Prénom</label><input type="text" id="p-fn" name="firstname"></div><div class="af"><label for="p-ln">Nom</label><input type="text" id="p-ln" name="lastname"></div></div>
       <div class="g2"><div class="af"><label for="p-ad">N° ADELI</label><input type="text" id="p-ad" name="adeli"></div><div class="af"><label for="p-rp">RPPS</label><input type="text" id="p-rp" name="rpps"></div></div>
@@ -1396,69 +1204,46 @@
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Outils pratiques</div>
       <div class="ni nurse-only" data-v="tresor"><span class="nic">💸</span> Trésorerie <span id="tresor-attente-badge" style="font-size:10px;color:var(--w);margin-left:4px;font-family:var(--fm)"></span></div>
-      <div class="ni nurse-only" data-v="rapport"><span class="nic">📄</span> Rapport mensuel</div>
-      <div class="ni nurse-only" data-v="dash"><span class="nic">📊</span> Dashboard & Statistiques <span class="ni-alert-badge red" id="nav-dash-badge" style="display:none"></span></div>
-      <div class="ni nurse-only" data-v="copilote"><span class="nic">🤖</span> Copilote IA</div>
-      <div class="ni" data-v="transmissions"><span class="nic">📝</span> Transmissions infirmières</div>
-      <div class="ni" data-v="compte-rendu"><span class="nic">📋</span> Compte-rendu de passage</div>
+      <div class="ni nurse-only" data-v="rapport"><span class="nic">📄</span> <span class="ni-label">Rapport mensuel</span></div>
+      <div class="ni nurse-only" data-v="dash"><span class="nic">📊</span> <span class="ni-label">Dashboard &amp; Statistiques</span> <span class="ni-alert-badge red" id="nav-dash-badge" style="display:none"></span></div>
+      <div class="ni nurse-only" data-v="copilote"><span class="nic">🤖</span> <span class="ni-label">Copilote IA</span></div>
+      <div class="ni" data-v="compte-rendu"><span class="nic">📋</span> <span class="ni-label">Compte-rendu de passage</span></div>
       <div class="ni" data-v="bsi"><span class="nic">🩺</span> BSI — Bilan soins infirmiers</div>
       <div class="ni" data-v="consentements"><span class="nic">✍️</span> Consentements éclairés</div>
       <div class="ni" data-v="alertes-med"><span class="nic">⚠️</span> Alertes médicamenteuses</div>
-      <div class="ni" data-v="audit-cpam"><span class="nic">🔍</span> Simulateur audit CPAM</div>
-      <div class="ni nurse-only" data-v="outils-charges"><span class="nic">💰</span> Calcul charges & net</div>
+      <div class="ni" data-v="audit-cpam"><span class="nic">🔍</span> <span class="ni-label">Simulateur audit CPAM</span></div>
+      <div class="ni nurse-only" data-v="outils-charges"><span class="nic">💰</span> <span class="ni-label">Calcul charges &amp; net</span></div>
       <div class="ni nurse-only" data-v="outils-modeles"><span class="nic">📝</span> Modèles de soins</div>
       <div class="ni nurse-only" data-v="outils-simulation"><span class="nic">⚡</span> Simulateur majoration</div>
     </div>
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Cabinet</div>
       <div class="ni nurse-only" id="nav-cabinet-item" data-v="cabinet"><span class="nic">🏥</span> Cabinet &amp; synchronisation <span id="cabinet-nav-badge" style="display:none;background:rgba(0,212,170,.2);color:var(--a);border-radius:20px;font-size:9px;padding:1px 7px;margin-left:4px;font-family:var(--fm)">0</span></div>
+      <div class="ni" data-v="transmissions"><span class="nic">📝</span> <span class="ni-label">Transmissions infirmières</span></div>
+      <div class="ni" data-v="compliance"><span class="nic">🧠</span> Conformité cabinet</div>
     </div>
     <!-- ═══ 💎 Section Premium (add-on +15€ HT/mois) ═══
-         Toutes les entrées ci-dessous sont gated PREMIUM par applyUILocks().
-         Les versions basiques restent accessibles dans "Outils pratiques"
-         pour ne pas casser le produit (dual-track Pro/Premium).
+         Cette section ne contient QUE les modules exclusifs Premium.
+         Les autres bénéfices Premium (copilote 90j, audit IA, dash prédictif,
+         charges prédictif, rapport intelligent, transmissions smart, CR auto IA)
+         enrichissent automatiquement les modules Pro existants — voir
+         premium-enhanced.js qui :
+           1. Renomme les onglets Pro (Copilote IA → Copilote IA Pro+ 💎)
+           2. Injecte les widgets Premium DANS les vues d'origine
+         Pour les non-Premium, ces 4 entrées sont visibles + cadenassées (FOMO).
     ═════════════════════════════════════════════════════ -->
     <div class="sl" style="margin-top:8px">
       <div class="slbl">💎 Premium</div>
-      <!-- 🧠 Optimisation & IA avancée -->
-      <div class="ni nurse-only" data-v="copilote-premium"><span class="nic">🤖</span> Copilote IA Pro+</div>
-      <div class="ni" data-v="audit-cpam-premium"><span class="nic">🔍</span> Audit CPAM IA prédictif</div>
-      <div class="ni nurse-only" data-v="simulateur-regulation"><span class="nic">⚡</span> Simulateur régulation</div>
-      <!-- ⚖️ Sécurité & juridique -->
       <div class="ni nurse-only" data-v="ca-sous-declare"><span class="nic">💸</span> Détection CA sous-déclaré</div>
       <div class="ni nurse-only" data-v="forensic-cert"><span class="nic">🛡️</span> Certificats conformes</div>
       <div class="ni nurse-only" data-v="rapport-juridique"><span class="nic">⚖️</span> Rapport juridique mensuel</div>
-      <!-- 💰 Optimisation financière -->
-      <div class="ni nurse-only" data-v="charges-premium"><span class="nic">💰</span> Charges & net prédictif</div>
-      <div class="ni nurse-only" data-v="rapport-premium"><span class="nic">📄</span> Rapport mensuel intelligent</div>
-      <!-- 📊 Analyse stratégique -->
-      <div class="ni nurse-only" data-v="dash-premium"><span class="nic">📊</span> Dashboard prédictif</div>
-      <!-- 🧾 Automatisation -->
-      <div class="ni" data-v="transmissions-premium"><span class="nic">📝</span> Transmissions smart IA</div>
-      <div class="ni" data-v="compte-rendu-premium"><span class="nic">📋</span> Compte-rendu auto IA</div>
-    </div>
-    <!-- ═══════════════════════════════════════════════════════
-         🧑‍💼 EXPERTISE COMPTABLE SANTÉ — Plan AMI Comptable
-         Réservé aux experts-comptables (tier COMPTABLE).
-         Visible aux admins (démo) — verrouillé pour les autres.
-    ═══════════════════════════════════════════════════════ -->
-    <div class="sl" id="nav-comptable-section" style="margin-top:8px">
-      <div class="slbl">🧑‍💼 Expertise comptable</div>
-      <div class="ni" data-v="comptable-hub"><span class="nic">🏛️</span> Vue d'ensemble cabinet</div>
-      <div class="ni" data-v="comptable-dashboard"><span class="nic">📊</span> Dashboard multi-IDEL</div>
-      <div class="ni" data-v="comptable-export-fec"><span class="nic">📑</span> Export FEC + 2035</div>
-      <div class="ni" data-v="comptable-2042"><span class="nic">🧾</span> Générateur 2042-C-PRO</div>
-      <div class="ni" data-v="comptable-scoring"><span class="nic">🎯</span> Scoring risque portfolio</div>
-      <div class="ni" data-v="comptable-alertes"><span class="nic">🚨</span> Alertes NGAP en masse</div>
-      <div class="ni" data-v="comptable-connecteurs"><span class="nic">🔌</span> Connecteurs Cegid/EBP/Quadra</div>
-      <div class="ni" data-v="comptable-anonymisee"><span class="nic">🛡️</span> Vue anonymisée (pseudo-FEC)</div>
-      <div class="ni" data-v="comptable-trimestriel"><span class="nic">📅</span> Rapports trimestriels</div>
+      <div class="ni nurse-only" data-v="simulateur-regulation"><span class="nic">⚡</span> Simulateur régulation</div>
     </div>
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Système</div>
       <div class="ni" data-v="mon-abo"><span class="nic">💎</span> Mon abonnement <span id="sub-nav-pill" style="display:none"></span></div>
       <div class="ni nurse-only" data-v="ngap-ref"><span class="nic">📚</span> Référentiel NGAP</div>
-      <div class="ni" data-v="aide"><span class="nic">📖</span> Aide & Docs</div>
+      <div class="ni" data-v="aide"><span class="nic">📖</span> Aide &amp; Docs</div>
       <div class="ni nurse-only" data-v="contact"><span class="nic">💬</span> Contact Admin <span id="contact-badge" style="display:none;background:#ef4444;color:#fff;border-radius:20px;font-size:9px;padding:1px 6px;margin-left:4px;font-family:var(--fm)">!</span></div>
       <div class="ni nurse-only" data-v="sec"><span class="nic">🛡️</span> Sécurité</div>
     </div>
@@ -1511,20 +1296,11 @@
       <button class="bn-item nurse-only" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="contact" onclick="navTo('contact',this);toggleMobileMenu()"><span class="bn-ic">💬</span>Contact</button>
       <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="aide" onclick="navTo('aide',this);toggleMobileMenu()"><span class="bn-ic">📖</span>Aide</button>
       <button class="bn-item nurse-only" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="sec" onclick="navTo('sec',this);toggleMobileMenu()"><span class="bn-ic">🛡️</span>Sécurité</button>
-      <!-- 💎 Vues PREMIUM (add-on) — fond violet léger pour les distinguer -->
-      <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="copilote-premium" onclick="navTo('copilote-premium',this);toggleMobileMenu()"><span class="bn-ic">🤖</span>Copilote+</button>
-      <button class="bn-item" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="audit-cpam-premium" onclick="navTo('audit-cpam-premium',this);toggleMobileMenu()"><span class="bn-ic">🔍</span>Audit IA</button>
-      <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="simulateur-regulation" onclick="navTo('simulateur-regulation',this);toggleMobileMenu()"><span class="bn-ic">⚡</span>Régulation</button>
+      <!-- 💎 Vues PREMIUM (modules exclusifs) — fond violet léger pour les distinguer -->
       <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="ca-sous-declare" onclick="navTo('ca-sous-declare',this);toggleMobileMenu()"><span class="bn-ic">💸</span>CA sous-déc.</button>
       <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="forensic-cert" onclick="navTo('forensic-cert',this);toggleMobileMenu()"><span class="bn-ic">🛡️</span>Conformes</button>
       <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="rapport-juridique" onclick="navTo('rapport-juridique',this);toggleMobileMenu()"><span class="bn-ic">⚖️</span>Rap. juri.</button>
-      <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="charges-premium" onclick="navTo('charges-premium',this);toggleMobileMenu()"><span class="bn-ic">💰</span>Charges+</button>
-      <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="rapport-premium" onclick="navTo('rapport-premium',this);toggleMobileMenu()"><span class="bn-ic">📄</span>Rap. IA</button>
-      <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="dash-premium" onclick="navTo('dash-premium',this);toggleMobileMenu()"><span class="bn-ic">📊</span>Dash IA</button>
-      <button class="bn-item" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="transmissions-premium" onclick="navTo('transmissions-premium',this);toggleMobileMenu()"><span class="bn-ic">📝</span>Transm.+</button>
-      <button class="bn-item" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="compte-rendu-premium" onclick="navTo('compte-rendu-premium',this);toggleMobileMenu()"><span class="bn-ic">📋</span>CR auto IA</button>
-      <!-- 🧑‍💼 Expertise comptable santé (tier COMPTABLE + admin) — un seul bouton hub -->
-      <button class="bn-item" id="btn-comptable-mobile" style="background:rgba(255,95,109,.08);border:1px solid rgba(255,95,109,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="comptable-hub" onclick="navTo('comptable-hub',this);toggleMobileMenu()"><span class="bn-ic">🧑‍💼</span>Comptable</button>
+      <button class="bn-item nurse-only" style="background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="simulateur-regulation" onclick="navTo('simulateur-regulation',this);toggleMobileMenu()"><span class="bn-ic">⚡</span>Régulation</button>
       <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="mon-abo" onclick="navTo('mon-abo',this);toggleMobileMenu()"><span class="bn-ic">💎</span>Mon abo</button>
       <button id="btn-install-mobile" class="bn-item" style="display:none;background:var(--ad);border:1px solid rgba(0,212,170,.3);border-radius:12px;padding:12px 4px;height:auto;flex:none;color:var(--a)" onclick="installApp()"><span class="bn-ic">📱</span>Installer</button>
       <button id="btn-profil-mobile" class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" onclick="openPM();toggleMobileMenu()"><span class="bn-ic">👤</span>Profil</button>
@@ -1533,14 +1309,6 @@
   </div>
 
   <main class="main">
-
-    <!-- ══════════════════════════════════════════
-         💎 Bandeaux abonnement (gérés par subscription.js)
-         - sub-trial-banner  : TRIAL actif (J-X restant) ou LOCKED
-         - sub-admin-banner  : admin en mode simulation de tier
-    ══════════════════════════════════════════ -->
-    <div id="sub-admin-banner" style="display:none"></div>
-    <div id="sub-trial-banner" style="display:none"></div>
 
     <!-- COTATION -->
     <section class="view on" id="view-cot">
@@ -2400,7 +2168,7 @@
             <th>Actes</th>
             <th>Total</th>
             <th>Statut</th>
-            <th class="hist-col-ide">IDE(s)</th>
+            <th>IDE(s)</th>
             <th>Alertes</th>
             <th></th>
             <th></th>
@@ -2457,9 +2225,6 @@
 
         <!-- ── 🆕 Widget Score de confiance (trust score) ── -->
         <div id="dash-trust-widget" style="display:none;margin:4px 0 16px"></div>
-
-        <!-- 💎 Premium Intelligence — auto-mount risk/forecast/elite à la nav dashboard -->
-        <div id="pi-dashboard-mount"></div>
 
         <!-- ── KPIs ── -->
         <div id="dash-kpis" class="sg" style="grid-template-columns:repeat(auto-fill,minmax(175px,1fr));margin:20px 0 24px"></div>
@@ -3322,13 +3087,14 @@
       </div>
 
       <!-- ── 🛡️ Widget Conformité cabinet (v3.9) — déplacé depuis Dashboard ── -->
+      <div id="dash-compliance-widget" style="display:none;margin:4px 0 16px"></div>
+
       <!-- Contenu dynamique rendu par cabinet.js -->
       <div id="cabinet-root">
         <!-- Rempli par renderCabinetSection() à la navigation -->
       </div>
 
-      <!-- ══ DASHBOARD CABINET — Statistiques cabinet Multi-IDE ══
-           (Revenus par IDE, Simulateur et Objectif CA sont dans la modale "📊 Stats consolidées") -->
+      <!-- ══ DASHBOARD CABINET — déplacé depuis view-dash ══ -->
       <div id="dash-cabinet-section" style="display:none;margin-top:24px">
 
         <!-- ── Séparateur + titre cabinet ── -->
@@ -3341,8 +3107,38 @@
           <button class="btn bs bsm" onclick="loadDashCabinet()">↻ Actualiser</button>
         </div>
 
-        <!-- KPIs cabinet (peuplé par loadDashCabinet) -->
-        <div id="dash-cabinet-kpis" class="sg" style="grid-template-columns:repeat(auto-fill,minmax(175px,1fr));margin-bottom:12px"></div>
+        <!-- KPIs cabinet -->
+        <div id="dash-cabinet-kpis" class="sg" style="grid-template-columns:repeat(auto-fill,minmax(175px,1fr));margin-bottom:24px"></div>
+
+        <!-- Revenus par IDE -->
+        <div style="border-top:1px solid var(--b);margin-bottom:18px"></div>
+        <div class="dash-section-title" style="margin-bottom:14px">Revenus par infirmière</div>
+        <div id="dash-cabinet-ide-revenues" style="margin-bottom:24px"></div>
+
+        <!-- Simulateur revenus cabinet -->
+        <div style="border-top:1px solid var(--b);margin-bottom:18px"></div>
+        <div class="dash-section-title" style="margin-bottom:14px">
+          Simulateur revenus cabinet
+          <span class="dash-section-badge">IA</span>
+        </div>
+        <p style="font-size:12px;color:var(--m);margin-bottom:14px">Projettez vos revenus mensuels en ajustant les paramètres.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:16px">
+          <div class="af"><label>Patients/jour/IDE</label><input type="number" id="sim-patients-jour" value="12" min="1" max="30" oninput="runCabinetSimulator()"></div>
+          <div class="af"><label>Nb IDEs</label><input type="number" id="sim-nb-ide" value="2" min="1" max="10" oninput="runCabinetSimulator()"></div>
+          <div class="af"><label>Montant moyen/acte (€)</label><input type="number" id="sim-montant-moyen" value="8.50" step="0.5" oninput="runCabinetSimulator()"></div>
+          <div class="af"><label>Jours travaillés/mois</label><input type="number" id="sim-jours" value="22" min="1" max="31" oninput="runCabinetSimulator()"></div>
+        </div>
+        <div id="dash-cabinet-simulator-result" style="margin-bottom:24px"></div>
+
+        <!-- Objectif CA mensuel -->
+        <div style="border-top:1px solid var(--b);margin-bottom:18px"></div>
+        <div class="dash-section-title" style="margin-bottom:14px">Objectif CA mensuel 🎯</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+          <input type="number" id="cab-ca-target" placeholder="Ex: 8000" style="width:150px" oninput="runCabinetCATarget()">
+          <span style="font-size:13px;color:var(--m)">€/mois</span>
+          <button class="btn bp bsm" onclick="runCabinetCATarget()"><span>🎯</span> Simuler</button>
+        </div>
+        <div id="dash-cabinet-ca-target-result"></div>
       </div>
     </section>
 
@@ -3419,9 +3215,8 @@
     </section>
 
     <!-- ══════════════════════════════════════════
-         💎 MON ABONNEMENT
-         Contenu rendu par subscription.js (SUB.renderAbonnementPage)
-         via ui:navigate quand view === 'mon-abo'
+         💎 MON ABONNEMENT — rendu par subscription.js
+              (SUB.renderAbonnementPage via ui:navigate)
     ══════════════════════════════════════════ -->
     <section class="view" id="view-mon-abo">
       <div style="text-align:center;padding:40px;color:var(--m)">
@@ -3430,10 +3225,11 @@
       </div>
     </section>
 
-    <!-- ═══ 💎 VUES PREMIUM (add-on +15€ HT/mois) ═══
+    <!-- ═══ 💎 VUES PREMIUM (modules exclusifs · add-on +15€ HT/mois) ═══
          Rendues par ca-sous-declare.js / forensic-cert.js / rapport-juridique.js
-         via l'événement ui:navigate. Accès gated par SUB.requireAccess().
-    ═══════════════════════════════════════════════ -->
+         et par premium-enhanced.js pour simulateur-regulation.
+         Accès gated par SUB.requireAccess() — réservé tier PREMIUM + admins.
+    ═══════════════════════════════════════════════════════════════ -->
     <section class="view" id="view-ca-sous-declare">
       <div style="text-align:center;padding:40px;color:var(--m)">
         <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
@@ -3444,7 +3240,7 @@
     <section class="view" id="view-forensic-cert">
       <div style="text-align:center;padding:40px;color:var(--m)">
         <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement des certificats forensiques…
+        Chargement des certificats conformes…
       </div>
     </section>
 
@@ -3455,123 +3251,10 @@
       </div>
     </section>
 
-    <!-- ═══ 💎 VUES PREMIUM DUAL-TRACK (versions IA enrichies) ═══
-         Rendues par premium-enhanced.js via l'événement ui:navigate.
-         Accès gated par SUB.requireAccess() — réservé tier PREMIUM + admins.
-         Les versions basiques restent accessibles dans "Outils pratiques".
-    ═══════════════════════════════════════════════════════════════ -->
-    <section class="view" id="view-copilote-premium">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement du Copilote IA Pro+…
-      </div>
-    </section>
-
-    <section class="view" id="view-audit-cpam-premium">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement de l'audit CPAM IA prédictif…
-      </div>
-    </section>
-
     <section class="view" id="view-simulateur-regulation">
       <div style="text-align:center;padding:40px;color:var(--m)">
         <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
         Chargement du simulateur de régulation…
-      </div>
-    </section>
-
-    <section class="view" id="view-charges-premium">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement du calcul charges & net prédictif…
-      </div>
-    </section>
-
-    <section class="view" id="view-rapport-premium">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement du rapport mensuel intelligent…
-      </div>
-    </section>
-
-    <section class="view" id="view-dash-premium">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement du dashboard prédictif…
-      </div>
-    </section>
-
-    <section class="view" id="view-transmissions-premium">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement des transmissions smart IA…
-      </div>
-    </section>
-
-    <section class="view" id="view-compte-rendu-premium">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement du compte-rendu auto IA…
-      </div>
-    </section>
-
-    <!-- ═══ 🧑‍💼 VUES EXPERTISE COMPTABLE — Plan AMI Comptable (99€ HT/mois) ═══
-         Rendues par comptable.js via l'événement ui:navigate.
-         Accès gated par SUB.requireAccess() — réservé tier COMPTABLE + admins.
-    ═══════════════════════════════════════════════════════════════════════ -->
-    <section class="view" id="view-comptable-hub">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement de la vue d'ensemble cabinet…
-      </div>
-    </section>
-    <section class="view" id="view-comptable-dashboard">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement du dashboard multi-IDEL…
-      </div>
-    </section>
-    <section class="view" id="view-comptable-export-fec">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement de l'export FEC + 2035…
-      </div>
-    </section>
-    <section class="view" id="view-comptable-2042">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement du générateur 2042-C-PRO…
-      </div>
-    </section>
-    <section class="view" id="view-comptable-scoring">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement du scoring de risque portfolio…
-      </div>
-    </section>
-    <section class="view" id="view-comptable-alertes">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement des alertes NGAP en masse…
-      </div>
-    </section>
-    <section class="view" id="view-comptable-connecteurs">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement des connecteurs comptables…
-      </div>
-    </section>
-    <section class="view" id="view-comptable-anonymisee">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement de la vue anonymisée…
-      </div>
-    </section>
-    <section class="view" id="view-comptable-trimestriel">
-      <div style="text-align:center;padding:40px;color:var(--m)">
-        <div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>
-        Chargement des rapports trimestriels…
       </div>
     </section>
 
@@ -3639,18 +3322,18 @@
 <script src="js/bsi.js?v=3.9"></script>
 <script src="js/consentements.js?v=3.9"></script><!-- 🛡️ v2.0 : cabinet sync + versionning + hash SHA-256 + check avant acte -->
 <script src="js/compliance-engine.js?v=3.9"></script><!-- 🧠 Scoring 4 piliers + auto-correction + risque prédictif + ranking patients -->
-<script src="js/subscription.js?v=3.9"></script><!-- 💎 Module SUB : abonnements, paywall, simulation tier, gating features -->
-<!-- ═══ 💎 Modules PREMIUM add-on (+15€ HT/mois) ═══
-     Tous gated par SUB.hasAccess(). Les non-PREMIUM voient le paywall.
-═════════════════════════════════════════════════ -->
-<script src="js/ca-sous-declare.js?v=1.0"></script><!-- 💸 Détection CA sous-déclaré (PREMIUM) -->
-<script src="js/forensic-cert.js?v=1.0"></script><!-- 🛡️ Certificats forensiques horodatés (PREMIUM) -->
-<script src="js/rapport-juridique.js?v=1.0"></script><!-- ⚖️ Rapport juridique mensuel (PREMIUM) -->
-<script src="js/comptable.js?v=1.0"></script><!-- 🧑‍💼 Expertise comptable santé : 8 modules COMPTABLE (multi-IDEL, FEC, 2035, 2042, scoring, alertes, connecteurs, anonymisée, trimestriel) -->
-<script src="js/premium-intelligence.js?v=1.0"></script><!-- 💎 Copilote financier + juridique : loss/risk/forecast/coach/elite + précheck + tournée optimizer -->
-<script src="js/premium-enhanced.js?v=1.0"></script><!-- 💎 Vues PREMIUM dual-track : copilote+, audit IA, régulation, charges+, rapport IA, dash prédictif, transm. smart, CR auto -->
 <script src="js/alertes-medicaments.js?v=3.8"></script>
 <script src="js/audit-cpam.js?v=3.9"></script>
+
+<!-- ══════════════════════════════════════════════════════
+     💎 PREMIUM — Subscription engine + 4 modules exclusifs + enrichissement
+══════════════════════════════════════════════════════ -->
+<script src="js/subscription.js?v=4.0"></script><!-- 💎 SUB : abonnements, paywall, simulation tier, gating features -->
+<script src="js/ca-sous-declare.js?v=1.0"></script><!-- 💸 Détection CA sous-déclaré (PREMIUM exclusif) -->
+<script src="js/forensic-cert.js?v=1.0"></script><!-- 🛡️ Certificats conformes horodatés (PREMIUM exclusif) -->
+<script src="js/rapport-juridique.js?v=1.0"></script><!-- ⚖️ Rapport juridique mensuel (PREMIUM exclusif) -->
+<script src="js/premium-intelligence.js?v=1.0"></script><!-- 💎 Widgets réutilisables : loss/risk/forecast/coach/elite -->
+<script src="js/premium-enhanced.js?v=2.0"></script><!-- 💎 Renomme onglets Pro pour Premium + injecte widgets dans vues d'origine + simulateur régulation -->
 
 <script>
 /* ══ Bannières admin — modules cliniques v2 ══
@@ -3724,18 +3407,6 @@ async function hist() {
   const tbody = document.getElementById('htb');
   const stats = document.getElementById('hstats');
   if (!tbody) return;
-
-  // 🏥 Colonne IDE(s) : visible uniquement si membre d'un cabinet multi-IDE.
-  //   L'admin en bypass réel la voit aussi (pour debug/test).
-  //   L'admin en simulation suit la logique "IDEL simulée" : si pas cabinet member, masqué.
-  (function _toggleIdeCol() {
-    const st = (typeof SUB !== 'undefined' && SUB.getState) ? SUB.getState() : null;
-    const showIdeCol = st
-      ? (st.cabinetMember || (st.isAdmin && !st.isAdminSim))
-      : true;  // fallback si SUB pas chargé : on affiche (non-régression)
-    const histTable = document.querySelector('#view-his .ht table');
-    if (histTable) histTable.classList.toggle('hist-hide-ide', !showIdeCol);
-  })();
 
   tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px"><div class="spin spinw" style="width:24px;height:24px;margin:0 auto"></div></td></tr>';
 
@@ -3885,7 +3556,7 @@ async function hist() {
         <td style="max-width:160px">${actesHtml}</td>
         <td class="pt-ca" style="white-space:nowrap">${parseFloat(r.total||0).toFixed(2)}&nbsp;€</td>
         <td>${statutHtml}</td>
-        <td class="hist-col-ide">${idesHtml}</td>
+        <td>${idesHtml}</td>
         <td>${alertsHtml}</td>
         <td><button class="btn bs bsm hist-edit-btn" style="font-size:10px;padding:3px 8px"
           data-hist-id="${r.id}"
@@ -4031,23 +3702,21 @@ async function editFromHist(data) {
     }
   } catch (_e) { console.warn('[editFromHist] IDB lookup:', _e?.message); }
 
-  // ── Poser _editingCotation explicitement ───────────────────────────────
-  // _userChose:true             → bypass garanti de la modale doublon (le user
-  //                               a cliqué ✏️ → choix explicite, pas de modale)
-  // _forceAttachToPatient:true  → si la cotation n'est pas dans cotations[]
-  //                               du patient local (cas admin avec IDB
-  //                               fraîchement synchronisée OU cotation créée
-  //                               sur un autre device), forcer un push au
-  //                               lieu du "ne rien faire" anti-doublon.
-  //                               SAFE : n'agit que si patientId est connu
-  //                               (donc le patient existe vraiment dans l'IDB).
+  // ── Poser _editingCotation explicitement (sans _autoDetected) ──────────
+  // → _cotationCheckDoublon() bypassera la modale, mode upsert garanti si la
+  //    cotation existe en IDB ; sinon push propre (grâce à _forceAttachToPatient
+  //    posé quand le patientId est connu → le pipeline local push au lieu de
+  //    refuser silencieusement).
   window._editingCotation = {
     patientId:             patientId,
     cotationIdx:           cotationIdx >= 0 ? cotationIdx : null,
     invoice_number:        invNum,
     _fromHist:             true,
-    _userChose:            true,
-    _forceAttachToPatient: !!patientId && cotationIdx < 0,
+    // _forceAttachToPatient : garantit que le pipeline local attache la cotation
+    // à ce patient.id même si la cotation n'existe pas déjà localement (cas admin
+    // qui édite une ligne serveur sans équivalent IDB local).
+    _forceAttachToPatient: !!patientId && cotationIdx < 0 && !invNum,
+    // PAS de _autoDetected → bypass modale doublon
   };
 
   // ── Naviguer vers la page cotation ─────────────────────────────────────
@@ -4140,16 +3809,15 @@ document.addEventListener('click', function(e) {
 </script>
 
 <script>
-/* ══════════════════════════════════════════════════════════════
-   Hook showApp UNIVERSEL (desktop + mobile) pour initialiser :
-   - Les éléments topbar (bouton 🔔 notifications, 🔍 recherche, sync status)
-   - Les KPIs rapport / filtres hist à la navigation
-   - Le toast de bienvenue
-   ⚠️ Ce bloc DOIT être hors IIFE mobile-only, sinon 🔔 ne s'affiche pas sur desktop.
-══════════════════════════════════════════════════════════════ */
 (function(){
+  // Déplacer voicebtn dans le header mobile (mobile uniquement)
+  if(window.innerWidth > 768) return;
   document.addEventListener('DOMContentLoaded', function(){
-    // Hook showApp : init extras topbar + toast bienvenue (tous devices)
+    var wrap = document.getElementById('mobile-header-fabs');
+    var vbtn = document.getElementById('voicebtn');
+    if(wrap && vbtn) wrap.appendChild(vbtn);
+
+    // Hook showApp pour initialiser les extras topbar + toast de bienvenue
     var _origShowApp = window.showApp;
     window.showApp = function() {
       if (typeof _origShowApp === 'function') _origShowApp.apply(this, arguments);
@@ -4163,7 +3831,7 @@ document.addEventListener('click', function(e) {
       }, 600);
     };
 
-    // Chargement auto KPIs rapport + filtre hist à la navigation (tous devices)
+    // Chargement auto KPIs rapport + filtre hist à la navigation
     document.addEventListener('ui:navigate', function(e) {
       const view = e.detail?.view;
       if (view === 'rapport') {
@@ -4191,18 +3859,6 @@ document.addEventListener('click', function(e) {
   window.addEventListener('appinstalled', function(){
     var m = document.getElementById('btn-install-mobile');
     if(m) m.style.display = 'none';
-  });
-})();
-</script>
-
-<script>
-/* IIFE mobile-only : déplacement voicebtn dans header mobile */
-(function(){
-  if(window.innerWidth > 768) return;
-  document.addEventListener('DOMContentLoaded', function(){
-    var wrap = document.getElementById('mobile-header-fabs');
-    var vbtn = document.getElementById('voicebtn');
-    if(wrap && vbtn) wrap.appendChild(vbtn);
   });
 })();
 </script>
@@ -4302,10 +3958,6 @@ function _addNotifItem(type, title, msg) {
   const dot = document.getElementById('top-notif-dot');
   if (dot) dot.classList.add('show');
 }
-/* 💎 Exposition globale pour les modules externes (subscription.js, cabinet.js, etc.)
-   qui poussent des notifications dans le panneau 🔔 (ex: J-7 trial, promotion cabinet…) */
-window._addNotifItem = _addNotifItem;
-window.notify = _addNotifItem;
 function _renderNotifPanel() {
   const list = document.getElementById('notif-list');
   if (!list) return;

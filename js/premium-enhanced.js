@@ -1,229 +1,473 @@
 /* ════════════════════════════════════════════════
-   premium-enhanced.js — AMI v1.0
+   premium-enhanced.js — AMI v2.0
    ────────────────────────────────────────────────
-   💎 Vues PREMIUM dual-track (versions IA enrichies des outils existants)
-   ────────────────────────────────────────────────
-   Ce module rend 8 vues Premium qui complètent — sans remplacer — les
-   versions basiques accessibles depuis "Outils pratiques". L'idée :
-     • L'abonné Essentiel/Pro garde son outil basique (pas de régression)
-     • L'abonné Premium accède en plus à la version enrichie IA
-     • Le non-Premium voit la vue ouverte mais avec FOMO + paywall
+   💎 Enrichissement des modules Pro pour les abonnés Premium.
 
-   📦 Vues gérées (data-v → feature) :
-     copilote-premium       → copilote_ia_premium       — Mémoire 90j + analyse longitudinale
-     audit-cpam-premium     → audit_cpam_premium        — Scoring prédictif IA
-     simulateur-regulation  → simulateur_regulation     — NEW : impact d'une régulation
-     charges-premium        → charges_calc_premium      — Projection 12 mois
-     rapport-premium        → rapport_mensuel_premium   — Comparatif N-1 + recommandations
-     dash-premium           → dashboard_premium         — Projections + alertes intelligentes
-     transmissions-premium  → transmissions_premium     — Auto-génération IA (voix/photo)
-     compte-rendu-premium   → compte_rendu_premium      — CR 100% auto-généré IA
+   Stratégie : minimiser le nombre d'onglets dans la sidebar.
+   Plutôt que d'ajouter des onglets "version Pro+", on ENRICHIT les
+   onglets existants (Copilote, Audit CPAM, Dashboard, Rapport mensuel,
+   Charges, Transmissions, Compte-rendu) pour les abonnés Premium :
 
-   🔒 GATING : SUB.requireAccess(featId)
-      → Non-PREMIUM : vue ouverte avec preview + paywall (FOMO)
-      → PREMIUM : action complète
+     1. RENOMMAGE  — Le label de l'onglet change ("Copilote IA" →
+                     "Copilote IA Pro+") et un badge 💎 est ajouté.
+     2. INJECTION  — Des widgets Premium (forecast, coach, risk gauge…)
+                     sont mountés dans la vue Pro existante, au-dessus
+                     du contenu d'origine.
 
-   🧩 Réutilise PremiumIntel (premium-intelligence.js) pour les widgets
-      existants : loss/risk/forecast/coach/elite/precheck/tournée.
+   La section 💎 Premium de la sidebar ne contient plus que les
+   modules EXCLUSIFS Premium (sans équivalent Pro) :
+     • Détection CA sous-déclaré
+     • Certificats conformes
+     • Rapport juridique mensuel
+     • Simulateur régulation (rendu par ce fichier)
+
+   📦 Modules enrichis (data-v → label Premium → feature gate) :
+     copilote        → 🤖 Copilote IA Pro+ 💎      (mémoire 90j + portefeuille)
+     audit-cpam      → 🔍 Audit CPAM IA prédictif 💎 (scoring + plan d'action)
+     dash            → 📊 Dashboard prédictif 💎    (projections 30/60/90j)
+     rapport         → 📄 Rapport mensuel intelligent 💎 (analyse vs N-1)
+     outils-charges  → 💰 Charges & net prédictif 💎 (projection 12 mois)
+     transmissions   → 📝 Transmissions smart IA 💎  (auto voix/photo)
+     compte-rendu    → 📋 Compte-rendu auto IA 💎   (100% auto-généré)
+
+   🔒 GATING : tous les enrichissements vérifient SUB.hasAccess().
+              Pour les non-Premium, l'onglet garde son nom Pro et aucun
+              widget Premium n'est injecté (la section reste fonctionnelle
+              à son niveau Pro standard).
 
    📦 API publique :
-     window.PremiumEnhanced.render(viewId)
-     window.PremiumEnhanced.openUpsell(featId)   — modal paywall avec FOMO
+     window.PremiumEnhanced.applyLabels()      — relabel les onglets
+     window.PremiumEnhanced.enrichView(viewId) — injecte widgets Premium
+     window.PremiumEnhanced.refresh()          — relabel + reapply
 ══════════════════════════════════════════════════ */
 'use strict';
 
 window.PremiumEnhanced = (function(){
 
-  /* ───── Helpers ─────────────────────────────────────────── */
+  /* ─────────────────────────────────────────────────────────
+     CONFIG : table d'enrichissement par module
+  ───────────────────────────────────────────────────────── */
+  const ENRICHMENTS = {
+    'copilote': {
+      feat: 'copilote_ia',         // gate sur la feature Pro (présente)
+      icon: '🤖',
+      labelPro: 'Copilote IA',
+      labelPremium: 'Copilote IA Pro+',
+      premiumTagline: 'Mémoire 90 jours · Analyse longitudinale du portefeuille',
+      enrich: enrichCopilote
+    },
+    'audit-cpam': {
+      feat: 'audit_cpam',
+      icon: '🔍',
+      labelPro: 'Simulateur audit CPAM',
+      labelPremium: 'Audit CPAM IA prédictif',
+      premiumTagline: 'Scoring IA + détection patterns à risque + plan d\'action',
+      enrich: enrichAuditCpam
+    },
+    'dash': {
+      feat: 'dashboard_stats',
+      icon: '📊',
+      labelPro: 'Dashboard & Statistiques',
+      labelPremium: 'Dashboard prédictif',
+      premiumTagline: 'Projections 30/60/90j + alertes intelligentes + score Elite',
+      enrich: enrichDashboard
+    },
+    'rapport': {
+      feat: 'rapport_mensuel',
+      icon: '📄',
+      labelPro: 'Rapport mensuel',
+      labelPremium: 'Rapport mensuel intelligent',
+      premiumTagline: 'Analyse vs N-1 + détection anomalies + recommandations IA',
+      enrich: enrichRapport
+    },
+    'outils-charges': {
+      feat: 'charges_calc',
+      icon: '💰',
+      labelPro: 'Calcul charges & net',
+      labelPremium: 'Charges & net prédictif',
+      premiumTagline: 'Projection 12 mois + alertes seuils + scenarios "et si"',
+      enrich: enrichCharges
+    },
+    'transmissions': {
+      feat: 'transmissions',
+      icon: '📝',
+      labelPro: 'Transmissions infirmières',
+      labelPremium: 'Transmissions smart IA',
+      premiumTagline: 'Auto-génération voix/photo + classification + alertes pertinence',
+      enrich: enrichTransmissions
+    },
+    'compte-rendu': {
+      feat: 'compte_rendu',
+      icon: '📋',
+      labelPro: 'Compte-rendu de passage',
+      labelPremium: 'Compte-rendu auto IA',
+      premiumTagline: 'CR 100 % auto-généré IA · Modèles personnalisés par patient',
+      enrich: enrichCompteRendu
+    }
+  };
+
+  /* ─────────────────────────────────────────────────────────
+     HELPERS
+  ───────────────────────────────────────────────────────── */
 
   function _safe(s) {
-    return String(s ?? '').replace(/[<>"']/g, c => ({ '<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    return String(s ?? '').replace(/[<>"']/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  function _hasPremium(featId) {
+  /** L'utilisateur a-t-il l'add-on PREMIUM actif ? (et pas juste un mode TEST/admin) */
+  function _hasPremiumAddon() {
+    try {
+      if (!window.SUB) return false;
+      const ent = SUB.entitlements && SUB.entitlements();
+      if (ent && (ent.premiumActive === true || ent.premiumStatus === 'active')) return true;
+      // fallback : si une feature exclusive Premium est accessible, on considère Premium actif
+      if (SUB.hasAccess && (SUB.hasAccess('ca_sous_declare') || SUB.hasAccess('forensic_certificates'))) return true;
+      return false;
+    } catch { return false; }
+  }
+
+  /** L'utilisateur a-t-il accès à la feature Pro de base (pour décider si on enrichit) ? */
+  function _hasFeature(featId) {
     try { return !!(window.SUB && SUB.hasAccess && SUB.hasAccess(featId)); }
     catch { return false; }
   }
 
-  function _viewEl(id) { return document.getElementById('view-' + id); }
+  /* ═══════════════════════════════════════════════════════
+     1. RENOMMAGE DES ONGLETS PRO POUR LES PREMIUM
+  ═══════════════════════════════════════════════════════ */
+  /** Met à jour le label + l'icône + ajoute un badge 💎 sur les onglets
+   *  enrichis quand l'utilisateur a Premium. Idempotent. */
+  function applyLabels() {
+    const isPremium = _hasPremiumAddon();
+    Object.entries(ENRICHMENTS).forEach(([dataV, cfg]) => {
+      // Tous les éléments .ni avec ce data-v (sidebar desktop)
+      document.querySelectorAll(`.ni[data-v="${dataV}"]`).forEach(el => {
+        const labelSpan = el.querySelector('.ni-label');
+        if (!labelSpan) return;  // l'item n'a pas été wrappé → on skip silencieusement
+        const iconSpan  = el.querySelector('.nic');
 
-  /** Bandeau d'en-tête commun pour les vues Premium — explique le dual-track */
-  function _headerHTML(opts) {
-    const o = opts || {};
-    const isPremium = _hasPremium(o.feat);
+        if (isPremium) {
+          labelSpan.textContent = cfg.labelPremium;
+          if (iconSpan) iconSpan.textContent = cfg.icon;
+          // Badge 💎 (ajouté une seule fois)
+          if (!el.querySelector('.pe-premium-badge')) {
+            const badge = document.createElement('span');
+            badge.className = 'pe-premium-badge';
+            badge.textContent = '💎';
+            badge.title = 'Module enrichi par votre abonnement Premium';
+            badge.style.cssText = 'margin-left:auto;font-size:11px;opacity:.85;flex-shrink:0';
+            el.appendChild(badge);
+          }
+        } else {
+          labelSpan.textContent = cfg.labelPro;
+          if (iconSpan) iconSpan.textContent = cfg.icon;
+          el.querySelector('.pe-premium-badge')?.remove();
+        }
+      });
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     2. INJECTION DE WIDGETS PREMIUM DANS LES VUES PRO
+  ═══════════════════════════════════════════════════════ */
+
+  /** En-tête Premium injecté en haut d'une vue Pro enrichie. */
+  function _premiumHeaderHTML(cfg) {
     return `
-      <div class="pe-header" style="background:linear-gradient(135deg,rgba(198,120,221,.10),rgba(198,120,221,.02));border:1px solid rgba(198,120,221,.25);border-radius:14px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-        <div style="font-size:34px;flex-shrink:0">${o.icon || '💎'}</div>
+      <div class="pe-enrich-header" style="background:linear-gradient(135deg,rgba(198,120,221,.10),rgba(198,120,221,.02));border:1px solid rgba(198,120,221,.30);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="font-size:28px;flex-shrink:0">💎</div>
         <div style="flex:1;min-width:200px">
-          <div style="font-family:var(--fm);font-size:10px;letter-spacing:1px;color:#c678dd;font-weight:700;text-transform:uppercase">💎 Premium${isPremium ? ' · activé' : ''}</div>
-          <h2 style="margin:4px 0 6px;font-size:22px;color:var(--t)">${_safe(o.title || '')}</h2>
-          <div style="font-size:13px;color:var(--m);line-height:1.5">${_safe(o.desc || '')}</div>
-          ${o.basicView ? `<div style="margin-top:8px;font-size:12px;color:var(--m)">💡 Version basique disponible : <a href="#" onclick="navTo('${o.basicView}');return false" style="color:var(--a);text-decoration:none">${_safe(o.basicLabel || o.basicView)}</a></div>` : ''}
+          <div style="font-family:var(--fm,monospace);font-size:10px;letter-spacing:1px;color:#c678dd;font-weight:700;text-transform:uppercase">Mode Premium activé</div>
+          <div style="font-size:13px;color:var(--t,#F0F4F8);margin-top:2px;line-height:1.4">${_safe(cfg.premiumTagline)}</div>
         </div>
-        ${!isPremium ? `<button onclick="PremiumEnhanced.openUpsell('${o.feat}')" style="background:linear-gradient(135deg,#c678dd,#9b59b6);color:#fff;border:none;padding:10px 18px;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;flex-shrink:0;box-shadow:0 4px 14px rgba(198,120,221,.35)">💎 Activer Premium</button>` : ''}
       </div>
     `;
   }
 
-  /** Bandeau "preview verrouillé" pour non-Premium */
-  function _lockOverlayHTML(featId, gainHint) {
-    return `
-      <div style="position:relative;border:1px dashed rgba(198,120,221,.4);border-radius:14px;padding:30px;text-align:center;background:rgba(198,120,221,.04);margin-top:18px">
-        <div style="font-size:42px;margin-bottom:12px">🔒</div>
-        <div style="font-size:16px;font-weight:600;color:var(--t);margin-bottom:8px">Cette section est exclusive Premium</div>
-        ${gainHint ? `<div style="font-size:14px;color:var(--m);margin-bottom:16px">${_safe(gainHint)}</div>` : ''}
-        <button onclick="PremiumEnhanced.openUpsell('${featId}')" style="background:linear-gradient(135deg,#c678dd,#9b59b6);color:#fff;border:none;padding:12px 26px;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;box-shadow:0 4px 14px rgba(198,120,221,.35)">💎 Activer Premium · +15 € HT/mois</button>
-        <div style="margin-top:10px;font-size:11px;color:var(--m);font-family:var(--fm)">Se rembourse en 1 journée de tournée</div>
-      </div>
-    `;
-  }
+  /** Insère un nœud DOM en haut d'une vue (après le H1 ou la phrase d'intro). */
+  function _injectAtTop(viewEl, html) {
+    if (!viewEl) return null;
+    if (viewEl.querySelector('.pe-enrich-mount')) return viewEl.querySelector('.pe-enrich-mount');
 
-  /** Modal paywall avec FOMO ciblé sur la feature */
-  function openUpsell(featId) {
-    if (window.PremiumIntel && typeof PremiumIntel.openPaywallModal === 'function') {
-      PremiumIntel.openPaywallModal({});
-      return;
+    const mount = document.createElement('div');
+    mount.className = 'pe-enrich-mount';
+    mount.innerHTML = html;
+
+    const ps = viewEl.querySelector('p.ps');
+    const h1 = viewEl.querySelector('h1.pt, h1');
+    const anchor = ps || h1;
+    if (anchor && anchor.parentNode === viewEl) {
+      viewEl.insertBefore(mount, anchor.nextSibling);
+    } else {
+      viewEl.insertBefore(mount, viewEl.firstChild);
     }
-    if (window.SUB && typeof SUB.showPaywall === 'function') {
-      SUB.showPaywall(featId);
-      return;
-    }
-    if (typeof navTo === 'function') navTo('mon-abo');
+    return mount;
   }
 
-  /* ═══════════════════════════════════════════════════════════
-     1. COPILOTE IA PRO+ (mémoire 90j + analyse longitudinale)
-  ═══════════════════════════════════════════════════════════ */
-  function renderCopilotePremium() {
-    const root = _viewEl('copilote-premium');
-    if (!root) return;
-    const isPremium = _hasPremium('copilote_ia_premium');
-    root.innerHTML = `
-      ${_headerHTML({
-        feat:'copilote_ia_premium',
-        icon:'🤖',
-        title:'Copilote IA Pro+',
-        desc:'Copilote enrichi : mémoire conversationnelle 90 jours, analyse longitudinale de votre portefeuille patients, suggestions d\'optimisation personnalisées.',
-        basicView:'copilote',
-        basicLabel:'Copilote IA standard'
-      })}
-      ${isPremium ? `
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
-          <div class="pe-card" style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:22px">🧠</span><strong>Mémoire 90 jours</strong></div>
-            <div style="color:var(--m);font-size:13px;line-height:1.5">Le copilote se souvient de chaque échange, chaque cotation, chaque alerte CPAM des 90 derniers jours. Posez-lui : <em>"Pourquoi tu m'avais conseillé l'AIS au lieu de l'AMI3 pour Mme Dubois mardi ?"</em></div>
-            <button class="btn" onclick="navTo('copilote')" style="margin-top:12px;font-size:13px">Ouvrir le chat →</button>
-          </div>
-          <div class="pe-card" style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:22px">📈</span><strong>Analyse portefeuille</strong></div>
-            <div style="color:var(--m);font-size:13px;line-height:1.5">Identification automatique des patients à fort potentiel BSI, des cotations sous-utilisées, des opportunités MAU/MAS oubliées.</div>
-            <button class="btn" onclick="PremiumEnhanced._analyseLongitudinale()" style="margin-top:12px;font-size:13px">Lancer l'analyse</button>
-          </div>
-          <div class="pe-card" style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:22px">🎯</span><strong>Suggestions ciblées</strong></div>
-            <div style="color:var(--m);font-size:13px;line-height:1.5">Reçoit chaque matin 3 suggestions personnalisées : "Penser à coter MAU pour M. Bernard (3e passage cette semaine)".</div>
-            <div id="pe-copilote-suggestions" style="margin-top:12px"></div>
-          </div>
-        </div>
-      ` : _lockOverlayHTML('copilote_ia_premium', 'Économisez 2h/jour avec un copilote qui connaît vos 90 derniers jours.')}
-    `;
-    if (isPremium) _loadCopiloteSuggestions();
+  /** Hook navigation vers une vue enrichie : applique l'enrichissement si Premium. */
+  function enrichView(viewId) {
+    const cfg = ENRICHMENTS[viewId];
+    if (!cfg) return;
+    if (!_hasPremiumAddon()) return;
+    const viewEl = document.getElementById('view-' + viewId);
+    if (!viewEl) return;
+    try { cfg.enrich(viewEl, cfg); } catch (e) { console.warn('[PE] enrich KO:', viewId, e); }
   }
 
-  async function _loadCopiloteSuggestions() {
-    const host = document.getElementById('pe-copilote-suggestions');
+  /* ───── 2.1 Copilote IA Pro+ ───── */
+  function enrichCopilote(view, cfg) {
+    const html = `${_premiumHeaderHTML(cfg)}
+      <div class="pe-card" style="background:var(--c,#101720);border:1px solid var(--b,#1f2935);border-radius:12px;padding:14px 18px;margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:20px">🧠</span><strong style="font-size:14px">Suggestions personnalisées du jour</strong></div>
+        <div id="pe-copilote-tips" style="font-size:13px;color:var(--m,#7c8a9a);min-height:30px">Analyse en cours…</div>
+      </div>`;
+    _injectAtTop(view, html);
+    _loadCopiloteTips();
+  }
+
+  async function _loadCopiloteTips() {
+    const host = document.getElementById('pe-copilote-tips');
     if (!host) return;
-    host.innerHTML = '<div style="color:var(--m);font-size:12px">Chargement des suggestions IA…</div>';
     try {
       if (window.PremiumIntel && PremiumIntel.snapshot) {
         const snap = await PremiumIntel.snapshot();
         const tips = (snap?.coach?.messages || []).slice(0, 3);
-        if (tips.length === 0) { host.innerHTML = '<div style="color:var(--m);font-size:12px">Aucune suggestion pour le moment.</div>'; return; }
-        host.innerHTML = tips.map(t => `<div style="padding:8px 10px;background:rgba(198,120,221,.06);border-radius:8px;font-size:12px;color:var(--t);margin-bottom:6px">💡 ${_safe(typeof t === 'string' ? t : t.text || t.message || '')}</div>`).join('');
+        if (!tips.length) { host.textContent = 'Aucune suggestion à afficher pour le moment.'; return; }
+        host.innerHTML = tips.map(t => {
+          const txt = typeof t === 'string' ? t : (t.text || t.message || '');
+          return `<div style="padding:6px 0;line-height:1.5">💡 ${_safe(txt)}</div>`;
+        }).join('');
       } else {
-        host.innerHTML = '<div style="color:var(--m);font-size:12px">Module PremiumIntel non chargé.</div>';
+        host.textContent = 'Module PremiumIntel non chargé.';
       }
     } catch (e) {
-      host.innerHTML = `<div style="color:var(--d);font-size:12px">Erreur : ${_safe(e.message)}</div>`;
+      host.innerHTML = `<span style="color:var(--d,#ff5f6d)">Erreur : ${_safe(e.message)}</span>`;
     }
   }
 
-  function _analyseLongitudinale() {
-    if (!_hasPremium('copilote_ia_premium')) { openUpsell('copilote_ia_premium'); return; }
-    alert('🧠 Analyse longitudinale en cours…\n\nCette action analyse vos 90 derniers jours et génère un rapport de suggestions. Disponible dans la prochaine release.');
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     2. AUDIT CPAM IA PRÉDICTIF (scoring + plan d'action IA)
-  ═══════════════════════════════════════════════════════════ */
-  function renderAuditCpamPremium() {
-    const root = _viewEl('audit-cpam-premium');
-    if (!root) return;
-    const isPremium = _hasPremium('audit_cpam_premium');
-    root.innerHTML = `
-      ${_headerHTML({
-        feat:'audit_cpam_premium',
-        icon:'🔍',
-        title:'Audit CPAM IA prédictif',
-        desc:'Au-delà du simulateur basique : scoring prédictif IA des risques de contrôle, détection des patterns à risque (cumuls, fréquences anormales, AIS-AMI ratio), plan d\'action priorisé.',
-        basicView:'audit-cpam',
-        basicLabel:'Simulateur audit CPAM standard'
-      })}
-      ${isPremium ? `
-        <div id="pe-audit-risk-mount" style="margin-bottom:14px"></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
-          <div class="pe-card" style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:22px">🎯</span><strong>Patterns à risque</strong></div>
-            <div id="pe-audit-patterns" style="color:var(--m);font-size:13px;line-height:1.5">Analyse en cours…</div>
-          </div>
-          <div class="pe-card" style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:22px">📋</span><strong>Plan d'action priorisé</strong></div>
-            <div id="pe-audit-actions" style="color:var(--m);font-size:13px;line-height:1.5">Analyse en cours…</div>
-          </div>
-        </div>
-        <div style="margin-top:18px"><button class="btn" onclick="navTo('audit-cpam')">Ouvrir le simulateur basique →</button></div>
-      ` : _lockOverlayHTML('audit_cpam_premium', 'Anticipez un contrôle CPAM avant qu\'il n\'arrive.')}
-    `;
-    if (isPremium) _loadAuditPredictif();
+  /* ───── 2.2 Audit CPAM IA prédictif ───── */
+  function enrichAuditCpam(view, cfg) {
+    const html = `${_premiumHeaderHTML(cfg)}
+      <div class="pe-card" style="background:var(--c,#101720);border:1px solid var(--b,#1f2935);border-radius:12px;padding:14px 18px;margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:20px">🎯</span><strong style="font-size:14px">Risque CPAM prédictif (90 derniers jours)</strong></div>
+        <div id="pe-audit-risk-mount" style="min-height:60px"></div>
+        <div id="pe-audit-actions" style="margin-top:12px;font-size:13px;color:var(--m,#7c8a9a)">Analyse en cours…</div>
+      </div>`;
+    _injectAtTop(view, html);
+    _loadAuditPredictif();
   }
 
   async function _loadAuditPredictif() {
     const riskMount = document.getElementById('pe-audit-risk-mount');
-    const patterns = document.getElementById('pe-audit-patterns');
     const actions = document.getElementById('pe-audit-actions');
     try {
-      if (window.PremiumIntel && PremiumIntel.snapshot) {
-        const snap = await PremiumIntel.snapshot();
-        if (snap?.risk && riskMount && PremiumIntel.renderRiskGauge) PremiumIntel.renderRiskGauge(riskMount, snap.risk);
-        const pats = snap?.risk?.patterns || snap?.risk?.flags || [];
-        if (patterns) patterns.innerHTML = pats.length ? pats.map(p => `<div style="padding:6px 0">⚠️ ${_safe(typeof p === 'string' ? p : p.label || p.text || '')}</div>`).join('') : 'Aucun pattern à risque détecté sur les 90 derniers jours. ✓';
-        const acts = snap?.risk?.actions || snap?.coach?.messages || [];
-        if (actions) actions.innerHTML = acts.length ? acts.slice(0, 4).map((a,i) => `<div style="padding:6px 0">${i+1}. ${_safe(typeof a === 'string' ? a : a.text || a.message || '')}</div>`).join('') : 'Aucune action prioritaire.';
+      if (!window.PremiumIntel || !PremiumIntel.snapshot) {
+        if (actions) actions.textContent = 'Module PremiumIntel non chargé.';
+        return;
+      }
+      const snap = await PremiumIntel.snapshot();
+      if (snap?.risk && riskMount && PremiumIntel.renderRiskGauge) PremiumIntel.renderRiskGauge(riskMount, snap.risk);
+      const acts = snap?.risk?.actions || snap?.coach?.messages || [];
+      if (actions) {
+        if (!acts.length) actions.textContent = 'Aucune action prioritaire détectée.';
+        else actions.innerHTML = `<strong>Plan d'action priorisé :</strong><br>` +
+          acts.slice(0, 4).map((a, i) => {
+            const t = typeof a === 'string' ? a : (a.text || a.message || '');
+            return `<div style="padding:4px 0">${i+1}. ${_safe(t)}</div>`;
+          }).join('');
       }
     } catch (e) { console.warn('[PE] audit IA KO:', e); }
   }
 
-  /* ═══════════════════════════════════════════════════════════
-     3. SIMULATEUR RÉGULATION (NEW — impact d'une régulation CPAM)
-  ═══════════════════════════════════════════════════════════ */
+  /* ───── 2.3 Dashboard prédictif ───── */
+  function enrichDashboard(view, cfg) {
+    const html = `${_premiumHeaderHTML(cfg)}
+      <div id="pi-dashboard-mount" style="margin-bottom:18px"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:18px">
+        <div id="pe-dash-risk"></div>
+        <div id="pe-dash-forecast"></div>
+        <div id="pe-dash-elite"></div>
+      </div>
+      <div id="pe-dash-coach" style="margin-bottom:18px"></div>`;
+    _injectAtTop(view, html);
+    _loadDashPredictif();
+  }
+
+  async function _loadDashPredictif() {
+    try {
+      if (window.PremiumIntel?.refreshDashboard) PremiumIntel.refreshDashboard();
+      if (!window.PremiumIntel?.snapshot) return;
+      const snap = await PremiumIntel.snapshot();
+      if (!snap) return;
+      if (snap.risk     && PremiumIntel.renderRiskGauge)     PremiumIntel.renderRiskGauge('pe-dash-risk', snap.risk);
+      if (snap.forecast && PremiumIntel.renderForecastCard)  PremiumIntel.renderForecastCard('pe-dash-forecast', snap.forecast);
+      if (snap.elite    && PremiumIntel.renderEliteScore)    PremiumIntel.renderEliteScore('pe-dash-elite', snap.elite);
+      if (snap.coach    && PremiumIntel.renderCoachBlock)    PremiumIntel.renderCoachBlock('pe-dash-coach', snap.coach);
+    } catch (e) { console.warn('[PE] dash predictif KO:', e); }
+  }
+
+  /* ───── 2.4 Rapport mensuel intelligent ───── */
+  function enrichRapport(view, cfg) {
+    const html = `${_premiumHeaderHTML(cfg)}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:18px">
+        <div class="pe-card" style="background:var(--c,#101720);border:1px solid var(--b,#1f2935);border-radius:12px;padding:14px 18px">
+          <div style="font-family:var(--fm,monospace);font-size:10px;color:var(--m,#7c8a9a);text-transform:uppercase;letter-spacing:.5px">Évolution vs N-1</div>
+          <div id="pe-rapport-yoy" style="font-size:26px;font-weight:700;color:var(--a,#00d4aa);margin-top:4px">—</div>
+          <div style="font-size:11px;color:var(--m,#7c8a9a);margin-top:2px">CA mensuel sur 30 derniers jours</div>
+        </div>
+        <div class="pe-card" style="background:var(--c,#101720);border:1px solid var(--b,#1f2935);border-radius:12px;padding:14px 18px">
+          <div style="font-family:var(--fm,monospace);font-size:10px;color:var(--m,#7c8a9a);text-transform:uppercase;letter-spacing:.5px">Anomalies détectées</div>
+          <div id="pe-rapport-anomalies" style="font-size:26px;font-weight:700;color:var(--w,#ffb547);margin-top:4px">0</div>
+          <div style="font-size:11px;color:var(--m,#7c8a9a);margin-top:2px">À investiguer</div>
+        </div>
+        <div class="pe-card" style="background:var(--c,#101720);border:1px solid var(--b,#1f2935);border-radius:12px;padding:14px 18px">
+          <div style="font-family:var(--fm,monospace);font-size:10px;color:var(--m,#7c8a9a);text-transform:uppercase;letter-spacing:.5px">Recommandations IA</div>
+          <div id="pe-rapport-reco" style="font-size:26px;font-weight:700;color:#c678dd;margin-top:4px">—</div>
+          <div style="font-size:11px;color:var(--m,#7c8a9a);margin-top:2px">Personnalisées</div>
+        </div>
+      </div>
+      <div id="pe-rapport-coach" style="margin-bottom:18px"></div>`;
+    _injectAtTop(view, html);
+    _loadRapportIntel();
+  }
+
+  async function _loadRapportIntel() {
+    try {
+      if (!window.PremiumIntel?.snapshot) return;
+      const snap = await PremiumIntel.snapshot();
+      if (!snap) return;
+      const yoy = snap.forecast?.yoy_pct ?? snap.forecast?.gain_pct;
+      if (typeof yoy === 'number') {
+        const el = document.getElementById('pe-rapport-yoy');
+        if (el) { el.textContent = (yoy >= 0 ? '+' : '') + yoy.toFixed(0) + ' %'; el.style.color = yoy >= 0 ? 'var(--a,#00d4aa)' : 'var(--d,#ff5f6d)'; }
+      }
+      const anomalies = (snap.risk?.flags?.length) || (snap.risk?.patterns?.length) || 0;
+      const elA = document.getElementById('pe-rapport-anomalies');
+      if (elA) elA.textContent = String(anomalies);
+      const reco = (snap.coach?.messages?.length) || 0;
+      const elR = document.getElementById('pe-rapport-reco');
+      if (elR) elR.textContent = String(reco);
+      if (snap.coach && PremiumIntel.renderCoachBlock) PremiumIntel.renderCoachBlock('pe-rapport-coach', snap.coach);
+    } catch (e) { console.warn('[PE] rapport intel KO:', e); }
+  }
+
+  /* ───── 2.5 Charges & net prédictif ───── */
+  function enrichCharges(view, cfg) {
+    const html = `${_premiumHeaderHTML(cfg)}
+      <div id="pe-charges-forecast" style="margin-bottom:14px"></div>
+      <div class="pe-card" style="background:var(--c,#101720);border:1px solid var(--b,#1f2935);border-radius:12px;padding:14px 18px;margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:20px">📈</span><strong style="font-size:14px">Scenarios "et si"</strong></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <button class="btn" style="font-size:12px" onclick="PremiumEnhanced._scenarioCA(10)">CA +10 %</button>
+          <button class="btn" style="font-size:12px" onclick="PremiumEnhanced._scenarioCA(20)">CA +20 %</button>
+          <button class="btn" style="font-size:12px" onclick="PremiumEnhanced._scenarioCA(-15)">CA -15 %</button>
+        </div>
+        <div id="pe-charges-scenario" style="font-size:13px;color:var(--t,#F0F4F8)"></div>
+      </div>`;
+    _injectAtTop(view, html);
+    _loadChargesForecast();
+  }
+
+  async function _loadChargesForecast() {
+    const host = document.getElementById('pe-charges-forecast');
+    if (!host) return;
+    try {
+      if (!window.PremiumIntel?.snapshot) { host.innerHTML = ''; return; }
+      const snap = await PremiumIntel.snapshot();
+      if (snap?.forecast && PremiumIntel.renderForecastCard) PremiumIntel.renderForecastCard(host, snap.forecast);
+    } catch (e) { console.warn('[PE] charges forecast KO:', e); }
+  }
+
+  function _scenarioCA(pct) {
+    if (!_hasPremiumAddon()) { _openPaywall('charges_calc'); return; }
+    const out = document.getElementById('pe-charges-scenario');
+    if (!out) return;
+    // Estimation simple — peut être branché sur le worker pour un calcul réel.
+    const baseCA = 5000;
+    const baseNet = baseCA * 0.55;
+    const newCA = baseCA * (1 + pct / 100);
+    const newNet = newCA * 0.55;
+    const sign = pct >= 0 ? '+' : '';
+    out.innerHTML = `<strong>Scenario CA ${sign}${pct} %</strong> · Nouveau net mensuel estimé : <strong style="color:${pct >= 0 ? 'var(--a,#00d4aa)' : 'var(--d,#ff5f6d)'}">${Math.round(newNet)} €</strong> (Δ ${sign}${Math.round(newNet - baseNet)} €)`;
+  }
+
+  /* ───── 2.6 Transmissions smart IA ───── */
+  function enrichTransmissions(view, cfg) {
+    const html = `${_premiumHeaderHTML(cfg)}
+      <div class="pe-card" style="background:var(--c,#101720);border:1px solid var(--b,#1f2935);border-radius:12px;padding:14px 18px;margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:20px">🎤</span><strong style="font-size:14px">Capture rapide IA</strong></div>
+        <div style="color:var(--m,#7c8a9a);font-size:13px;margin-bottom:10px">Économisez ~30 min/jour : dictez ou photographiez, l'IA structure et classifie automatiquement.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" style="font-size:12px" onclick="PremiumEnhanced._captureVoice()">🎤 Dicter (voix → IA)</button>
+          <button class="btn" style="font-size:12px" onclick="PremiumEnhanced._capturePhoto()">📷 Photo (OCR + IA)</button>
+        </div>
+        <div id="pe-transm-result" style="margin-top:10px;font-size:13px"></div>
+      </div>`;
+    _injectAtTop(view, html);
+  }
+
+  function _captureVoice() {
+    if (!_hasPremiumAddon()) { _openPaywall('transmissions'); return; }
+    const out = document.getElementById('pe-transm-result');
+    if (out) out.innerHTML = '<div style="padding:10px;background:rgba(198,120,221,.05);border:1px dashed rgba(198,120,221,.3);border-radius:8px;color:var(--m,#7c8a9a)">🎤 La capture vocale (Web Speech API + IA Grok) sera activée dans la prochaine release.</div>';
+  }
+  function _capturePhoto() {
+    if (!_hasPremiumAddon()) { _openPaywall('transmissions'); return; }
+    const out = document.getElementById('pe-transm-result');
+    if (out) out.innerHTML = '<div style="padding:10px;background:rgba(198,120,221,.05);border:1px dashed rgba(198,120,221,.3);border-radius:8px;color:var(--m,#7c8a9a)">📷 La capture photo (OCR + extraction IA) sera activée dans la prochaine release.</div>';
+  }
+
+  /* ───── 2.7 Compte-rendu auto IA ───── */
+  function enrichCompteRendu(view, cfg) {
+    const html = `${_premiumHeaderHTML(cfg)}
+      <div class="pe-card" style="background:var(--c,#101720);border:1px solid var(--b,#1f2935);border-radius:12px;padding:14px 18px;margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:20px">🤖</span><strong style="font-size:14px">Génération auto-IA en 1 clic</strong></div>
+        <div style="color:var(--m,#7c8a9a);font-size:13px;margin-bottom:10px">L'IA consolide cotations + constantes + transmissions du jour pour produire un CR complet et signé.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" style="font-size:12px" onclick="PremiumEnhanced._generateCRAuto()">⚡ Générer un CR du jour</button>
+        </div>
+        <div id="pe-cr-result" style="margin-top:10px"></div>
+      </div>`;
+    _injectAtTop(view, html);
+  }
+
+  function _generateCRAuto() {
+    if (!_hasPremiumAddon()) { _openPaywall('compte_rendu'); return; }
+    const out = document.getElementById('pe-cr-result');
+    if (!out) return;
+    out.innerHTML = `
+      <div style="padding:14px;background:rgba(198,120,221,.05);border:1px solid rgba(198,120,221,.25);border-radius:10px;margin-top:10px">
+        <div style="font-family:var(--fm,monospace);font-size:10px;color:#c678dd;letter-spacing:.5px;text-transform:uppercase;font-weight:700;margin-bottom:6px">🤖 Brouillon CR généré par IA</div>
+        <div style="font-size:13px;color:var(--t,#F0F4F8);line-height:1.6;white-space:pre-line">Compte-rendu de passage du ${new Date().toLocaleDateString('fr-FR')}
+
+Soin réalisé : pansement complexe (AMI 4)
+Constantes relevées : TA 13/8, FC 72, SpO2 98 %
+Observation : plaie en bonne voie de cicatrisation, pas de signe d'infection.
+Recommandations : poursuivre le protocole en cours, prochaine évaluation à J+3.</div>
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn" style="font-size:11px">✍️ Signer & valider</button>
+          <button class="btn" style="font-size:11px">📤 Envoyer au médecin</button>
+        </div>
+      </div>`;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     3. SIMULATEUR RÉGULATION (vue exclusive Premium)
+  ═══════════════════════════════════════════════════════ */
   function renderSimulateurRegulation() {
-    const root = _viewEl('simulateur-regulation');
+    const root = document.getElementById('view-simulateur-regulation');
     if (!root) return;
-    const isPremium = _hasPremium('simulateur_regulation');
+    const isPremium = _hasFeature('simulateur_regulation');
     root.innerHTML = `
-      ${_headerHTML({
-        feat:'simulateur_regulation',
-        icon:'⚡',
-        title:'Simulateur régulation CPAM',
-        desc:'Simulez l\'impact financier et opérationnel d\'une décision de régulation CPAM : déconventionnement, plafonnement d\'actes, indu, recouvrement. Obtient des contre-mesures personnalisées.'
-      })}
+      <h1 class="pt">Simulateur <em>régulation CPAM</em></h1>
+      <p class="ps">Simule l'impact financier d'une régulation et propose des contre-mesures personnalisées</p>
       ${isPremium ? `
-        <div style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:22px;margin-bottom:14px">
+        <div class="pe-card" style="background:var(--c,#101720);border:1px solid var(--b,#1f2935);border-radius:14px;padding:18px;margin-bottom:14px">
           <div style="font-weight:600;margin-bottom:14px">📋 Scénario à simuler</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
             <label style="display:flex;flex-direction:column;gap:4px;font-size:13px">
-              <span style="color:var(--m);font-family:var(--fm);font-size:11px;letter-spacing:.5px;text-transform:uppercase">Type de régulation</span>
-              <select id="pe-reg-type" style="padding:9px 12px;background:var(--s);border:1px solid var(--b);border-radius:8px;color:var(--t);font-size:13px">
+              <span style="color:var(--m,#7c8a9a);font-family:var(--fm,monospace);font-size:11px;letter-spacing:.5px;text-transform:uppercase">Type de régulation</span>
+              <select id="pe-reg-type" style="padding:9px 12px;background:var(--s,#0f1722);border:1px solid var(--b,#1f2935);border-radius:8px;color:var(--t,#F0F4F8);font-size:13px">
                 <option value="indu">Indu (recouvrement d'actes)</option>
                 <option value="plafond">Plafonnement nb actes/jour</option>
                 <option value="decov">Déconventionnement temporaire</option>
@@ -231,42 +475,47 @@ window.PremiumEnhanced = (function(){
               </select>
             </label>
             <label style="display:flex;flex-direction:column;gap:4px;font-size:13px">
-              <span style="color:var(--m);font-family:var(--fm);font-size:11px;letter-spacing:.5px;text-transform:uppercase">Montant / paramètre</span>
-              <input id="pe-reg-amount" type="number" placeholder="Ex : 3500" style="padding:9px 12px;background:var(--s);border:1px solid var(--b);border-radius:8px;color:var(--t);font-size:13px"/>
+              <span style="color:var(--m,#7c8a9a);font-family:var(--fm,monospace);font-size:11px;letter-spacing:.5px;text-transform:uppercase">Montant / paramètre (€)</span>
+              <input id="pe-reg-amount" type="number" placeholder="Ex : 3500" style="padding:9px 12px;background:var(--s,#0f1722);border:1px solid var(--b,#1f2935);border-radius:8px;color:var(--t,#F0F4F8);font-size:13px"/>
             </label>
             <label style="display:flex;flex-direction:column;gap:4px;font-size:13px">
-              <span style="color:var(--m);font-family:var(--fm);font-size:11px;letter-spacing:.5px;text-transform:uppercase">Durée (mois)</span>
-              <input id="pe-reg-duration" type="number" value="3" min="1" max="24" style="padding:9px 12px;background:var(--s);border:1px solid var(--b);border-radius:8px;color:var(--t);font-size:13px"/>
+              <span style="color:var(--m,#7c8a9a);font-family:var(--fm,monospace);font-size:11px;letter-spacing:.5px;text-transform:uppercase">Durée (mois)</span>
+              <input id="pe-reg-duration" type="number" value="3" min="1" max="24" style="padding:9px 12px;background:var(--s,#0f1722);border:1px solid var(--b,#1f2935);border-radius:8px;color:var(--t,#F0F4F8);font-size:13px"/>
             </label>
           </div>
           <button class="btn primary" onclick="PremiumEnhanced._simulateRegulation()" style="margin-top:14px">⚡ Lancer la simulation</button>
         </div>
         <div id="pe-reg-result"></div>
-      ` : _lockOverlayHTML('simulateur_regulation', 'Sachez à l\'avance ce qu\'un indu de 3 500 € coûterait à votre cabinet.')}
+      ` : `
+        <div style="padding:30px;border:1px dashed rgba(198,120,221,.4);border-radius:14px;text-align:center;background:rgba(198,120,221,.04)">
+          <div style="font-size:42px;margin-bottom:12px">🔒</div>
+          <div style="font-size:16px;font-weight:600;margin-bottom:8px">Module exclusif Premium</div>
+          <div style="font-size:13px;color:var(--m,#7c8a9a);margin-bottom:16px">Sachez à l'avance ce qu'un indu de 3 500 € coûterait à votre cabinet — et comment le neutraliser.</div>
+          <button class="btn primary" onclick="if(window.SUB)SUB.showPaywall('simulateur_regulation');else navTo('mon-abo')">💎 Activer Premium · +15 € HT/mois</button>
+        </div>
+      `}
     `;
   }
 
   function _simulateRegulation() {
-    if (!_hasPremium('simulateur_regulation')) { openUpsell('simulateur_regulation'); return; }
+    if (!_hasFeature('simulateur_regulation')) { _openPaywall('simulateur_regulation'); return; }
     const type = document.getElementById('pe-reg-type')?.value || 'indu';
     const amount = parseFloat(document.getElementById('pe-reg-amount')?.value) || 0;
     const months = parseInt(document.getElementById('pe-reg-duration')?.value) || 3;
     const result = document.getElementById('pe-reg-result');
     if (!result) return;
-
-    // Simulation simple côté front (le vrai calcul peut passer par le worker plus tard)
     const scenarios = {
       indu: {
         impact: amount,
         impactLabel: 'Indu à régler en une fois',
         mitigations: [
-          'Demander un échéancier sur 12 mois auprès de la CPAM (réduit pression trésorerie de 92 %)',
+          'Demander un échéancier sur 12 mois auprès de la CPAM (réduit la pression trésorerie de ~92 %)',
           'Vérifier l\'assiette : un indu sur >50 dossiers est souvent contestable partiellement',
           'Activer la Protection médico-légale+ Premium pour bouclier juridique'
         ]
       },
       plafond: {
-        impact: amount * months * 22,  // 22 jours/mois × perte/jour estimée
+        impact: amount * months * 22,
         impactLabel: `Perte brute estimée sur ${months} mois`,
         mitigations: [
           'Réorganiser la tournée pour augmenter le panier moyen par patient',
@@ -280,11 +529,11 @@ window.PremiumEnhanced = (function(){
         mitigations: [
           'Conventionnement secteur 2 sur les actes hors-AMI (urgence)',
           'Communication patients : maintenir la file active malgré le tarif libre',
-          'Consultation avocat santé (URGENT) — la Protection médico-légale+ Premium couvre'
+          'Consultation avocat santé URGENT — la Protection médico-légale+ Premium couvre'
         ]
       },
       majoration: {
-        impact: amount * 0.18 * months * 22,  // ~18% du CA = majorations
+        impact: amount * 0.18 * months * 22,
         impactLabel: `Perte mensuelle de majorations sur ${months} mois`,
         mitigations: [
           'Cibler les actes en zones MAU horaires alternatives',
@@ -294,386 +543,87 @@ window.PremiumEnhanced = (function(){
       }
     };
     const s = scenarios[type] || scenarios.indu;
-    const impactStr = s.impact.toLocaleString('fr-FR', { maximumFractionDigits:0 }) + ' €';
+    const impactStr = s.impact.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' €';
     result.innerHTML = `
-      <div style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:22px">
+      <div class="pe-card" style="background:var(--c,#101720);border:1px solid var(--b,#1f2935);border-radius:14px;padding:18px">
         <div style="display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:18px">
           <div style="flex:1;min-width:200px">
-            <div style="font-family:var(--fm);font-size:11px;color:var(--m);letter-spacing:.5px;text-transform:uppercase">${_safe(s.impactLabel)}</div>
-            <div style="font-size:36px;font-weight:700;color:var(--d);margin-top:4px">${impactStr}</div>
+            <div style="font-family:var(--fm,monospace);font-size:11px;color:var(--m,#7c8a9a);letter-spacing:.5px;text-transform:uppercase">${_safe(s.impactLabel)}</div>
+            <div style="font-size:32px;font-weight:700;color:var(--d,#ff5f6d);margin-top:4px">${impactStr}</div>
           </div>
           <div style="flex:1;min-width:200px;background:rgba(198,120,221,.08);border:1px solid rgba(198,120,221,.25);border-radius:10px;padding:14px">
-            <div style="font-family:var(--fm);font-size:11px;color:#c678dd;letter-spacing:.5px;text-transform:uppercase;font-weight:700">💡 Recommandation IA</div>
-            <div style="font-size:13px;color:var(--t);margin-top:6px;line-height:1.5">Avec une stratégie adaptée, vous pouvez réduire l'impact estimé de <strong>40 à 70 %</strong>. Voir contre-mesures ↓</div>
+            <div style="font-family:var(--fm,monospace);font-size:11px;color:#c678dd;letter-spacing:.5px;text-transform:uppercase;font-weight:700">💡 Recommandation IA</div>
+            <div style="font-size:13px;color:var(--t,#F0F4F8);margin-top:6px;line-height:1.5">Avec une stratégie adaptée, vous pouvez réduire l'impact estimé de <strong>40 à 70 %</strong>.</div>
           </div>
         </div>
         <div style="font-weight:600;margin-bottom:10px">⚙️ Contre-mesures recommandées</div>
-        <ol style="margin:0;padding-left:22px;color:var(--t);font-size:13px;line-height:1.7">
+        <ol style="margin:0;padding-left:22px;color:var(--t,#F0F4F8);font-size:13px;line-height:1.7">
           ${s.mitigations.map(m => `<li>${_safe(m)}</li>`).join('')}
         </ol>
       </div>
     `;
   }
 
-  /* ═══════════════════════════════════════════════════════════
-     4. CHARGES & NET PRÉDICTIF (projection 12 mois + scenarios)
-  ═══════════════════════════════════════════════════════════ */
-  function renderChargesPremium() {
-    const root = _viewEl('charges-premium');
-    if (!root) return;
-    const isPremium = _hasPremium('charges_calc_premium');
-    root.innerHTML = `
-      ${_headerHTML({
-        feat:'charges_calc_premium',
-        icon:'💰',
-        title:'Charges & net prédictif',
-        desc:'Au-delà du calcul basique : projection 12 mois URSSAF/CARPIMKO, alertes seuils (BNC, micro-BIC), scenarios "et si" (CA +10%, +20%, perte d\'un client lourd…).',
-        basicView:'outils-charges',
-        basicLabel:'Calcul charges & net standard'
-      })}
-      ${isPremium ? `
-        <div id="pe-charges-forecast" style="margin-bottom:14px"></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
-          <div class="pe-card" style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:22px">📈</span><strong>Scenario "et si"</strong></div>
-            <div style="color:var(--m);font-size:13px;line-height:1.5;margin-bottom:10px">Simulez l'impact d'une variation de CA sur votre net.</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="btn" style="font-size:12px" onclick="PremiumEnhanced._scenarioCA(10)">+10 %</button>
-              <button class="btn" style="font-size:12px" onclick="PremiumEnhanced._scenarioCA(20)">+20 %</button>
-              <button class="btn" style="font-size:12px" onclick="PremiumEnhanced._scenarioCA(-15)">-15 %</button>
-            </div>
-            <div id="pe-charges-scenario" style="margin-top:10px;font-size:13px;color:var(--t)"></div>
-          </div>
-          <div class="pe-card" style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:22px">🚨</span><strong>Alertes seuils</strong></div>
-            <div id="pe-charges-alertes" style="color:var(--m);font-size:13px;line-height:1.7">
-              ✓ Plafond micro-BNC (77 700 €) : OK<br>
-              ✓ Seuil franchise TVA (37 500 €) : OK<br>
-              ⚠️ Approche du seuil revenu de référence retraite progressive
-            </div>
-          </div>
-          <div class="pe-card" style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:22px">📅</span><strong>Calendrier fiscal</strong></div>
-            <div style="color:var(--m);font-size:13px;line-height:1.7">
-              • Acompte URSSAF : J-15<br>
-              • Déclaration CARPIMKO : T+45<br>
-              • Acompte 2042-C-PRO : ${new Date().getFullYear()}-09-15
-            </div>
-          </div>
-        </div>
-        <div style="margin-top:18px"><button class="btn" onclick="navTo('outils-charges')">Ouvrir le calcul standard →</button></div>
-      ` : _lockOverlayHTML('charges_calc_premium', 'Sachez aujourd\'hui ce que vous toucherez net dans 12 mois.')}
-    `;
-    if (isPremium) _loadChargesForecast();
+  /* ═══════════════════════════════════════════════════════
+     OUVERTURE PAYWALL
+  ═══════════════════════════════════════════════════════ */
+  function _openPaywall(featId) {
+    if (window.SUB && SUB.showPaywall) { SUB.showPaywall(featId); return; }
+    if (typeof navTo === 'function') navTo('mon-abo');
   }
 
-  async function _loadChargesForecast() {
-    const host = document.getElementById('pe-charges-forecast');
-    if (!host) return;
-    try {
-      if (window.PremiumIntel && PremiumIntel.snapshot) {
-        const snap = await PremiumIntel.snapshot();
-        if (snap?.forecast && PremiumIntel.renderForecastCard) {
-          PremiumIntel.renderForecastCard(host, snap.forecast);
-        } else {
-          host.innerHTML = '<div style="color:var(--m);font-size:12px;text-align:center;padding:20px">Données insuffisantes pour générer la projection (besoin d\'au moins 30 jours de cotations).</div>';
-        }
-      }
-    } catch (e) { console.warn('[PE] forecast charges KO:', e); }
+  /* ═══════════════════════════════════════════════════════
+     INIT — hooks navigation + relabel
+  ═══════════════════════════════════════════════════════ */
+  function refresh() {
+    applyLabels();
   }
 
-  function _scenarioCA(pct) {
-    if (!_hasPremium('charges_calc_premium')) { openUpsell('charges_calc_premium'); return; }
-    const out = document.getElementById('pe-charges-scenario');
-    if (!out) return;
-    // Estimation simple — un vrai scénario passerait par le worker
-    const baseCA = 5000;
-    const baseNet = baseCA * 0.55;  // ~55 % net après URSSAF/CARPIMKO/CSG-CRDS
-    const newCA = baseCA * (1 + pct / 100);
-    const newNet = newCA * 0.55;
-    const sign = pct >= 0 ? '+' : '';
-    out.innerHTML = `<strong>Scenario CA ${sign}${pct} %</strong><br>Nouveau net mensuel : <strong style="color:${pct >= 0 ? 'var(--a)' : 'var(--d)'}">${Math.round(newNet)} €</strong> (Δ ${sign}${Math.round(newNet - baseNet)} €)`;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     5. RAPPORT MENSUEL INTELLIGENT (comparatif N-1 + recommandations)
-  ═══════════════════════════════════════════════════════════ */
-  function renderRapportPremium() {
-    const root = _viewEl('rapport-premium');
-    if (!root) return;
-    const isPremium = _hasPremium('rapport_mensuel_premium');
-    root.innerHTML = `
-      ${_headerHTML({
-        feat:'rapport_mensuel_premium',
-        icon:'📄',
-        title:'Rapport mensuel intelligent',
-        desc:'Au-delà du rapport basique : analyse comparative année-1, détection automatique d\'anomalies, recommandations personnalisées, indicateurs prédictifs (trend forecasting).',
-        basicView:'rapport',
-        basicLabel:'Rapport mensuel standard'
-      })}
-      ${isPremium ? `
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:14px">
-          <div class="pe-card" style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-            <div style="font-family:var(--fm);font-size:11px;color:var(--m);text-transform:uppercase;letter-spacing:.5px">Évolution vs N-1</div>
-            <div style="font-size:32px;font-weight:700;color:var(--a);margin-top:4px">+ 12 %</div>
-            <div style="font-size:12px;color:var(--m);margin-top:4px">CA mensuel sur les 30 derniers jours</div>
-          </div>
-          <div class="pe-card" style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-            <div style="font-family:var(--fm);font-size:11px;color:var(--m);text-transform:uppercase;letter-spacing:.5px">Anomalies détectées</div>
-            <div style="font-size:32px;font-weight:700;color:var(--w);margin-top:4px">3</div>
-            <div style="font-size:12px;color:var(--m);margin-top:4px">À investiguer (cf. ci-dessous)</div>
-          </div>
-          <div class="pe-card" style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-            <div style="font-family:var(--fm);font-size:11px;color:var(--m);text-transform:uppercase;letter-spacing:.5px">Recommandations</div>
-            <div style="font-size:32px;font-weight:700;color:#c678dd;margin-top:4px">5</div>
-            <div style="font-size:12px;color:var(--m);margin-top:4px">Personnalisées via IA</div>
-          </div>
-        </div>
-        <div id="pe-rapport-coach" style="margin-bottom:14px"></div>
-        <div style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-          <div style="font-weight:600;margin-bottom:12px">📊 Indicateurs prédictifs (30 jours)</div>
-          <div id="pe-rapport-forecast"></div>
-        </div>
-        <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn" onclick="navTo('rapport')">Ouvrir le rapport standard →</button>
-          <button class="btn primary" onclick="window.print()">Imprimer / PDF</button>
-        </div>
-      ` : _lockOverlayHTML('rapport_mensuel_premium', 'Comprenez chaque variation de CA grâce à l\'IA comparative.')}
-    `;
-    if (isPremium) _loadRapportPremium();
-  }
-
-  async function _loadRapportPremium() {
-    try {
-      if (window.PremiumIntel && PremiumIntel.snapshot) {
-        const snap = await PremiumIntel.snapshot();
-        const coach = document.getElementById('pe-rapport-coach');
-        if (snap?.coach && coach && PremiumIntel.renderCoachBlock) PremiumIntel.renderCoachBlock(coach, snap.coach);
-        const fc = document.getElementById('pe-rapport-forecast');
-        if (snap?.forecast && fc && PremiumIntel.renderForecastCard) PremiumIntel.renderForecastCard(fc, snap.forecast);
-      }
-    } catch (e) { console.warn('[PE] rapport premium KO:', e); }
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     6. DASHBOARD PRÉDICTIF (projections + alertes intelligentes)
-  ═══════════════════════════════════════════════════════════ */
-  function renderDashPremium() {
-    const root = _viewEl('dash-premium');
-    if (!root) return;
-    const isPremium = _hasPremium('dashboard_premium');
-    root.innerHTML = `
-      ${_headerHTML({
-        feat:'dashboard_premium',
-        icon:'📊',
-        title:'Dashboard prédictif',
-        desc:'Au-delà du dashboard basique : projections de revenus 30/60/90 jours, alertes intelligentes par IA, suggestions d\'optimisation personnalisées, score "Elite IDEL".',
-        basicView:'dash',
-        basicLabel:'Dashboard & statistiques standard'
-      })}
-      ${isPremium ? `
-        <div id="pi-dashboard-mount"></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:14px">
-          <div id="pe-dash-risk"></div>
-          <div id="pe-dash-forecast"></div>
-          <div id="pe-dash-elite"></div>
-        </div>
-        <div style="margin-top:14px" id="pe-dash-coach"></div>
-        <div style="margin-top:18px"><button class="btn" onclick="navTo('dash')">Ouvrir le dashboard standard →</button></div>
-      ` : _lockOverlayHTML('dashboard_premium', 'Sachez à l\'avance ce que sera votre CA dans 90 jours.')}
-    `;
-    if (isPremium) _loadDashPremium();
-  }
-
-  async function _loadDashPremium() {
-    try {
-      if (window.PremiumIntel && PremiumIntel.refreshDashboard) PremiumIntel.refreshDashboard();
-      if (window.PremiumIntel && PremiumIntel.snapshot) {
-        const snap = await PremiumIntel.snapshot();
-        if (!snap) return;
-        if (snap.risk && PremiumIntel.renderRiskGauge)         PremiumIntel.renderRiskGauge('pe-dash-risk', snap.risk);
-        if (snap.forecast && PremiumIntel.renderForecastCard)  PremiumIntel.renderForecastCard('pe-dash-forecast', snap.forecast);
-        if (snap.elite && PremiumIntel.renderEliteScore)        PremiumIntel.renderEliteScore('pe-dash-elite', snap.elite);
-        if (snap.coach && PremiumIntel.renderCoachBlock)        PremiumIntel.renderCoachBlock('pe-dash-coach', snap.coach);
-      }
-    } catch (e) { console.warn('[PE] dash premium KO:', e); }
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     7. TRANSMISSIONS SMART IA (auto-génération voix/photo)
-  ═══════════════════════════════════════════════════════════ */
-  function renderTransmissionsPremium() {
-    const root = _viewEl('transmissions-premium');
-    if (!root) return;
-    const isPremium = _hasPremium('transmissions_premium');
-    root.innerHTML = `
-      ${_headerHTML({
-        feat:'transmissions_premium',
-        icon:'📝',
-        title:'Transmissions smart IA',
-        desc:'Au-delà du journal basique : génération automatique IA depuis dictée vocale ou photo, classification automatique (clinique/social/médicament), alertes pertinence, export multi-destinataires (médecin, famille, cabinet).',
-        basicView:'transmissions',
-        basicLabel:'Transmissions standard'
-      })}
-      ${isPremium ? `
-        <div style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:22px">
-          <div style="font-weight:600;margin-bottom:14px">🎤 Capture rapide</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
-            <button class="btn primary" onclick="PremiumEnhanced._captureVoice()" style="padding:18px;font-size:14px">🎤 Dicter (voix → IA)</button>
-            <button class="btn" onclick="PremiumEnhanced._capturePhoto()" style="padding:18px;font-size:14px">📷 Photo (OCR + IA)</button>
-            <button class="btn" onclick="navTo('transmissions')" style="padding:18px;font-size:14px">📝 Saisie classique</button>
-          </div>
-          <div id="pe-transm-result" style="margin-top:14px"></div>
-        </div>
-        <div style="margin-top:14px;background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-          <div style="font-weight:600;margin-bottom:10px">⚙️ Réglages IA</div>
-          <div style="color:var(--m);font-size:13px;line-height:1.7">
-            • Classification automatique : <strong style="color:var(--t)">Activée</strong><br>
-            • Alertes pertinence : <strong style="color:var(--t)">Élevées</strong><br>
-            • Export auto vers : <strong style="color:var(--t)">Médecin traitant + cabinet</strong>
-          </div>
-        </div>
-      ` : _lockOverlayHTML('transmissions_premium', 'Économisez 30 min/jour avec des transmissions auto-générées par IA.')}
-    `;
-  }
-
-  function _captureVoice() {
-    if (!_hasPremium('transmissions_premium')) { openUpsell('transmissions_premium'); return; }
-    const out = document.getElementById('pe-transm-result');
-    if (!out) return;
-    out.innerHTML = '<div style="padding:14px;background:rgba(198,120,221,.05);border:1px dashed rgba(198,120,221,.3);border-radius:8px;font-size:13px;color:var(--m)">🎤 La capture vocale (Web Speech API + IA Grok) sera activée dans la prochaine release. En attendant, ouvrez la <a href="#" onclick="navTo(\'transmissions\');return false" style="color:var(--a)">saisie standard</a>.</div>';
-  }
-
-  function _capturePhoto() {
-    if (!_hasPremium('transmissions_premium')) { openUpsell('transmissions_premium'); return; }
-    const out = document.getElementById('pe-transm-result');
-    if (!out) return;
-    out.innerHTML = '<div style="padding:14px;background:rgba(198,120,221,.05);border:1px dashed rgba(198,120,221,.3);border-radius:8px;font-size:13px;color:var(--m)">📷 La capture photo (OCR + extraction IA) sera activée dans la prochaine release.</div>';
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     8. COMPTE-RENDU AUTO IA (CR 100% auto-généré)
-  ═══════════════════════════════════════════════════════════ */
-  function renderCompteRenduPremium() {
-    const root = _viewEl('compte-rendu-premium');
-    if (!root) return;
-    const isPremium = _hasPremium('compte_rendu_premium');
-    root.innerHTML = `
-      ${_headerHTML({
-        feat:'compte_rendu_premium',
-        icon:'📋',
-        title:'Compte-rendu auto IA',
-        desc:'Au-delà du générateur basique : compte-rendu 100% auto-généré IA depuis vos cotations + constantes + transmissions. Modèles personnalisables par patient, signature électronique intégrée.',
-        basicView:'compte-rendu',
-        basicLabel:'Compte-rendu de passage standard'
-      })}
-      ${isPremium ? `
-        <div style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:22px;margin-bottom:14px">
-          <div style="font-weight:600;margin-bottom:14px">🤖 Génération automatique</div>
-          <div style="color:var(--m);font-size:13px;line-height:1.6;margin-bottom:14px">
-            Sélectionnez un patient et l'IA génère un CR complet en consolidant :
-            cotations du jour · constantes · transmissions récentes · contexte ordonnance.
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <select id="pe-cr-patient" style="flex:1;min-width:200px;padding:11px;background:var(--s);border:1px solid var(--b);border-radius:8px;color:var(--t);font-size:13px">
-              <option value="">— Sélectionner un patient —</option>
-            </select>
-            <button class="btn primary" onclick="PremiumEnhanced._generateCRAuto()">⚡ Générer le CR</button>
-          </div>
-          <div id="pe-cr-result" style="margin-top:14px"></div>
-        </div>
-        <div style="background:var(--c);border:1px solid var(--b);border-radius:14px;padding:18px">
-          <div style="font-weight:600;margin-bottom:10px">📋 Modèles personnalisés</div>
-          <div style="color:var(--m);font-size:13px;line-height:1.7">
-            • CR pansement complexe (auto-rempli depuis BSI)<br>
-            • CR injection sous-cutanée (auto-traçabilité)<br>
-            • CR surveillance perfusion (constantes intégrées)<br>
-            <em style="color:var(--m)">Personnalisez vos propres modèles dans Réglages → CR auto.</em>
-          </div>
-        </div>
-        <div style="margin-top:18px"><button class="btn" onclick="navTo('compte-rendu')">Ouvrir le générateur standard →</button></div>
-      ` : _lockOverlayHTML('compte_rendu_premium', 'Économisez 15 min par patient avec des CR 100 % auto-générés.')}
-    `;
-    if (isPremium) _loadCRPatients();
-  }
-
-  async function _loadCRPatients() {
-    const sel = document.getElementById('pe-cr-patient');
-    if (!sel) return;
-    try {
-      if (typeof getPatients === 'function') {
-        const list = await getPatients();
-        (list || []).slice(0, 100).forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.id || '';
-          opt.textContent = (p.nom || '') + ' ' + (p.prenom || '');
-          sel.appendChild(opt);
-        });
-      }
-    } catch (e) { console.warn('[PE] CR patients KO:', e); }
-  }
-
-  function _generateCRAuto() {
-    if (!_hasPremium('compte_rendu_premium')) { openUpsell('compte_rendu_premium'); return; }
-    const id = document.getElementById('pe-cr-patient')?.value;
-    const out = document.getElementById('pe-cr-result');
-    if (!out) return;
-    if (!id) { out.innerHTML = '<div style="color:var(--w);font-size:13px">⚠️ Sélectionnez d\'abord un patient.</div>'; return; }
-    out.innerHTML = `
-      <div style="padding:18px;background:rgba(198,120,221,.05);border:1px solid rgba(198,120,221,.25);border-radius:10px">
-        <div style="font-family:var(--fm);font-size:11px;color:#c678dd;letter-spacing:.5px;text-transform:uppercase;font-weight:700;margin-bottom:8px">🤖 CR généré par IA</div>
-        <div style="font-size:13px;color:var(--t);line-height:1.7;white-space:pre-line">Compte-rendu de passage du ${new Date().toLocaleDateString('fr-FR')}
-
-Soin réalisé : pansement complexe (AMI 4)
-Constantes : TA 13/8, FC 72, SpO2 98 %
-Observation : plaie en bonne voie de cicatrisation, pas de signe d'infection.
-Recommandations : poursuivre le protocole en cours, prochaine évaluation à J+3.
-
-Cordialement,</div>
-        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" style="font-size:12px">✍️ Signer & valider</button>
-          <button class="btn" style="font-size:12px">📤 Envoyer au médecin</button>
-          <button class="btn" style="font-size:12px">💾 Sauvegarder</button>
-        </div>
-      </div>
-    `;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     ROUTAGE — un dispatcher pour les 8 vues
-  ═══════════════════════════════════════════════════════════ */
-  const _RENDERERS = {
-    'copilote-premium':       renderCopilotePremium,
-    'audit-cpam-premium':     renderAuditCpamPremium,
-    'simulateur-regulation':  renderSimulateurRegulation,
-    'charges-premium':        renderChargesPremium,
-    'rapport-premium':        renderRapportPremium,
-    'dash-premium':           renderDashPremium,
-    'transmissions-premium':  renderTransmissionsPremium,
-    'compte-rendu-premium':   renderCompteRenduPremium
-  };
-
-  function render(viewId) {
-    const fn = _RENDERERS[viewId];
-    if (fn) try { fn(); } catch (e) { console.error('[PE] render KO:', viewId, e); }
-  }
-
-  /* ───── Hook navigation ────────────────────────────────── */
+  // Hook navigation
   document.addEventListener('ui:navigate', e => {
     const v = e.detail?.view;
-    if (v && _RENDERERS[v]) setTimeout(() => render(v), 50);
+    if (v === 'simulateur-regulation') {
+      setTimeout(renderSimulateurRegulation, 50);
+      return;
+    }
+    if (ENRICHMENTS[v]) {
+      // Laisser le module Pro d'origine se rendre, puis injecter par-dessus
+      setTimeout(() => enrichView(v), 250);
+    }
   });
 
-  /* ───── Export ────────────────────────────────────────── */
+  // Premier relabel : au DOM ready + après le bootstrap SUB (event custom potentiel)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(refresh, 600));
+  } else {
+    setTimeout(refresh, 600);
+  }
+
+  // Relabel quand l'état SUB change (l'admin simule un autre tier, etc.)
+  // → pas d'event custom de SUB pour l'instant ; on re-applique périodiquement
+  setInterval(() => {
+    // léger : on ne relabel que si l'état Premium a changé
+    const wasPremium = document.body.dataset.peLastPremium === '1';
+    const isPremium = _hasPremiumAddon();
+    if (wasPremium !== isPremium) {
+      document.body.dataset.peLastPremium = isPremium ? '1' : '0';
+      refresh();
+    }
+  }, 3000);
+
+  /* ═══════════════════════════════════════════════════════
+     EXPORT
+  ═══════════════════════════════════════════════════════ */
   return {
-    render,
-    openUpsell,
-    // internes exposés pour les onclick inline
-    _analyseLongitudinale,
-    _simulateRegulation,
+    applyLabels,
+    enrichView,
+    refresh,
+    renderSimulateurRegulation,
+    // Internes exposés pour les onclick inline
     _scenarioCA,
     _captureVoice,
     _capturePhoto,
-    _generateCRAuto
+    _generateCRAuto,
+    _simulateRegulation
   };
 })();

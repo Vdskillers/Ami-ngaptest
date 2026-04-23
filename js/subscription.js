@@ -80,19 +80,11 @@ window.SUB = (function(){
     forensic_certificates:   { tier:'PREMIUM', label:'Preuves légales opposables',      desc:'Bouclier anti-contrôle CPAM : certificats horodatés RFC 3161, chaîne de preuve SHA-256, PDF opposable juridiquement. Pour neutraliser un redressement en amont.' },
     sla_support:             { tier:'PREMIUM', label:'SLA support prioritaire < 2h',    desc:'Engagement contractuel de réponse support < 2h ouvrées, canal dédié premium.' },
     rapport_juridique_mensuel:{ tier:'PREMIUM', label:'Rapport juridique mensuel',      desc:'Synthèse mensuelle auditée : conformité, preuves collectées, exposition contentieux, recommandations DPO.' },
-    /* ═══ 💎 PREMIUM dual-track (+15 € HT/mois) ═════════════════════════
-       Versions enrichies IA des outils existants. Les versions basiques
-       restent accessibles depuis "Outils pratiques" pour ne pas casser
-       le produit pour les abonnés Essentiel/Pro. La version Premium
-       ajoute la couche prédictive + recommandations IA + gain de temps. */
-    copilote_ia_premium:      { tier:'PREMIUM', label:'Copilote IA Pro+',                desc:'Copilote enrichi : analyse longitudinale du portefeuille, suggestions d\'optimisation patient par patient, mémoire conversationnelle 90j.' },
-    audit_cpam_premium:       { tier:'PREMIUM', label:'Audit CPAM IA prédictif',         desc:'Simulateur audit CPAM avancé : scoring prédictif IA, détection des patterns à risque, plan d\'action personnalisé.' },
-    simulateur_regulation:    { tier:'PREMIUM', label:'Simulateur régulation',           desc:'Simule l\'impact d\'une décision de régulation CPAM (déconventionnement, plafonnement, recouvrement) sur votre activité et propose des contre-mesures.' },
-    charges_calc_premium:     { tier:'PREMIUM', label:'Charges & net prédictif',         desc:'Calcul charges & net enrichi IA : projection 12 mois, optimisation URSSAF/CARPIMKO, alertes seuils, scenarios "et si".' },
-    rapport_mensuel_premium:  { tier:'PREMIUM', label:'Rapport mensuel intelligent',     desc:'Rapport mensuel enrichi IA : analyse comparative N-1, détection anomalies, recommandations personnalisées, indicateurs prédictifs.' },
-    dashboard_premium:        { tier:'PREMIUM', label:'Dashboard prédictif',             desc:'Dashboard avancé : projections de revenus 30/60/90 jours, alertes intelligentes, suggestions d\'optimisation personnalisées, score "elite IDEL".' },
-    transmissions_premium:    { tier:'PREMIUM', label:'Transmissions smart IA',          desc:'Transmissions automatisées : génération IA depuis la voix/photo, classification automatique, alertes pertinence, export CR multi-destinataires.' },
-    compte_rendu_premium:     { tier:'PREMIUM', label:'Compte-rendu auto IA',            desc:'Compte-rendu de passage 100% auto-généré IA depuis vos cotations + constantes + observations. Modèles personnalisables par patient.' },
+    /* ═══ 💎 PREMIUM exclusif — nouveau module sans équivalent Pro ═══
+       Les autres bénéfices Premium (copilote 90j, audit prédictif, dash IA…)
+       sont injectés DANS les modules Pro existants via premium-enhanced.js
+       pour minimiser le nombre d'onglets dans la sidebar. */
+    simulateur_regulation:    { tier:'PREMIUM', label:'Simulateur régulation',           desc:'Simule l\'impact d\'une décision de régulation CPAM (déconventionnement, plafonnement, indu) sur votre activité et propose des contre-mesures personnalisées.' },
     /* ═══ 🧑‍💼 COMPTABLE — Expertise comptable santé (99 € HT/mois) ═══
        8 features dédiées aux experts-comptables qui gèrent un portefeuille
        d'IDEL clientes. Réservées aux abonnés COMPTABLE et aux admins (démo). */
@@ -505,19 +497,11 @@ window.SUB = (function(){
     'outils-simulation':'simulateur_maj','cabinet':'cabinet_multi_ide',
     'transmissions':'transmissions','compliance':'compliance_engine',
     'ngap-ref':'ngap_ref','contact':'contact_admin','mon-abo':null,
-    // 💎 PREMIUM add-on (+15€ HT/mois)
+    // 💎 PREMIUM add-on (+15€ HT/mois) — modules exclusifs
     'ca-sous-declare':'ca_sous_declare',
     'forensic-cert':'forensic_certificates',
     'rapport-juridique':'rapport_juridique_mensuel',
-    // 💎 PREMIUM dual-track (versions IA enrichies des outils existants)
-    'copilote-premium':'copilote_ia_premium',
-    'audit-cpam-premium':'audit_cpam_premium',
     'simulateur-regulation':'simulateur_regulation',
-    'charges-premium':'charges_calc_premium',
-    'rapport-premium':'rapport_mensuel_premium',
-    'dash-premium':'dashboard_premium',
-    'transmissions-premium':'transmissions_premium',
-    'compte-rendu-premium':'compte_rendu_premium',
     // 🧑‍💼 COMPTABLE — Expertise comptable santé
     'comptable-hub':'dashboard_consolide',          // hub = même verrou que le dashboard
     'comptable-dashboard':'dashboard_consolide',
@@ -637,7 +621,7 @@ window.SUB = (function(){
     ESSENTIEL: { subtitle:'IDEL solo débutante', features:['Cotation NGAP intelligente','Carnet patients chiffré','Tournée basique + import calendrier','Trésorerie & remboursements','Rapport mensuel','Signatures électroniques','Journal kilométrique','Support standard'] },
     PRO:       { subtitle:'IDEL solo active', features:['✨ Tout AMI Essentiel','Dashboard & statistiques','Simulateur audit CPAM','Copilote IA (xAI Grok)','BSI, Pilulier, Constantes','Alertes médicamenteuses','Compte-rendu + Consentements','Tournée IA (VRPTW + 2-opt)'], popular:true },
     CABINET:   { subtitle:'Cabinet 2 à 6 IDE', features:['✨ Tout AMI Pro','Mode cabinet multi-IDE','Planning partagé','Transmissions collaboratives','Répartition intelligente','Consentements partagés','🧠 Conformité cabinet (manager)','📊 Stats consolidées (manager)','🛠️ Gestion des membres (titulaire)'] },
-    PREMIUM:   { subtitle:'Mode Expert · Gagne plus, perds moins, travaille moins', features:['✨ S\'ajoute à Pro ou Cabinet','🧠 Copilote IA Pro+ (mémoire 90j)','🔍 Audit CPAM IA prédictif','⚡ Simulateur régulation CPAM','💸 Détection CA sous-déclaré (+120 à 300€/mois)','⚖️ Certificats conformes opposables','📜 Rapport juridique mensuel','💰 Charges & net prédictif (12 mois)','📄 Rapport mensuel intelligent','📊 Dashboard prédictif (projections 30/60/90j)','📝 Transmissions smart IA (auto)','📋 Compte-rendu auto-généré IA','⚡ Support prioritaire < 2h'] },
+    PREMIUM:   { subtitle:'Mode Expert · Gagne plus, perds moins, travaille moins', features:['✨ S\'ajoute à Pro ou Cabinet','🤖 Copilote IA Pro+ (mémoire 90j) — directement dans le chat','🔍 Audit CPAM IA prédictif — directement dans le simulateur','📊 Dashboard prédictif (projections 30/60/90j) — directement dans le dashboard','📄 Rapport mensuel intelligent (analyse vs N-1)','💰 Charges & net prédictif (12 mois)','📝 Transmissions smart IA (voix/photo)','📋 Compte-rendu 100% auto IA','💎 Modules exclusifs Premium :','💸 Détection CA sous-déclaré (+120 à 300€/mois)','⚖️ Certificats conformes opposables','📜 Rapport juridique mensuel','⚡ Simulateur régulation CPAM','⚡ Support prioritaire < 2h'] },
     COMPTABLE: { subtitle:'Cabinet d\'expertise comptable santé', features:['Dashboard consolidé multi-IDEL (jusqu\'à 20 incluses)','Export FEC + liasse fiscale 2035','Générateur 2042-C-PRO · URSSAF · CARPIMKO','Scoring risque portfolio client','Alertes anomalies NGAP en masse','Connecteurs Cegid · EBP · Quadra','Vue anonymisée (pseudo-FEC)','Rapports trimestriels automatiques'] }
   };
 
