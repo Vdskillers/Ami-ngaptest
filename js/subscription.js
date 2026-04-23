@@ -29,10 +29,10 @@ window.SUB = (function(){
   const TIERS = {
     TEST:      { label:'Mode test (illimité)', price:'—', priority:999, color:'#00d4aa' },
     TRIAL:     { label:'Essai gratuit',        price:'0 €',                priority:900, color:'#00d4aa' },
-    ESSENTIEL: { label:'AMI Essentiel',        price:'19 € HT / mois',     priority:1,   color:'#4fa8ff' },
-    PRO:       { label:'AMI Pro',              price:'39 € HT / mois',     priority:2,   color:'#00d4aa' },
-    CABINET:   { label:'AMI Cabinet',          price:'29 € HT / IDE / mois', priority:3, color:'#ffb547' },
-    PREMIUM:   { label:'AMI Premium',          price:'+15 € HT / mois',    priority:4,   color:'#c678dd' },
+    ESSENTIEL: { label:'AMI Starter',          price:'29 € HT / mois',     priority:1,   color:'#4fa8ff' },
+    PRO:       { label:'AMI Pro',              price:'49 € HT / mois',     priority:2,   color:'#00d4aa' },
+    CABINET:   { label:'AMI Cabinet',          price:'Dégressif · à partir de 29 € HT / IDE / mois', priority:3, color:'#a78bfa', pricingDetail:'1–2 IDE → 49 € · 3–5 IDE → 39 € · 6+ IDE → 29 € HT / IDE / mois' },
+    PREMIUM:   { label:'AMI Premium',          price:'+29 € HT / mois',    priority:4,   color:'#fbbf24' },
     COMPTABLE: { label:'AMI Comptable',        price:'99 € HT / mois', priority:5,   color:'#ff5f6d', pricingDetail:'20 IDEL incluses · +5 € HT par IDEL supplémentaire' },
     LOCKED:    { label:'Aucun abonnement',     price:'—',                 priority:0,   color:'#6a8099' },
     ADMIN:     { label:'Admin (bypass)',       price:'—',                 priority:999, color:'#ff5f6d' }
@@ -71,7 +71,7 @@ window.SUB = (function(){
     cabinet_manage_members:  { tier:'CABINET', label:'Gestion des membres',    desc:'Inviter, promouvoir et retirer des membres du cabinet (titulaire/gestionnaire uniquement).' },
     cabinet_consolidated_stats: { tier:'CABINET', label:'Stats consolidées cabinet', desc:'Vue CA, actes et performance de toutes les IDE du cabinet (titulaire/gestionnaire uniquement).' },
     compliance_engine:   { tier:'CABINET', label:'Conformité cabinet',        desc:'Moteur de conformité du cabinet : scoring 4 piliers, auto-correction, risque prédictif (titulaire/gestionnaire uniquement).' },
-    /* ═══ 💎 PREMIUM — Add-on IDEL haut volume (+15 € HT / mois) ════════
+    /* ═══ 💎 PREMIUM — Add-on IDEL haut volume (+29 € HT / mois) ════════
        S'ajoute à Pro ou Cabinet. Les 6 fonctionnalités ci-dessous
        sont réservées aux abonnés PREMIUM et aux admins (démo/test). */
     optimisation_ca_plus:    { tier:'PREMIUM', label:'Optimisation CA avancée',        desc:'Revenue engine premium : IA prédictive sur manques-à-gagner, suggestions d\'actes, upsell cotations.' },
@@ -159,7 +159,7 @@ window.SUB = (function(){
         cabinetMember: !!data.cabinet_member,
         cabinetSize:   data.cabinet_size || 0,
         cabinetRole:   data.cabinet_role || null,
-        // 💎 Add-on PREMIUM (+15€ HT/mois) — activable par-dessus Pro ou Cabinet
+        // 💎 Add-on PREMIUM (+29€ HT/mois) — activable par-dessus Pro ou Cabinet
         premiumAddon:  !!data.premium_addon,
         premiumAddonUntil: data.premium_addon_until || null
       };
@@ -363,7 +363,7 @@ window.SUB = (function(){
       if (FEATURES[featId]?.tier === 'CABINET') return true;
     }
 
-    // 💎 Add-on PREMIUM (+15€ HT/mois) : s'ajoute à Pro ou Cabinet
+    // 💎 Add-on PREMIUM (+29€ HT/mois) : s'ajoute à Pro ou Cabinet
     //   Si l'user a souscrit l'add-on (_state.premiumAddon = true),
     //   il a accès aux features PREMIUM en plus de son tier de base.
     //   Cas où tier = 'PREMIUM' est déjà couvert par ACCESS_MATRIX.PREMIUM.
@@ -492,7 +492,7 @@ window.SUB = (function(){
     'outils-simulation':'simulateur_maj','cabinet':'cabinet_multi_ide',
     'transmissions':'transmissions','compliance':'compliance_engine',
     'ngap-ref':'ngap_ref','contact':'contact_admin','mon-abo':null,
-    // 💎 PREMIUM add-on (+15€ HT/mois)
+    // 💎 PREMIUM add-on (+29€ HT/mois)
     'ca-sous-declare':'ca_sous_declare',
     'forensic-cert':'forensic_certificates',
     'rapport-juridique':'rapport_juridique_mensuel',
@@ -612,10 +612,10 @@ window.SUB = (function(){
   /* ───── 11. PAGE ABONNEMENT ──────────────────────────────── */
 
   const PLAN_DETAILS = {
-    ESSENTIEL: { subtitle:'IDEL solo débutante', features:['Cotation NGAP intelligente','Carnet patients chiffré','Tournée basique + import calendrier','Trésorerie & remboursements','Rapport mensuel','Signatures électroniques','Journal kilométrique','Support standard'] },
-    PRO:       { subtitle:'IDEL solo active', features:['✨ Tout AMI Essentiel','Dashboard & statistiques','Simulateur audit CPAM','Copilote IA (xAI Grok)','BSI, Pilulier, Constantes','Alertes médicamenteuses','Compte-rendu + Consentements','Tournée IA (VRPTW + 2-opt)'], popular:true },
-    CABINET:   { subtitle:'Cabinet 2 à 6 IDE', features:['✨ Tout AMI Pro','Mode cabinet multi-IDE','Planning partagé','Transmissions collaboratives','Répartition intelligente','Consentements partagés','🧠 Conformité cabinet (manager)','📊 Stats consolidées (manager)','🛠️ Gestion des membres (titulaire)'] },
-    PREMIUM:   { subtitle:'Mode Expert Revenus · Se rembourse en 1 journée de tournée', features:['✨ S\'ajoute à Pro ou Cabinet','💸 Optimisation CA avancée (+120 à 300€/mois récupérés)','🚨 Détection pertes invisibles (actes non cotés)','⚖️ Protection juridique renforcée (anti-redressement)','🧾 Preuves légales opposables CPAM','⚡ Support prioritaire < 2h','📊 Rapport légal mensuel auditable'] },
+    ESSENTIEL: { subtitle:'« Arrête de perdre de l\'argent »', features:['Cotation intelligente','Alertes erreurs','Journal des actes','Support standard'] },
+    PRO:       { subtitle:'« Optimise tes revenus sans effort »', features:['✨ Tout AMI Starter, plus :','Dashboard & statistiques','Simulateur CPAM','Alertes avancées','Suggestions d\'optimisation IA','💸 +150 à +300 € / mois récupérés'], popular:true },
+    CABINET:   { subtitle:'« Gère ton cabinet comme un pro »', features:['✨ Tout AMI Pro, plus :','Multi-IDE (sync sélective)','Statistiques globales','Gestion des tournées','Accès manager / planning'] },
+    PREMIUM:   { subtitle:'« Zéro stress. Zéro contrôle surprise. »', features:['✨ S\'ajoute à Pro ou Cabinet','Détection des pertes invisibles','Optimisation IA avancée','Protection juridique renforcée','Audit mensuel automatique','💎 Chaque mois, tu récupères plus que ce que ça coûte'] },
     COMPTABLE: { subtitle:'Cabinet d\'expertise comptable santé', features:['Dashboard consolidé multi-IDEL (jusqu\'à 20 incluses)','Export FEC + liasse fiscale 2035','Générateur 2042-C-PRO · URSSAF · CARPIMKO','Scoring risque portfolio client','Alertes anomalies NGAP en masse','Connecteurs Cegid · EBP · Quadra','Vue anonymisée (pseudo-FEC)','Rapports trimestriels automatiques'] }
   };
 
