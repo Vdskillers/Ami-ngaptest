@@ -6,12 +6,14 @@
    ✅ Préfixe cache isolé (amitest-) pour ne pas entrer en conflit avec la PWA prod
 */
 
-const CACHE_VERSION = 'amitest-v3.8';
+const CACHE_VERSION = 'amitest-v3.9';
 const CACHE_STATIC  = CACHE_VERSION + '-static';
 const CACHE_TILES   = CACHE_VERSION + '-tiles';
 
 const STATIC_ASSETS = [
   './index.html',
+  './AMI-landing.html',
+  './landing-loader.js',
   './css/style.css',
   './js/utils.js',
   './js/auth.js',
