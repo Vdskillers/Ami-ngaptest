@@ -51,6 +51,55 @@
     return SUB.requireAccess(featId);
   }
 
+  /* ─── 🎬 GESTION DU MODE DÉMO ──────────────────────────────────
+     État persisté dans localStorage. Par défaut = ON.
+     Quand OFF : getPortfolio() retourne [] → empty states partout.
+     Quand backend prêt : remplacer le bloc dans getPortfolio() par
+     un fetch sur /webhook/comptable-portfolio. */
+  const _DEMO_KEY = 'ami_comptable_demo_mode';
+
+  function _isDemoMode() {
+    try { return (localStorage.getItem(_DEMO_KEY) || 'on') === 'on'; }
+    catch { return true; }
+  }
+
+  function _setDemoMode(on) {
+    try { localStorage.setItem(_DEMO_KEY, on ? 'on' : 'off'); }
+    catch (e) { console.warn('[comptable] localStorage unavailable', e); }
+  }
+
+  /** Re-rendre la vue comptable courante après changement de mode. */
+  function _refreshCurrentView() {
+    const currentEl = document.querySelector('.view.on');
+    if (!currentEl) return;
+    const id = currentEl.id || '';
+    if (!id.startsWith('view-comptable-')) return;
+    const v = id.replace('view-', '');
+    document.dispatchEvent(new CustomEvent('ui:navigate', { detail: { view: v } }));
+  }
+
+  /** Désactive le mode démo (avec confirmation). À appeler quand un vrai
+      cabinet d'expertise s'abonne et veut voir SES données réelles. */
+  function disableDemoMode() {
+    const ok = confirm(
+      'Désactiver le mode démo ?\n\n' +
+      'Le portefeuille fictif de 20 IDEL sera retiré.\n' +
+      'Vous verrez vos données réelles (vide tant qu\'aucune IDEL cliente n\'est enregistrée).\n\n' +
+      'Vous pourrez réactiver le mode démo à tout moment.'
+    );
+    if (!ok) return;
+    _setDemoMode(false);
+    _toast('success', 'Mode démo désactivé', 'Les données réelles sont désormais affichées');
+    _refreshCurrentView();
+  }
+
+  /** Réactive le mode démo. */
+  function enableDemoMode() {
+    _setDemoMode(true);
+    _toast('info', 'Mode démo activé', '20 IDEL fictives chargées pour la démonstration');
+    _refreshCurrentView();
+  }
+
   function $(id) { return document.getElementById(id); }
 
   function _fmt(n) {
@@ -139,8 +188,21 @@
     };
   }
 
-  /** Récupère le portefeuille (démo) — à remplacer par un appel worker quand prêt. */
+  /** Récupère le portefeuille.
+      Mode démo ON → 20 IDEL fictives déterministes.
+      Mode démo OFF → tableau vide (à remplacer par un fetch worker quand prêt). */
   async function getPortfolio() {
+    if (!_isDemoMode()) {
+      // 🔌 TODO BACKEND : remplacer ce return [] par un fetch :
+      // try {
+      //   const r = await fetch(W + '/webhook/comptable-portfolio', {
+      //     headers: { 'Authorization': 'Bearer ' + ss.tok() }
+      //   });
+      //   const data = await r.json();
+      //   return Array.isArray(data?.idels) ? data.idels : [];
+      // } catch { return []; }
+      return [];
+    }
     return _DEMO_IDELS.map(i => ({ ...i, kpis: _genKPIs(i) }));
   }
 
@@ -204,6 +266,29 @@
 
       .cpt-empty{text-align:center;padding:38px 20px;color:var(--m);font-size:13px}
 
+      /* ── 🎬 Bandeau MODE DÉMO ── */
+      .cpt-demo-banner{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,rgba(255,181,71,.12),rgba(255,181,71,.04));border:1px solid rgba(255,181,71,.3);border-radius:12px;padding:12px 16px;margin-bottom:16px;flex-wrap:wrap}
+      .cpt-demo-banner .cpt-demo-ic{font-size:22px;flex-shrink:0}
+      .cpt-demo-banner .cpt-demo-txt{flex:1;min-width:200px;font-size:13px;color:var(--t);line-height:1.45}
+      .cpt-demo-banner .cpt-demo-txt b{color:var(--w);font-weight:700}
+      .cpt-demo-banner .cpt-demo-actions{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
+      .cpt-demo-banner button{background:rgba(255,181,71,.18);color:var(--w);border:1px solid rgba(255,181,71,.4);border-radius:8px;padding:7px 14px;font-family:var(--ff);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+      .cpt-demo-banner button:hover{background:rgba(255,181,71,.28);transform:translateY(-1px)}
+      .cpt-demo-banner button.cpt-demo-btn-ghost{background:transparent;color:var(--m);border-color:var(--b)}
+      .cpt-demo-banner button.cpt-demo-btn-ghost:hover{color:var(--t)}
+      /* Variante quand mode démo OFF — bandeau vert "données réelles" */
+      .cpt-demo-banner.live{background:linear-gradient(90deg,rgba(0,212,170,.10),rgba(0,212,170,.02));border-color:rgba(0,212,170,.3)}
+      .cpt-demo-banner.live .cpt-demo-txt b{color:var(--a)}
+      .cpt-demo-banner.live button{background:rgba(0,212,170,.16);color:var(--a);border-color:rgba(0,212,170,.4)}
+      .cpt-demo-banner.live button:hover{background:rgba(0,212,170,.24)}
+
+      /* ── 📭 Empty state ── */
+      .cpt-empty-state{background:var(--s);border:1px dashed var(--b);border-radius:14px;padding:48px 28px;text-align:center;margin-bottom:18px}
+      .cpt-empty-state-ic{font-size:54px;margin-bottom:14px;opacity:.55}
+      .cpt-empty-state-title{font-size:16px;font-weight:700;color:var(--t);margin-bottom:6px}
+      .cpt-empty-state-desc{font-size:13px;color:var(--m);line-height:1.6;max-width:480px;margin:0 auto 18px}
+      .cpt-empty-state-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+
       @media (max-width:768px){
         .cpt-hero{padding:14px 16px;gap:12px}
         .cpt-hero-text h1{font-size:18px}
@@ -237,6 +322,84 @@
       </div>`;
   }
 
+  /** Bandeau MODE DÉMO — toujours affiché en haut de chaque vue comptable.
+      ON  → orange + bouton "Désactiver le mode démo"
+      OFF → vert + bouton "Réactiver le mode démo" */
+  function _renderDemoBanner() {
+    if (_isDemoMode()) {
+      return `
+        <div class="cpt-demo-banner">
+          <div class="cpt-demo-ic">🎬</div>
+          <div class="cpt-demo-txt">
+            <b>Mode démo activé</b> — vous consultez un portefeuille fictif de 20 IDEL
+            pour découvrir les fonctionnalités. Aucune donnée affichée n'est réelle.
+          </div>
+          <div class="cpt-demo-actions">
+            <button onclick="Comptable.disableDemoMode()">🔌 Désactiver le mode démo</button>
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="cpt-demo-banner live">
+        <div class="cpt-demo-ic">🟢</div>
+        <div class="cpt-demo-txt">
+          <b>Données réelles</b> — vous consultez votre portefeuille IDEL réel.
+          Pour une démonstration commerciale, vous pouvez réactiver le mode démo.
+        </div>
+        <div class="cpt-demo-actions">
+          <button class="cpt-demo-btn-ghost" onclick="Comptable.enableDemoMode()">🎬 Réactiver le mode démo</button>
+        </div>
+      </div>`;
+  }
+
+  /** Empty state générique — affiché quand le portefeuille est vide
+      (mode démo OFF + pas encore d'IDEL cliente enregistrée). */
+  function _renderEmptyState(title, desc, opts = {}) {
+    const { ic = '📭', primaryCta, primaryAction, secondaryCta, secondaryAction } = opts;
+    const buttons = [
+      primaryCta && `<button class="btn bp bsm" onclick="${_esc(primaryAction || '')}">${_esc(primaryCta)}</button>`,
+      secondaryCta && `<button class="btn bs bsm" onclick="${_esc(secondaryAction || '')}">${_esc(secondaryCta)}</button>`
+    ].filter(Boolean).join('');
+    return `
+      <div class="cpt-empty-state">
+        <div class="cpt-empty-state-ic">${ic}</div>
+        <div class="cpt-empty-state-title">${_esc(title)}</div>
+        <div class="cpt-empty-state-desc">${_esc(desc)}</div>
+        ${buttons ? `<div class="cpt-empty-state-actions">${buttons}</div>` : ''}
+      </div>`;
+  }
+
+  /** Empty state spécifique : "ajouter votre première IDEL cliente". */
+  function _renderEmptyPortfolio() {
+    return _renderEmptyState(
+      'Aucune IDEL cliente enregistrée',
+      'Pour commencer à utiliser AMI Comptable, ajoutez vos premières IDEL clientes au portefeuille. Elles apparaîtront ici dès qu\'elles auront accepté votre invitation.',
+      {
+        ic: '🧑\u200d💼',
+        primaryCta: '✉ Inviter une IDEL cliente',
+        primaryAction: 'Comptable.inviteIdel()',
+        secondaryCta: '🎬 Voir une démo (20 IDEL fictives)',
+        secondaryAction: 'Comptable.enableDemoMode()'
+      }
+    );
+  }
+
+  /** Placeholder pour invitation IDEL — à brancher sur worker quand prêt. */
+  function inviteIdel() {
+    const email = prompt(
+      'Inviter une IDEL cliente\n\n' +
+      'Saisissez l\'email de l\'IDEL à inviter dans votre portefeuille :'
+    );
+    if (!email) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      _toast('error', 'Email invalide', '');
+      return;
+    }
+    // 🔌 TODO BACKEND : POST /webhook/comptable-invite { email }
+    _toast('info', 'Invitation simulée',
+      `Une invitation sera envoyée à ${email} dès que le backend multi-IDEL sera activé.`);
+  }
+
   function _renderBack() {
     return `<div class="cpt-back" onclick="navTo('comptable-hub',null)">← Retour à la vue d'ensemble</div>`;
   }
@@ -248,6 +411,17 @@
     if (!root) return;
 
     const portfolio = await getPortfolio();
+
+    // Empty state si aucune IDEL (mode démo OFF + portefeuille vide)
+    if (!portfolio.length) {
+      root.innerHTML = `
+        ${_renderDemoBanner()}
+        ${_renderHero('Vue d\'ensemble cabinet', 'Portefeuille vide — aucune IDEL cliente pour le moment')}
+        ${_renderEmptyPortfolio()}
+      `;
+      return;
+    }
+
     const totals = portfolio.reduce((acc, i) => {
       acc.ca        += i.kpis.caTotal;
       acc.actes     += i.kpis.nbActes;
@@ -270,6 +444,7 @@
     ];
 
     root.innerHTML = `
+      ${_renderDemoBanner()}
       ${_renderHero('Vue d\'ensemble cabinet', `Portefeuille : ${portfolio.length} IDEL clientes · Suivi consolidé temps réel`)}
 
       <div class="cpt-kpis">
@@ -305,6 +480,17 @@
     if (!root) return;
 
     const portfolio = await getPortfolio();
+
+    if (!portfolio.length) {
+      root.innerHTML = `
+        ${_renderBack()}
+        ${_renderDemoBanner()}
+        ${_renderHero('Dashboard multi-IDEL', 'Portefeuille vide', '📊')}
+        ${_renderEmptyPortfolio()}
+      `;
+      return;
+    }
+
     portfolio.sort((a,b) => b.kpis.caTotal - a.kpis.caTotal);
 
     const rows = portfolio.map(i => {
@@ -326,6 +512,7 @@
 
     root.innerHTML = `
       ${_renderBack()}
+      ${_renderDemoBanner()}
       ${_renderHero('Dashboard multi-IDEL', `Vue agrégée du portefeuille (${portfolio.length} IDEL incluses)`, '📊')}
 
       <div class="cpt-table-wrap">
@@ -378,11 +565,23 @@
     if (!root) return;
 
     const portfolio = await getPortfolio();
+
+    if (!portfolio.length) {
+      root.innerHTML = `
+        ${_renderBack()}
+        ${_renderDemoBanner()}
+        ${_renderHero('Export FEC + liasse fiscale 2035', 'Aucune IDEL à exporter', '📑')}
+        ${_renderEmptyPortfolio()}
+      `;
+      return;
+    }
+
     const Y = new Date().getFullYear() - 1;
     const opts = portfolio.map(i => `<option value="${i.id}">${_esc(i.prenom)} ${_esc(i.nom)} — ${_esc(i.ville)}</option>`).join('');
 
     root.innerHTML = `
       ${_renderBack()}
+      ${_renderDemoBanner()}
       ${_renderHero('Export FEC + liasse fiscale 2035', 'Fichier des Écritures Comptables (PCG) et liasse BNC règlementaire', '📑')}
 
       <div class="cpt-section">
@@ -556,11 +755,23 @@ Conserver 6 ans (article L102 B du LPF).
     if (!root) return;
 
     const portfolio = await getPortfolio();
+
+    if (!portfolio.length) {
+      root.innerHTML = `
+        ${_renderBack()}
+        ${_renderDemoBanner()}
+        ${_renderHero('Générateur 2042-C-PRO · URSSAF · CARPIMKO', 'Aucune IDEL à déclarer', '🧾')}
+        ${_renderEmptyPortfolio()}
+      `;
+      return;
+    }
+
     const Y = new Date().getFullYear() - 1;
     const opts = portfolio.map(i => `<option value="${i.id}">${_esc(i.prenom)} ${_esc(i.nom)} — ${_esc(i.ville)}</option>`).join('');
 
     root.innerHTML = `
       ${_renderBack()}
+      ${_renderDemoBanner()}
       ${_renderHero('Générateur 2042-C-PRO · URSSAF · CARPIMKO', 'Pré-remplissage des déclarations sociales et fiscales annuelles', '🧾')}
 
       <div class="cpt-section">
@@ -683,6 +894,17 @@ Conserver 6 ans (article L102 B du LPF).
     if (!root) return;
 
     const portfolio = await getPortfolio();
+
+    if (!portfolio.length) {
+      root.innerHTML = `
+        ${_renderBack()}
+        ${_renderDemoBanner()}
+        ${_renderHero('Scoring risque portfolio', 'Aucune IDEL à scorer', '🎯')}
+        ${_renderEmptyPortfolio()}
+      `;
+      return;
+    }
+
     portfolio.sort((a,b) => b.kpis.risqueCpam - a.kpis.risqueCpam);
 
     const high = portfolio.filter(i => i.kpis.risqueCpam >= 60);
@@ -718,6 +940,7 @@ Conserver 6 ans (article L102 B du LPF).
 
     root.innerHTML = `
       ${_renderBack()}
+      ${_renderDemoBanner()}
       ${_renderHero('Scoring risque portfolio', 'Notation CPAM/fiscal de chaque IDEL sous mandat avec recommandations d\'action', '🎯')}
 
       <div class="cpt-kpis">
@@ -754,6 +977,17 @@ Conserver 6 ans (article L102 B du LPF).
     if (!root) return;
 
     const portfolio = await getPortfolio();
+
+    if (!portfolio.length) {
+      root.innerHTML = `
+        ${_renderBack()}
+        ${_renderDemoBanner()}
+        ${_renderHero('Alertes anomalies NGAP en masse', 'Aucune IDEL à analyser', '🚨')}
+        ${_renderEmptyPortfolio()}
+      `;
+      return;
+    }
+
     // Generation pseudo-déterministe d'anomalies par IDEL
     const allAnoms = [];
     portfolio.forEach(idel => {
@@ -788,6 +1022,7 @@ Conserver 6 ans (article L102 B du LPF).
 
     root.innerHTML = `
       ${_renderBack()}
+      ${_renderDemoBanner()}
       ${_renderHero('Alertes anomalies NGAP en masse', `Détection batch sur ${portfolio.length} IDEL clientes — analyse temps réel`, '🚨')}
 
       <div class="cpt-kpis">
@@ -853,6 +1088,17 @@ Conserver 6 ans (article L102 B du LPF).
     if (!root) return;
 
     const portfolio = await getPortfolio();
+
+    if (!portfolio.length) {
+      root.innerHTML = `
+        ${_renderBack()}
+        ${_renderDemoBanner()}
+        ${_renderHero('Connecteurs comptables', 'Aucune IDEL à exporter', '🔌')}
+        ${_renderEmptyPortfolio()}
+      `;
+      return;
+    }
+
     const opts = portfolio.map(i => `<option value="${i.id}">${_esc(i.prenom)} ${_esc(i.nom)}</option>`).join('');
 
     const cards = _CONNECTORS.map(c => `
@@ -869,6 +1115,7 @@ Conserver 6 ans (article L102 B du LPF).
 
     root.innerHTML = `
       ${_renderBack()}
+      ${_renderDemoBanner()}
       ${_renderHero('Connecteurs comptables', 'Export direct vers les principaux logiciels comptables du marché', '🔌')}
 
       <div class="cpt-section">
@@ -955,6 +1202,16 @@ Conserver 6 ans (article L102 B du LPF).
 
     const portfolio = await getPortfolio();
 
+    if (!portfolio.length) {
+      root.innerHTML = `
+        ${_renderBack()}
+        ${_renderDemoBanner()}
+        ${_renderHero('Vue anonymisée (pseudo-FEC)', 'Aucune IDEL à anonymiser', '🛡️')}
+        ${_renderEmptyPortfolio()}
+      `;
+      return;
+    }
+
     // Génération d'un pseudo-FEC : agrégats globaux sans nom IDEL ni patient
     const aggregated = portfolio.map((idel, idx) => ({
       pseudo: `IDEL-${String(idx+1).padStart(3,'0')}`,
@@ -979,6 +1236,7 @@ Conserver 6 ans (article L102 B du LPF).
 
     root.innerHTML = `
       ${_renderBack()}
+      ${_renderDemoBanner()}
       ${_renderHero('Vue anonymisée (pseudo-FEC)', 'Mode RGPD strict : aucune donnée nominative, uniquement les flux financiers agrégés', '🛡️')}
 
       <div class="cpt-section" style="background:rgba(0,212,170,.04);border-color:rgba(0,212,170,.25)">
@@ -1034,12 +1292,24 @@ Conserver 6 ans (article L102 B du LPF).
     if (!root) return;
 
     const portfolio = await getPortfolio();
+
+    if (!portfolio.length) {
+      root.innerHTML = `
+        ${_renderBack()}
+        ${_renderDemoBanner()}
+        ${_renderHero('Rapports trimestriels automatiques', 'Aucune IDEL pour générer des rapports', '📅')}
+        ${_renderEmptyPortfolio()}
+      `;
+      return;
+    }
+
     const Y = new Date().getFullYear();
     const Q = Math.floor(new Date().getMonth() / 3) + 1;
     const opts = portfolio.map(i => `<option value="${i.id}">${_esc(i.prenom)} ${_esc(i.nom)}</option>`).join('');
 
     root.innerHTML = `
       ${_renderBack()}
+      ${_renderDemoBanner()}
       ${_renderHero('Rapports trimestriels automatiques', 'Génération automatique des rapports trimestriels pour chaque IDEL cliente', '📅')}
 
       <div class="cpt-section">
@@ -1204,10 +1474,15 @@ Document à conserver 6 ans (article L102 B du LPF).
   /* Export public API */
   window.Comptable = {
     getPortfolio,
+    // 🎬 Mode démo
+    isDemoMode: _isDemoMode,
+    enableDemoMode, disableDemoMode,
+    inviteIdel,
+    // Vues
     renderHub, renderDashboard, renderExportFEC, render2042,
     renderScoring, renderAlertes, renderConnecteurs,
     renderAnonymisee, renderTrimestriel,
-    // helpers exposés pour onclick inline
+    // Helpers exposés pour onclick inline
     exportPortfolioCSV, generateFEC, generateLiasse2035,
     generate2042, export2042CSV,
     exportAlertesCSV, openConnector, exportPseudoFEC,
