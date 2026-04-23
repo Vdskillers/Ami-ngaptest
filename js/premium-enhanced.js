@@ -94,6 +94,25 @@ window.PremiumEnhanced = (function(){
     catch { return false; }
   }
 
+  /** Vrai si l'utilisateur doit voir les badges 💎 dans la sidebar.
+   *  Couvre :
+   *    • Premium actif (add-on payé)
+   *    • Essai gratuit en cours (TRIAL)
+   *    • Admin (bypass)
+   *    • Mode TEST global (démo)
+   *  Le check repose sur SUB.hasAccess() qui couvre nativement ces 4 cas
+   *  via la matrice d'accès de subscription.js. */
+  function _canShowPremiumBadges() {
+    return _hasFeature('ca_sous_declare');
+  }
+
+  /** Ajoute/retire la classe `body.has-premium` qui contrôle l'affichage
+   *  des badges 💎 (cf. règle CSS dans index.html). */
+  function _syncBodyClass() {
+    if (!document.body) return;
+    document.body.classList.toggle('has-premium', _canShowPremiumBadges());
+  }
+
   function openPaywall(featId) {
     if (window.SUB && SUB.showPaywall) { SUB.showPaywall(featId); return; }
     if (typeof navTo === 'function') navTo('mon-abo');
@@ -303,12 +322,28 @@ window.PremiumEnhanced = (function(){
     if (INTEGRATIONS[v]) setTimeout(() => applyForView(v), 350);
   });
 
-  /* Re-applique le verrou si le statut Premium change (admin sim, etc.) */
+  /* Sync initial du badge visibility (au DOM ready + après bootstrap SUB).
+     SUB.bootstrap est asynchrone (fetch worker), on attend ~1s pour que
+     l'état soit hydraté avant de calculer les visibilités. */
+  function _initialSync() {
+    _syncBodyClass();
+    setTimeout(_syncBodyClass, 800);   // après bootstrap SUB
+    setTimeout(_syncBodyClass, 2000);  // filet de sécurité si worker lent
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initialSync);
+  } else {
+    _initialSync();
+  }
+
+  /* Re-applique le verrou + badge visibility si le statut Premium change
+     (admin sim, expiration trial, activation add-on, etc.). */
   setInterval(() => {
     const wasPremium = document.body.dataset.peLastPremium === '1';
-    const isPremium = !!(window.SUB && SUB.entitlements && SUB.entitlements().premiumActive);
+    const isPremium = _canShowPremiumBadges();
     if (wasPremium !== isPremium) {
       document.body.dataset.peLastPremium = isPremium ? '1' : '0';
+      _syncBodyClass();
       // Re-applique sur l'onglet courant si c'est un onglet enrichi
       Object.keys(INTEGRATIONS).forEach(k => {
         const section = document.querySelector(`#view-${k} > .pe-premium-section`);

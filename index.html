@@ -297,14 +297,18 @@
   .lp-sim-disclaimer{font-family:var(--fm);font-size:10px;color:#6a7f91;text-align:center;letter-spacing:.5px;margin-top:12px;line-height:1.5}
 
   /* 💎 Badge Premium dans les onglets de la sidebar (4 onglets enrichis :
-     tresor, sig, rapport, audit-cpam). Indique visuellement que la vue
-     contient un module Premium intégré (FOMO + signal de valeur). */
-  .ni-premium-badge{
+     tresor, sig, rapport, audit-cpam). Visible UNIQUEMENT pour les
+     abonnés Premium actifs (la classe `body.has-premium` est ajoutée
+     par premium-enhanced.js). Pour les non-Premium → badge masqué pour
+     éviter de polluer leur sidebar avec un signal qui ne les concerne pas. */
+  .ni-premium-badge{display:none}
+  body.has-premium .ni-premium-badge{
+    display:inline-flex;align-items:center;justify-content:center;
     margin-left:auto;font-size:13px;line-height:1;flex-shrink:0;
     opacity:.85;transition:opacity .15s, transform .15s;
     filter:drop-shadow(0 0 6px rgba(198,120,221,.35))
   }
-  .ni:hover .ni-premium-badge{opacity:1;transform:scale(1.1)}
+  body.has-premium .ni:hover .ni-premium-badge{opacity:1;transform:scale(1.1)}
 
   /* 💎 En-tête de section Premium injectée en bas des onglets enrichis */
   .pe-premium-section{
