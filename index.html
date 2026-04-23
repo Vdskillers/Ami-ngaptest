@@ -185,6 +185,54 @@
   .lp-cab-cta button:hover{background:rgba(79,168,255,.22);transform:translateY(-1px)}
   .lp-cab-cta .lp-cab-cta-secondary{background:transparent;color:#7fc0ff}
 
+  /* ════════════════════════════════════════════════════════════════
+     🧑‍💼 SECTION EXPERTISE COMPTABLE SANTÉ — landing dédiée AMI Comptable
+     Conversion-focused : douleur → solution → bénéfices chiffrés → CTA
+  ════════════════════════════════════════════════════════════════ */
+  .lp-compta{background:linear-gradient(135deg,rgba(255,95,109,.07),rgba(255,95,109,.02));border:1px solid rgba(255,95,109,.22);border-radius:20px;padding:34px 32px;margin-bottom:52px;position:relative;overflow:hidden}
+  .lp-compta::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(255,95,109,.12),transparent 70%);pointer-events:none}
+  .lp-compta-badge{display:inline-block;background:rgba(255,95,109,.18);color:#FF7A85;font-family:var(--fm);font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:5px 12px;border-radius:12px;margin-bottom:14px;font-weight:700}
+  .lp-compta-h{font-family:var(--fs);font-size:clamp(24px,3.8vw,34px);color:#ffffff;line-height:1.1;margin-bottom:12px;letter-spacing:-.5px}
+  .lp-compta-h em{color:#FF7A85;font-style:italic}
+  .lp-compta-p{font-size:14.5px;color:#c8d8e4;line-height:1.65;margin-bottom:24px}
+
+  /* Bloc DOULEUR (problème) — fond noir-rouge */
+  .lp-compta-pain{background:rgba(0,0,0,.25);border-left:3px solid #FF5F6D;border-radius:10px;padding:16px 20px;margin-bottom:22px}
+  .lp-compta-pain-t{font-size:12px;color:#FF7A85;font-family:var(--fm);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-weight:700}
+  .lp-compta-pain ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+  .lp-compta-pain li{font-size:13px;color:#d8e4ec;line-height:1.5;padding-left:18px;position:relative}
+  .lp-compta-pain li::before{content:'✗';color:#FF5F6D;position:absolute;left:0;font-weight:700}
+
+  /* Bloc BÉNÉFICES (solution) — grille features */
+  .lp-compta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+  @media(max-width:640px){.lp-compta-grid{grid-template-columns:1fr}}
+  .lp-compta-feat{background:rgba(255,255,255,.025);border:1px solid rgba(255,95,109,.12);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;transition:all .2s}
+  .lp-compta-feat:hover{border-color:rgba(255,95,109,.3);transform:translateY(-1px)}
+  .lp-compta-feat-ic{font-size:22px;flex-shrink:0;line-height:1.1}
+  .lp-compta-feat-txt{flex:1;font-size:13px;color:#d8e4ec;line-height:1.5}
+  .lp-compta-feat-txt strong{color:#ffffff;display:block;margin-bottom:2px;font-weight:700}
+
+  /* Bloc ROI — KPIs chiffrés */
+  .lp-compta-roi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;padding:18px;background:rgba(255,95,109,.05);border-radius:12px;border:1px dashed rgba(255,95,109,.25)}
+  @media(max-width:640px){.lp-compta-roi{grid-template-columns:repeat(2,1fr)}}
+  .lp-compta-roi-item{text-align:center;padding:6px}
+  .lp-compta-roi-val{font-family:var(--fs);font-size:clamp(20px,3vw,26px);color:#FF7A85;font-weight:700;line-height:1.1;margin-bottom:4px}
+  .lp-compta-roi-lbl{font-size:11px;color:#a0bbd0;font-family:var(--fm);letter-spacing:.3px;line-height:1.3}
+
+  /* Pricing inline */
+  .lp-compta-price{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:rgba(0,0,0,.25);border:1px solid rgba(255,95,109,.2);border-radius:12px;padding:14px 18px;margin-bottom:22px}
+  .lp-compta-price-amt{font-family:var(--fs);font-size:26px;color:#ffffff;font-weight:700;line-height:1}
+  .lp-compta-price-amt span{color:#FF7A85;font-size:16px;font-weight:600;margin-left:4px}
+  .lp-compta-price-sep{width:1px;height:32px;background:rgba(255,255,255,.12)}
+  .lp-compta-price-info{font-size:12.5px;color:#c8d8e4;line-height:1.4;flex:1;min-width:200px}
+  .lp-compta-price-info strong{color:#FF7A85;display:block;font-size:11px;font-family:var(--fm);letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px}
+
+  /* CTA */
+  .lp-compta-cta{display:flex;gap:10px;flex-wrap:wrap}
+  .lp-compta-cta button{background:rgba(255,95,109,.16);color:#ffffff;border:1px solid rgba(255,95,109,.4);border-radius:12px;padding:13px 24px;font-family:var(--ff);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .18s}
+  .lp-compta-cta button:hover{background:rgba(255,95,109,.26);transform:translateY(-1px);box-shadow:0 6px 18px rgba(255,95,109,.18)}
+  .lp-compta-cta .lp-compta-cta-secondary{background:transparent;color:#FF7A85}
+
   /* ── FAQ ─────────────────────────────────────── */
   .lp-faq{display:flex;flex-direction:column;gap:8px;margin-bottom:52px}
   .lp-faq-item{background:rgba(14,20,30,.92);border:1px solid rgba(30,45,61,.95);border-radius:14px;overflow:hidden;transition:border-color .2s}
@@ -344,6 +392,7 @@
         <a class="lp-toc-link" href="#lp-sim">✦ Essayer</a>
         <a class="lp-toc-link" href="#lp-roi">Ce que tu gagnes</a>
         <a class="lp-toc-link" href="#lp-cabinet-sec">Cabinets</a>
+        <a class="lp-toc-link" href="#lp-compta-sec" style="color:#FF7A85">🧑‍💼 Experts-comptables</a>
         <a class="lp-toc-link" href="#lp-faq-sec">FAQ</a>
         <a class="lp-toc-link" href="#lp-security">Sécurité</a>
       </div>
@@ -710,6 +759,129 @@
       <div class="lp-cab-cta">
         <button onclick="closeLanding()">🚀 Démarrer avec mon cabinet</button>
         <button class="lp-cab-cta-secondary" onclick="window.location.href='mailto:contact@ami-ngap.fr?subject=Démo%20cabinet%20AMI'">✉ Demander une démo dédiée</button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         🧑‍💼 EXPERTISE COMPTABLE SANTÉ — Section dédiée AMI Comptable
+         Cible : cabinets d'expertise comptable avec portefeuille IDEL
+         Approche : douleur → solution → bénéfices chiffrés → CTA
+    ════════════════════════════════════════════════════════════════ -->
+    <div id="lp-compta-sec" class="lp-compta">
+      <span class="lp-compta-badge">🧑‍💼 Édition expertise comptable santé</span>
+      <div class="lp-compta-h">Gérez 20 IDEL comme <em>1 seul dossier.</em><br>Sans erreur fiscale. Sans Excel. Sans perte de temps.</div>
+      <p class="lp-compta-p">
+        AMI Comptable automatise vos liasses 2035, détecte les risques CPAM en amont
+        et transforme votre portefeuille infirmier en machine rentable. Conçu pour
+        les cabinets d'expertise comptable santé qui veulent <strong>scaler sans recruter</strong>.
+      </p>
+
+      <!-- BLOC DOULEUR -->
+      <div class="lp-compta-pain">
+        <div class="lp-compta-pain-t">⚠ Vous perdez du temps là où vous devriez en gagner</div>
+        <ul>
+          <li>Retraitement Excel interminable pour chaque IDEL cliente</li>
+          <li>Risques CPAM invisibles jusqu'au contrôle (et là, c'est trop tard)</li>
+          <li>Dossiers hétérogènes, impossibles à standardiser à l'échelle</li>
+          <li>Liasses 2035 et 2042 répétitives qui pompent vos collaborateurs</li>
+          <li>Aucune vision globale du portefeuille en temps réel</li>
+        </ul>
+      </div>
+
+      <!-- BLOC BÉNÉFICES (8 features orientées résultat) -->
+      <div class="lp-compta-grid">
+        <div class="lp-compta-feat">
+          <div class="lp-compta-feat-ic">📊</div>
+          <div class="lp-compta-feat-txt">
+            <strong>Pilotage 20 IDEL en un seul écran</strong>
+            CA, actes, anomalies et conformité — vision instantanée du portefeuille.
+          </div>
+        </div>
+        <div class="lp-compta-feat">
+          <div class="lp-compta-feat-ic">📁</div>
+          <div class="lp-compta-feat-txt">
+            <strong>Liasses 2035 en 1 clic</strong>
+            FEC normé DGFiP + liasse BNC pré-remplie. Plus aucun retraitement manuel.
+          </div>
+        </div>
+        <div class="lp-compta-feat">
+          <div class="lp-compta-feat-ic">🧾</div>
+          <div class="lp-compta-feat-txt">
+            <strong>2042-C-PRO · URSSAF · CARPIMKO</strong>
+            Pré-remplissage automatique des déclarations sociales et fiscales par client.
+          </div>
+        </div>
+        <div class="lp-compta-feat">
+          <div class="lp-compta-feat-ic">⚠️</div>
+          <div class="lp-compta-feat-txt">
+            <strong>Risque CPAM anticipé</strong>
+            Scoring intelligent par cliente — détectez les anomalies AVANT le contrôle.
+          </div>
+        </div>
+        <div class="lp-compta-feat">
+          <div class="lp-compta-feat-ic">🚨</div>
+          <div class="lp-compta-feat-txt">
+            <strong>Anomalies NGAP en masse</strong>
+            Analyse batch sur tout le portefeuille. Erreurs détectées en 10 secondes.
+          </div>
+        </div>
+        <div class="lp-compta-feat">
+          <div class="lp-compta-feat-ic">🔗</div>
+          <div class="lp-compta-feat-txt">
+            <strong>Connecteurs Cegid · EBP · Quadra</strong>
+            Export direct vers les principaux logiciels comptables. Zéro retraitement.
+          </div>
+        </div>
+        <div class="lp-compta-feat">
+          <div class="lp-compta-feat-ic">🔒</div>
+          <div class="lp-compta-feat-txt">
+            <strong>Vue anonymisée RGPD-safe</strong>
+            Pseudo-FEC : aucune donnée patient exposée. Conforme art. 4.5 et 25 RGPD.
+          </div>
+        </div>
+        <div class="lp-compta-feat">
+          <div class="lp-compta-feat-ic">📈</div>
+          <div class="lp-compta-feat-txt">
+            <strong>Rapports trimestriels automatiques</strong>
+            Générés et prêts à envoyer à chaque cliente IDEL — chaque trimestre.
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOC ROI CHIFFRÉ -->
+      <div class="lp-compta-roi">
+        <div class="lp-compta-roi-item">
+          <div class="lp-compta-roi-val">+6 à 10h</div>
+          <div class="lp-compta-roi-lbl">économisées / mois<br>par collaborateur</div>
+        </div>
+        <div class="lp-compta-roi-item">
+          <div class="lp-compta-roi-val">−80 %</div>
+          <div class="lp-compta-roi-lbl">d'erreurs fiscales<br>détectées en amont</div>
+        </div>
+        <div class="lp-compta-roi-item">
+          <div class="lp-compta-roi-val">×3</div>
+          <div class="lp-compta-roi-lbl">de capacité de traitement<br>sans recruter</div>
+        </div>
+        <div class="lp-compta-roi-item">
+          <div class="lp-compta-roi-val">0 €</div>
+          <div class="lp-compta-roi-lbl">de perte sur contrôle<br>CPAM anticipé</div>
+        </div>
+      </div>
+
+      <!-- PRICING INLINE -->
+      <div class="lp-compta-price">
+        <div class="lp-compta-price-amt">99 €<span> HT / mois</span></div>
+        <div class="lp-compta-price-sep"></div>
+        <div class="lp-compta-price-info">
+          <strong>20 IDEL incluses</strong>
+          +5 € HT par IDEL supplémentaire · Moins cher qu'1 heure de collaborateur
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="lp-compta-cta">
+        <button onclick="closeLanding()">🚀 Démarrer mon cabinet d'expertise</button>
+        <button class="lp-compta-cta-secondary" onclick="window.location.href='mailto:contact@ami-ngap.fr?subject=Démo%20AMI%20Comptable%20-%20cabinet%20d%27expertise%20santé&amp;body=Bonjour,%0A%0AJe souhaite voir AMI Comptable sur mon portefeuille IDEL actuel.%0A%0ANombre d%27IDEL au portefeuille : %0ALogiciel comptable utilisé : %0A%0AMerci.'">✉ Démo sur mon portefeuille</button>
       </div>
     </div>
 
