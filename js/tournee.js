@@ -516,6 +516,17 @@ async function generatePlanningFromImport(){
   }catch(e){$('perr').style.display='flex';$('perr-m').textContent=e.message;}
   $('res-pla').classList.add('show');
   ld('btn-pla',false);
+  // ⚡ FIX glissement : modeAI('planning') écrit APP.importedData.patients par
+  // assignation directe → l'event listener app:update ne se déclenche jamais →
+  // _savePlanning() n'est pas appelé → la date n'est jamais figée. On force ici
+  // la sauvegarde pour que chaque patient sans date reçoive date: todayFixed.
+  try {
+    const allPats = APP.importedData?.patients || APP.importedData?.entries || [];
+    if (allPats.length) {
+      window.APP._planningData = { patients: allPats, total: allPats.length, source: 'planning_genere' };
+      _savePlanning(allPats);
+    }
+  } catch(e) { console.warn('[Planning] fix-date save KO:', e.message); }
 }
 
 /* ════════════════════════════════════════════════
@@ -648,7 +659,8 @@ async function renderPlanning(d){
     if (!p.date) return _planningWeekOffset === 0;
     try {
       const pd = new Date(p.date);
-      if (isNaN(pd)) return _planningWeekOffset === 0;
+      // ⚡ new Date(null) = epoch (Thu Jan 01 1970), pd.getTime() === 0 → considérer comme sans date
+      if (isNaN(pd) || pd.getTime() === 0) return _planningWeekOffset === 0;
       return pd >= weekStart && pd <= weekEnd;
     } catch { return true; }
   });
@@ -664,13 +676,19 @@ async function renderPlanning(d){
 
   patientsToShow.forEach((p, listIdx) => {
     let jourKey = null;
-    try {
-      const pd = new Date(p.date);
-      if (!isNaN(pd)) {
-        const nomJour = pd.toLocaleDateString('fr-FR', { weekday: 'long' }).toLowerCase();
-        jourKey = JOURS.find(j => nomJour.startsWith(j)) || null;
-      }
-    } catch {}
+    // ⚡ FIX glissement : new Date(null) renvoie Thu Jan 01 1970 (jeudi),
+    // pas une date invalide. Sans ce garde, tous les patients sans date
+    // sont silencieusement collés sur "jeudi" (effet visible quand le jour
+    // courant tombe un jeudi : illusion que les patients ont "glissé" sur aujourd'hui).
+    if (p.date) {
+      try {
+        const pd = new Date(p.date);
+        if (!isNaN(pd) && pd.getTime() !== 0) {
+          const nomJour = pd.toLocaleDateString('fr-FR', { weekday: 'long' }).toLowerCase();
+          jourKey = JOURS.find(j => nomJour.startsWith(j)) || null;
+        }
+      } catch {}
+    }
     if (!jourKey) {
       const desc = (p.description || p.texte || '').toLowerCase();
       jourKey = JOURS.find(j => desc.includes(j)) || null;
@@ -955,7 +973,8 @@ async function renderPlanning(d){
       if (p.date) {
         try {
           const pd = new Date(p.date);
-          if (!isNaN(pd)) {
+          // ⚡ Même garde que ci-dessus : éviter epoch (jeudi 01/01/1970)
+          if (!isNaN(pd) && pd.getTime() !== 0) {
             const nj = pd.toLocaleDateString('fr-FR', { weekday:'long' }).toLowerCase();
             return JOURS.find(jj => nj.startsWith(jj)) || null;
           }
