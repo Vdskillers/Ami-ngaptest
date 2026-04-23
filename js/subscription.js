@@ -29,10 +29,10 @@ window.SUB = (function(){
   const TIERS = {
     TEST:      { label:'Mode test (illimité)', price:'—', priority:999, color:'#00d4aa' },
     TRIAL:     { label:'Essai gratuit',        price:'0 €',                priority:900, color:'#00d4aa' },
-    ESSENTIEL: { label:'AMI Essentiel',        price:'19 € HT / mois',     priority:1,   color:'#4fa8ff' },
-    PRO:       { label:'AMI Pro',              price:'39 € HT / mois',     priority:2,   color:'#00d4aa' },
-    CABINET:   { label:'AMI Cabinet',          price:'29 € HT / IDE / mois', priority:3, color:'#ffb547' },
-    PREMIUM:   { label:'AMI Premium',          price:'+15 € HT / mois',    priority:4,   color:'#c678dd' },
+    ESSENTIEL: { label:'AMI Starter',          price:'29 € HT / mois',     priority:1,   color:'#4fa8ff' },
+    PRO:       { label:'AMI Pro',              price:'49 € HT / mois',     priority:2,   color:'#00d4aa' },
+    CABINET:   { label:'AMI Cabinet',          price:'Dégressif · à partir de 29 € HT / IDE / mois', priority:3, color:'#c678dd', pricingDetail:'1-2 IDE → 49 € · 3-5 IDE → 39 € · 6+ IDE → 29 € HT / IDE / mois' },
+    PREMIUM:   { label:'AMI Premium',          price:'+29 € HT / mois',    priority:4,   color:'#ffb547' },
     COMPTABLE: { label:'AMI Comptable',        price:'99 € HT / mois', priority:5,   color:'#ff5f6d', pricingDetail:'20 IDEL incluses · +5 € HT par IDEL supplémentaire' },
     LOCKED:    { label:'Aucun abonnement',     price:'—',                 priority:0,   color:'#6a8099' },
     ADMIN:     { label:'Admin (bypass)',       price:'—',                 priority:999, color:'#ff5f6d' }
@@ -618,10 +618,10 @@ window.SUB = (function(){
   /* ───── 11. PAGE ABONNEMENT ──────────────────────────────── */
 
   const PLAN_DETAILS = {
-    ESSENTIEL: { subtitle:'IDEL solo débutante', features:['Cotation NGAP intelligente','Carnet patients chiffré','Tournée basique + import calendrier','Trésorerie & remboursements','Rapport mensuel','Signatures électroniques','Journal kilométrique','Support standard'] },
-    PRO:       { subtitle:'IDEL solo active', features:['✨ Tout AMI Essentiel','Dashboard & statistiques','Simulateur audit CPAM','Copilote IA (xAI Grok)','BSI, Pilulier, Constantes','Alertes médicamenteuses','Compte-rendu + Consentements','Tournée IA (VRPTW + 2-opt)'], popular:true },
-    CABINET:   { subtitle:'Cabinet 2 à 6 IDE', features:['✨ Tout AMI Pro','Mode cabinet multi-IDE','Planning partagé','Transmissions collaboratives','Répartition intelligente','Consentements partagés','🧠 Conformité cabinet (manager)','📊 Stats consolidées (manager)','🛠️ Gestion des membres (titulaire)'] },
-    PREMIUM:   { subtitle:'Mode Expert · Gagne plus, perds moins, travaille moins', features:['✨ S\'ajoute à Pro ou Cabinet','🤖 Copilote IA Pro+ (mémoire 90j) — directement dans le chat','🔍 Audit CPAM IA prédictif — directement dans le simulateur','📊 Dashboard prédictif (projections 30/60/90j) — directement dans le dashboard','📄 Rapport mensuel intelligent (analyse vs N-1)','💰 Charges & net prédictif (12 mois)','📝 Transmissions smart IA (voix/photo)','📋 Compte-rendu 100% auto IA','💎 Modules exclusifs Premium :','💸 Détection CA sous-déclaré (+120 à 300€/mois)','⚖️ Certificats conformes opposables','📜 Rapport juridique mensuel','⚡ Simulateur régulation CPAM','⚡ Support prioritaire < 2h'] },
+    ESSENTIEL: { subtitle:'« Arrête de perdre de l\'argent »', features:['Cotation intelligente','Alertes erreurs','Journal des actes','Support standard'] },
+    PRO:       { subtitle:'« Optimise tes revenus sans effort »', features:['✨ Tout AMI Starter, plus :','Dashboard & statistiques','Simulateur CPAM','Alertes avancées','Suggestions d\'optimisation IA','💡 +150 à +300 € / mois récupérés'], popular:true },
+    CABINET:   { subtitle:'« Gère ton cabinet comme un pro »', features:['✨ Tout AMI Pro, plus :','Multi-IDE (sync sélective)','Statistiques globales','Gestion des tournées','Accès manager / planning'] },
+    PREMIUM:   { subtitle:'« Zéro stress, zéro contrôle surprise. »', features:['✨ S\'ajoute à Pro ou Cabinet','Détection des pertes invisibles','Optimisation IA avancée','Protection juridique renforcée','Audit mensuel automatique','🐷 Chaque mois, tu récupères plus que ce que ça coûte'] },
     COMPTABLE: { subtitle:'Cabinet d\'expertise comptable santé', features:['Dashboard consolidé multi-IDEL (jusqu\'à 20 incluses)','Export FEC + liasse fiscale 2035','Générateur 2042-C-PRO · URSSAF · CARPIMKO','Scoring risque portfolio client','Alertes anomalies NGAP en masse','Connecteurs Cegid · EBP · Quadra','Vue anonymisée (pseudo-FEC)','Rapports trimestriels automatiques'] }
   };
 
