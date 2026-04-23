@@ -702,18 +702,45 @@ function _renderAdmMessages(messages) {
     const nurseName = ((m.infirmiere_prenom||'') + ' ' + (m.infirmiere_nom||'')).trim() || 'Infirmier(ère)';
     const ini      = (nurseName.substring(0,1) + (nurseName.split(' ')[1]||'').substring(0,1)).toUpperCase();
     const isUnread = m.status === 'sent';
-    const replyBloc = m.reply_message
-      ? `<div style="margin-top:10px;padding:10px 14px;background:rgba(0,212,170,.06);border-left:3px solid var(--a);border-radius:0 8px 8px 0;font-size:12px;color:var(--m)"><span style="color:var(--a);font-weight:600">Votre réponse :</span> ${_escAdm(m.reply_message)}</div>`
-      : '';
-    const replyForm = m.status !== 'replied'
-      ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-           <textarea id="reply-${m.id}" placeholder="Répondre à ${nurseName}…" style="flex:1;min-width:200px;padding:8px 12px;background:var(--dd);border:1px solid var(--b);border-radius:8px;color:var(--t);font-size:12px;font-family:var(--fi);resize:vertical;min-height:60px" maxlength="1000"></textarea>
-           <div style="display:flex;flex-direction:column;gap:6px">
-             <button class="btn bp bsm" style="white-space:nowrap" onclick="replyToMessage('${m.id}','${_escAdm(nurseName)}')">📤 Répondre</button>
-             ${isUnread ? `<button class="btn bs bsm" style="font-size:11px" onclick="markMessageRead('${m.id}')">👁️ Marquer lu</button>` : ''}
-           </div>
+
+    // ═══ Reconstruction du fil de réponses (rétro-compat) ═══
+    // Priorité : m.replies (array JSONB moderne) ; fallback : m.reply_message (ancien format unique).
+    let thread = [];
+    if (Array.isArray(m.replies) && m.replies.length) {
+      thread = m.replies.map(r => ({
+        message: String(r.message || r.text || ''),
+        at: r.at || r.created_at || m.replied_at
+      })).filter(r => r.message);
+    } else if (m.reply_message) {
+      thread = [{ message: m.reply_message, at: m.replied_at }];
+    }
+
+    const threadBloc = thread.length
+      ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+           ${thread.map((r, i) => {
+             const rd = r.at ? new Date(r.at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+             return `<div style="padding:10px 14px;background:rgba(0,212,170,.06);border-left:3px solid var(--a);border-radius:0 8px 8px 0;font-size:12px;color:var(--m)">
+               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px;flex-wrap:wrap">
+                 <span style="color:var(--a);font-weight:600;font-size:11px;font-family:var(--fm)">💬 RÉPONSE #${i+1}${thread.length>1?' / '+thread.length:''}</span>
+                 ${rd ? `<span style="font-size:10px;color:var(--m);font-family:var(--fm)">${rd}</span>` : ''}
+               </div>
+               <div style="color:var(--t);line-height:1.5;white-space:pre-wrap">${_escAdm(r.message)}</div>
+             </div>`;
+           }).join('')}
          </div>`
       : '';
+
+    // Formulaire TOUJOURS affiché — permet d'ajouter autant de réponses que nécessaire.
+    const btnLabel   = thread.length ? '➕ Ajouter une réponse' : '📤 Répondre';
+    const placeholder = thread.length ? `Ajouter une réponse à ${nurseName}…` : `Répondre à ${nurseName}…`;
+    const replyForm = `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+           <textarea id="reply-${m.id}" placeholder="${placeholder}" style="flex:1;min-width:200px;padding:8px 12px;background:var(--dd);border:1px solid var(--b);border-radius:8px;color:var(--t);font-size:12px;font-family:var(--fi);resize:vertical;min-height:60px" maxlength="1000"></textarea>
+           <div style="display:flex;flex-direction:column;gap:6px">
+             <button class="btn bp bsm" style="white-space:nowrap" onclick="replyToMessage('${m.id}','${_escAdm(nurseName)}')">${btnLabel}</button>
+             ${isUnread ? `<button class="btn bs bsm" style="font-size:11px" onclick="markMessageRead('${m.id}')">👁️ Marquer lu</button>` : ''}
+           </div>
+         </div>`;
+
     return `<div style="border:1px solid ${isUnread ? '#ef4444' : 'var(--b)'};border-radius:12px;padding:16px;margin-bottom:12px;background:var(--s);${isUnread ? 'box-shadow:0 0 0 1px rgba(239,68,68,.2)' : ''}">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:10px">
@@ -725,12 +752,12 @@ function _renderAdmMessages(messages) {
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-family:var(--fm);background:rgba(255,255,255,.05);border:1px solid var(--b)">${catLabel[m.categorie]||m.categorie}</span>
-          <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-family:var(--fm);color:${statusColor[m.status]||'var(--m)'};">${statusLabel[m.status]||m.status}</span>
+          <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-family:var(--fm);color:${statusColor[m.status]||'var(--m)'};">${statusLabel[m.status]||m.status}${thread.length>1?` · ${thread.length} réponses`:''}</span>
         </div>
       </div>
       <div style="font-weight:600;font-size:13px;margin-bottom:6px">${_escAdm(m.sujet)}</div>
       <div style="font-size:13px;color:var(--m);line-height:1.6;white-space:pre-wrap;background:var(--dd);padding:10px 14px;border-radius:8px">${_escAdm(m.message)}</div>
-      ${replyBloc}
+      ${threadBloc}
       ${replyForm}
     </div>`;
   }).join('');
@@ -745,16 +772,30 @@ async function markMessageRead(id) {
 }
 
 async function replyToMessage(id, nurseName) {
-  const ta   = document.getElementById('reply-' + id);
+  const ta    = document.getElementById('reply-' + id);
   const reply = (ta?.value || '').trim();
   if (!reply) { admAlert('Rédigez une réponse avant d\'envoyer.', 'e'); return; }
   if (reply.length < 5) { admAlert('Réponse trop courte.', 'e'); return; }
   try {
     const d = await wpost('/webhook/admin-message-reply', { id, reply });
     if (!d.ok) throw new Error(d.error || 'Erreur');
-    admAlert(`✅ Réponse envoyée à ${nurseName}.`, 'o');
     const m = ADM_MESSAGES.find(x => x.id === id);
-    if (m) { m.status = 'replied'; m.reply_message = reply; m.replied_at = new Date().toISOString(); }
+    if (m) {
+      const now = new Date().toISOString();
+      if (!Array.isArray(m.replies)) m.replies = [];
+      // Si l'ancien champ reply_message existait et que replies est vide → migrer localement pour l'affichage.
+      if (!m.replies.length && m.reply_message) {
+        m.replies.push({ message: m.reply_message, at: m.replied_at || now });
+      }
+      m.replies.push({ message: reply, at: now });
+      // Rétro-compat : la 1ère réponse reste dans reply_message
+      if (!m.reply_message) { m.reply_message = reply; m.replied_at = now; }
+      m.status = 'replied';
+      const count = m.replies.length;
+      admAlert(count > 1 ? `✅ Réponse #${count} envoyée à ${nurseName}.` : `✅ Réponse envoyée à ${nurseName}.`, 'o');
+    } else {
+      admAlert(`✅ Réponse envoyée à ${nurseName}.`, 'o');
+    }
     _renderAdmMessages(ADM_MESSAGES);
   } catch (e) { admAlert(e.message, 'e'); }
 }

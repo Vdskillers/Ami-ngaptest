@@ -34,13 +34,52 @@ let _pendingPrintData = null;
    CABINET MULTI-IDE — CONSTANTES
 ════════════════════════════════════════════════ */
 
-const _COT_TARIFS = {
-  AMI1:3.15,  AMI2:6.30,  AMI3:9.45,  AMI4:12.60, AMI5:15.75, AMI6:18.90,
-  AIS1:2.65,  AIS3:7.95,
-  BSA:13.00,  BSB:18.20,  BSC:28.70,
-  IFD:2.75,   MCI:5.00,   MIE:3.15,
-  NUIT:9.15,  NUIT_PROF:18.30, DIM:8.50,
-};
+// ─── TARIFS NGAP — lecture dynamique du référentiel si chargé ───
+// Fallback hardcodé complet NGAP 2026.3 (CIR-9/2025)
+const _COT_TARIFS = (() => {
+  if (window.NGAP_REFERENTIEL) {
+    const ref = window.NGAP_REFERENTIEL;
+    const out = {};
+    // Actes Chap I + II
+    [...(ref.actes_chapitre_I||[]), ...(ref.actes_chapitre_II||[])].forEach(a => {
+      const key = a.code_facturation || a.code;
+      if (key) out[key] = a.tarif;
+    });
+    // Forfaits BSI
+    Object.entries(ref.forfaits_bsi || {}).forEach(([k, v]) => { out[k] = v.tarif; });
+    // Déplacements
+    Object.entries(ref.deplacements || {}).forEach(([k, v]) => { if (v.tarif) out[k] = v.tarif; });
+    // Majorations (avec alias)
+    Object.entries(ref.majorations || {}).forEach(([k, v]) => { out[k] = v.tarif; });
+    out['NUIT'] = ref.majorations?.ISN_NUIT?.tarif || 9.15;
+    out['NUIT_PROF'] = ref.majorations?.ISN_NUIT_PROFONDE?.tarif || 18.30;
+    out['DIM'] = ref.majorations?.ISD?.tarif || 8.50;
+    return out;
+  }
+  // Fallback NGAP 2026.3 complet (tarifs officiels vérifiés)
+  return {
+    // Actes techniques — coefficients simples
+    AMI0_5:1.58, AMI1:3.15,  AMI1_2:3.78, AMI1_25:3.94, AMI1_5:4.73, AMI1_6:5.04,
+    AMI2:6.30,  AMI2_1:6.62, AMI2_4:7.56, AMI2_5:7.88, AMI2_8:8.82, AMI3:9.45,
+    AMI3_05:9.61, AMI3_5:11.03, AMI3_9:12.29, AMI4:12.60, AMI4_1:12.92, AMI4_2:13.23,
+    AMI4_5:14.18, AMI4_6:14.49, AMI5:15.75, AMI5_1:16.07, AMI5_8:18.27, AMI6:18.90,
+    AMI7:22.05, AMI9:28.35, AMI10:31.50, AMI11:34.65, AMI14:44.10, AMI15:47.25,
+    // Alias point (AMI4.1 = AMI4_1)
+    'AMI4.1':12.92, 'AMI3.9':12.29, 'AMI4.2':13.23, 'AMI5.1':16.07, 'AMI5.8':18.27,
+    'AMI1.5':4.73,  'AMI1.1':3.47,  'AMI2.5':7.88,  'AMI2.8':8.82,  'AMI1.25':3.94,
+    // AIS
+    AIS1:2.65,  AIS3:7.95, AIS3_1:8.22, AIS4:10.60, AIS13:34.45, AIS16:42.40,
+    // BSI
+    BSA:13.00,  BSB:18.20,  BSC:28.70,
+    // Déplacements
+    IFD:2.75, IFI:2.75,
+    // Majorations
+    MCI:5.00,   MIE:3.15, MAU:1.35,
+    NUIT:9.15,  NUIT_PROF:18.30, DIM:8.50,
+    // Télésoin
+    TLS:10.00, TLL:12.00, TLD:15.00, RQD:10.00, TMI:5.04,
+  };
+})();
 
 // NLP côté client — détection complète des actes NGAP depuis le texte libre
 const _COT_NLP_PATTERNS = [
@@ -48,8 +87,19 @@ const _COT_NLP_PATTERNS = [
   { rx: /intraveineuse|ivd|iv directe/i,                                code:'AMI2', label:'Injection IV directe', group:'acte' },
   { rx: /injection|insuline|anticoagulant|héparine|fragmine|lovenox|piqûre/i, code:'AMI1', label:'Injection SC/IM', group:'acte' },
   { rx: /prélèvement|prise de sang|bilan sanguin/i,                     code:'AMI1', label:'Prélèvement veineux', group:'acte' },
-  { rx: /perfusion.*(?:>|plus d[eu]|longue|>1h)/i,                     code:'AMI6', label:'Perfusion longue >1h', group:'acte' },
-  { rx: /perfusion|perf\b/i,                                            code:'AMI5', label:'Perfusion', group:'acte' },
+  // Perfusions — CIR-9/2025 (applicable depuis 25/06/2025)
+  { rx: /(retrait|retir[eé])\s+(d[eé]finiti|du\s+dispositif|de\s+(la\s+)?(picc|midline|chambre|perfusion))|d[eé]branchement\s+d[eé]finiti/i,
+    code:'AMI5',   label:'Retrait définitif dispositif ≥24h', group:'acte' },
+  { rx: /(changement\s+(?:de\s+)?flacon|rebranche(ment)?|2\s*[èe]?me?\s+perfusion|deuxi[èe]me\s+perfusion|branchement\s+en\s+y)/i,
+    code:'AMI4_1', label:'Changement flacon / 2e branchement même jour', group:'acte' },
+  { rx: /perfusion.*(?:cancer|canc[ée]reux|chimio|immunod[eé]prim|mucoviscidose)|(?:cancer|canc[ée]reux|chimio|immunod[eé]prim|mucoviscidose).*perfusion/i,
+    code:'AMI15',  label:'Forfait perfusion longue — immunodéprimé/cancéreux (1x/jour)', group:'acte' },
+  { rx: /perfusion.*(?:courte|≤\s*1\s*h|<\s*1\s*h|30\s*min|45\s*min|60\s*min|surveillance\s+continue|inf[eé]rieure?\s+[aà]\s+1\s*h)/i,
+    code:'AMI9',   label:'Perfusion courte ≤1h sous surveillance', group:'acte' },
+  { rx: /perfusion.*(?:12\s*h|24\s*h|longue|>\s*1\s*h|plus d[eu]?\s*une\s+heure|baxter|chambre\s+implantable)|baxter|chambre\s+implantable|\bpicc\b|midline|diffuseur/i,
+    code:'AMI14',  label:'Forfait perfusion longue >1h (1x/jour)', group:'acte' },
+  { rx: /perfusion|perf\b/i,
+    code:'AMI14',  label:'Forfait perfusion longue (1x/jour)', group:'acte' },
   { rx: /pansement.*(?:complexe|escarre|nécrose|chirurgical|post.op|ulcère)/i, code:'AMI4', label:'Pansement complexe', group:'acte' },
   { rx: /pansement|plaie/i,                                             code:'AMI1', label:'Pansement simple', group:'acte' },
   { rx: /ecg|électrocardiogramme/i,                                     code:'AMI3', label:'ECG', group:'acte' },
@@ -147,79 +197,6 @@ document.addEventListener('input', e => {
     cotationRenderCabinetActes();
   }
 });
-
-/* ════════════════════════════════════════════════
-   🤖 PREMIUM — Pré-check temps réel pendant la saisie
-   ────────────────────────────────────────────────
-   Appelle /webhook/ami-precheck avec un debounce de 600ms
-   pour suggérer en LIVE des optimisations (IK manquante,
-   majo nuit oubliée, pansement à requalifier, etc.) AVANT
-   que l'utilisateur valide la cotation.
-
-   Effet : "magique" pour l'utilisateur — corrige avant.
-   Affiche dans #pi-precheck-mount injecté sous #live-reco.
-   Premium-aware : utilise PremiumIntel.precheckInput() qui
-   gère les fallbacks proprement.
-════════════════════════════════════════════════ */
-(function _initPrecheckLive() {
-  let _precheckTimer = null;
-  let _precheckLastLen = 0;
-
-  function _ensureMount() {
-    let mount = document.getElementById('pi-precheck-mount');
-    if (mount) return mount;
-    const liveReco = document.getElementById('live-reco');
-    if (!liveReco) return null;
-    mount = document.createElement('div');
-    mount.id = 'pi-precheck-mount';
-    mount.style.marginBottom = '10px';
-    liveReco.parentNode.insertBefore(mount, liveReco.nextSibling);
-    return mount;
-  }
-
-  async function _runPrecheck() {
-    if (typeof PremiumIntel === 'undefined' || !PremiumIntel.precheckInput) return;
-    const txt = (document.getElementById('f-txt')?.value || '').trim();
-    const mount = _ensureMount();
-    if (!mount) return;
-    if (txt.length < 5) {
-      mount.innerHTML = '';
-      mount.style.display = 'none';
-      return;
-    }
-    try {
-      const heure = document.getElementById('f-hs')?.value || '';
-      const date  = document.getElementById('f-ds')?.value || '';
-      const precheck = await PremiumIntel.precheckInput(txt, { heure, date });
-      PremiumIntel.renderPreCheck(mount, precheck);
-    } catch (e) { /* silencieux : ne jamais perturber la saisie */ }
-  }
-
-  document.addEventListener('input', e => {
-    if (e.target?.id !== 'f-txt') return;
-    const len = (e.target.value || '').length;
-    // Skip si juste 1-2 char tapés ou supprimés (bruit)
-    if (Math.abs(len - _precheckLastLen) < 2 && len > 5) return;
-    _precheckLastLen = len;
-    clearTimeout(_precheckTimer);
-    _precheckTimer = setTimeout(_runPrecheck, 600);  // debounce 600ms
-  });
-
-  // Re-trigger quand l'heure change (pour détecter majo nuit)
-  document.addEventListener('change', e => {
-    if (e.target?.id === 'f-hs' || e.target?.id === 'f-ds') {
-      clearTimeout(_precheckTimer);
-      _precheckTimer = setTimeout(_runPrecheck, 200);
-    }
-  });
-
-  // Reset à la soumission (clrCot) — écouté via mutation du champ
-  document.addEventListener('cotation:cleared', () => {
-    const mount = document.getElementById('pi-precheck-mount');
-    if (mount) { mount.innerHTML = ''; mount.style.display = 'none'; }
-    _precheckLastLen = 0;
-  });
-})();
 
 /* ════════════════════════════════════════════════
    RENDU DU PANNEAU "QUI FAIT QUOI ?"
@@ -679,13 +656,8 @@ async function _cotationCabinetPersistMyPart(d, txt) {
     } else if (!_editRef || _isForceNew) {
       // Pas de _editRef OU choix explicite "Nouvelle cotation" → push
       _pat.cotations.push(_newCot);
-    } else if (_editRef?._forceAttachToPatient) {
-      // Patient existant + mode édition explicite (✏️ Historique) mais
-      // cotation absente du cotations[] local — ré-attache au patient connu
-      _pat.cotations.push(_newCot);
     }
-    // Sinon (_editRef avec cotationIdx/invoice_number mais pas d'index ET
-    // pas de _forceAttachToPatient) → ne rien faire (évite doublons)
+    // Si _editRef avec cotationIdx/invoice_number mais pas d'index trouvé → ne rien faire (évite doublons)
 
     _pat.updated_at = new Date().toISOString();
     const _toStore = { id: _pat.id, nom: _pat.nom, prenom: _pat.prenom, _data: _enc(_pat), updated_at: _pat.updated_at };
@@ -1224,31 +1196,6 @@ async function _cotationPipeline() {
     $('cbody').innerHTML = renderCot(d);
     $('res-cot').classList.add('show');
 
-    // ── 💎 PREMIUM INTELLIGENCE — affichage post-cotation ────────────────
-    // Injecte loss + coach + forecast sous le résultat de cotation.
-    // S'auto-skip si premium_intel absent (ex: ancien worker, fallback).
-    try {
-      if (d && d.premium_intel && typeof PremiumIntel !== 'undefined') {
-        const cbody = document.getElementById('cbody');
-        if (cbody) {
-          // Conteneur dédié — vidé à chaque cotation pour éviter l'empilement
-          let piWrap = document.getElementById('pi-cotation-wrap');
-          if (piWrap) piWrap.remove();
-          piWrap = document.createElement('div');
-          piWrap.id = 'pi-cotation-wrap';
-          piWrap.innerHTML = `
-            <div id="pi-cot-loss"></div>
-            <div id="pi-cot-coach"></div>
-            <div id="pi-cot-forecast"></div>
-          `;
-          cbody.appendChild(piWrap);
-          PremiumIntel.renderLossCard('pi-cot-loss', d.premium_intel);
-          PremiumIntel.renderCoachBlock('pi-cot-coach', d.premium_intel.coach);
-          PremiumIntel.renderForecastCard('pi-cot-forecast', d.premium_intel.forecast);
-        }
-      }
-    } catch (e) { console.warn('[PI] post-cotation render KO:', e.message); }
-
     // ── Upsert cotation dans le carnet patient (IDB) ───────────────────────
     // RÈGLE STRICTE :
     //   • Patient existant → toujours upsert (mise à jour), jamais de doublon
@@ -1330,16 +1277,8 @@ async function _cotationPipeline() {
           } else if (!_editRef || _isForceNewSolo) {
             // Pas en mode édition OU choix explicite "Nouvelle cotation" → push
             _pat.cotations.push(_newCot);
-          } else if (_editRef?._forceAttachToPatient) {
-            // Patient existant + mode édition explicite (✏️ depuis Historique)
-            // mais cotation introuvable dans cotations[] (IDB fraîchement
-            // synchronisée côté admin, ou cotation créée par un autre device).
-            // → ré-attacher la cotation au patient connu (PAS de fiche fantôme,
-            //   le patient existe vraiment dans l'IDB).
-            _pat.cotations.push(_newCot);
           }
-          // Sinon (_editRef avec cotationIdx/invoice_number mais pas d'index
-          // trouvé ET pas de _forceAttachToPatient) → ne rien faire (évite les doublons)
+          // Si _editRef avec cotationIdx/invoice_number mais pas d'index trouvé → ne rien faire (évite les doublons)
 
           _pat.updated_at = new Date().toISOString();
           const _toStore1 = { id: _pat.id, nom: _pat.nom, prenom: _pat.prenom, _data: _enc(_pat), updated_at: _pat.updated_at };
@@ -2183,11 +2122,6 @@ function clrCot() {
   if (sugg) { sugg.textContent = ''; sugg.style.display = 'none'; }
   const actesList = $('cot-cabinet-actes-list');
   if (actesList) actesList.innerHTML = '<div class="ai in" style="font-size:12px">Saisissez la description des soins ci-dessus pour assigner les actes aux IDEs.</div>';
-
-  // 💎 Notifier le module Premium Intelligence pour vider precheck + résultats
-  document.dispatchEvent(new CustomEvent('cotation:cleared'));
-  const piWrap = document.getElementById('pi-cotation-wrap');
-  if (piWrap) piWrap.remove();
 }
 
 function coterDepuisRoute(desc, nomPatient) {
