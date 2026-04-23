@@ -26,13 +26,22 @@ const FEATURES = {
   cabinet_multi_ide: { tier:'CABINET' }, planning_shared: { tier:'CABINET' },
   transmissions_shared: { tier:'CABINET' }, cabinet_manage_members: { tier:'CABINET' },
   cabinet_consolidated_stats: { tier:'CABINET' }, compliance_engine: { tier:'CABINET' },
-  // ═══ PREMIUM — les 6 features sous protection ═══
+  // ═══ PREMIUM — les features sous protection ═══
   optimisation_ca_plus:      { tier:'PREMIUM' },
   ca_sous_declare:           { tier:'PREMIUM' },
   protection_legale_plus:    { tier:'PREMIUM' },
   forensic_certificates:     { tier:'PREMIUM' },
   sla_support:               { tier:'PREMIUM' },
   rapport_juridique_mensuel: { tier:'PREMIUM' },
+  // ═══ PREMIUM dual-track (versions IA enrichies des outils existants) ═══
+  copilote_ia_premium:       { tier:'PREMIUM' },
+  audit_cpam_premium:        { tier:'PREMIUM' },
+  simulateur_regulation:     { tier:'PREMIUM' },
+  charges_calc_premium:      { tier:'PREMIUM' },
+  rapport_mensuel_premium:   { tier:'PREMIUM' },
+  dashboard_premium:         { tier:'PREMIUM' },
+  transmissions_premium:     { tier:'PREMIUM' },
+  compte_rendu_premium:      { tier:'PREMIUM' },
   // COMPTABLE
   dashboard_consolide: { tier:'COMPTABLE' },
   export_fiscal:       { tier:'COMPTABLE' },
@@ -45,8 +54,13 @@ const FEATURES = {
 };
 
 const PREMIUM_FEATS = [
+  // 6 features Premium d'origine
   'optimisation_ca_plus','ca_sous_declare','protection_legale_plus',
-  'forensic_certificates','sla_support','rapport_juridique_mensuel'
+  'forensic_certificates','sla_support','rapport_juridique_mensuel',
+  // 8 features Premium dual-track (ajoutées v1.1)
+  'copilote_ia_premium','audit_cpam_premium','simulateur_regulation',
+  'charges_calc_premium','rapport_mensuel_premium','dashboard_premium',
+  'transmissions_premium','compte_rendu_premium'
 ];
 
 const COMPTABLE_FEATS = [
