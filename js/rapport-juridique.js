@@ -55,44 +55,49 @@
       }
     } catch (_) {}
 
-    // 3. Preuves signatures (lecture directe IDB ami_signatures)
-    //    loadSignatureList() est UI-only et ne renvoie rien — on lit l'IDB directement.
+    // 3. Preuves signatures — utilise le helper exposé par signature.js
+    //    (la DB réelle est nommée dynamiquement ami_sig_db_<userId> et ne peut
+    //    pas être ouverte par un nom statique)
     let preuves = { FORTE:0, STANDARD:0, MINIMAL:0, total:0 };
     try {
-      const sigDb = await new Promise((res, rej) => {
-        const req = indexedDB.open('ami_signatures', 1);
-        req.onsuccess = e => res(e.target.result);
-        req.onerror   = e => rej(e.target.error);
-      });
-      const stores = sigDb.objectStoreNames;
-      const storeName = stores.contains('ami_signatures') ? 'ami_signatures'
-                      : stores.contains('signatures')    ? 'signatures'
-                      : stores[0];
-      if (storeName) {
-        const allSigs = await new Promise((res, rej) => {
-          const tx = sigDb.transaction(storeName, 'readonly');
-          const rq = tx.objectStore(storeName).getAll();
-          rq.onsuccess = () => res(rq.result || []);
-          rq.onerror   = () => rej(rq.error);
-        });
-        // Exclure la signature IDE auto-injectée
-        const IDE_SELF_SIG_ID = 'ide_self_signature';
-        const lst = allSigs.filter(s => s.invoice_id !== IDE_SELF_SIG_ID);
-        lst.forEach(s => {
-          const d = new Date(s.signed_at || s.created_at || s.date || 0);
-          if (d.getFullYear() !== Y || (d.getMonth()+1) !== M) return;
-          // Détecter le niveau de force probante : FORTE si geozone+hash, STANDARD si hash, MINIMAL sinon
-          let t = (s.signature_type || '').toUpperCase();
-          if (!t) {
-            if (s.geozone && s.signature_hash) t = 'FORTE';
-            else if (s.signature_hash)         t = 'STANDARD';
-            else                                t = 'MINIMAL';
-          }
-          if (!['FORTE','STANDARD','MINIMAL'].includes(t)) t = 'STANDARD';
-          preuves[t] = (preuves[t] || 0) + 1;
-          preuves.total += 1;
-        });
+      let allSigs = [];
+      if (typeof window.getAllSignatures === 'function') {
+        allSigs = await window.getAllSignatures();
+      } else if (indexedDB.databases) {
+        // Fallback : énumérer les bases pour trouver ami_sig_db_*
+        const dbs = await indexedDB.databases();
+        const sigDbName = (dbs || []).map(d => d.name).find(n => n && n.startsWith('ami_sig_db_'));
+        if (sigDbName) {
+          const sigDb = await new Promise((res, rej) => {
+            const req = indexedDB.open(sigDbName, 1);
+            req.onsuccess = e => res(e.target.result);
+            req.onerror   = e => rej(e.target.error);
+          });
+          allSigs = await new Promise((res, rej) => {
+            const tx = sigDb.transaction('ami_signatures', 'readonly');
+            const rq = tx.objectStore('ami_signatures').getAll();
+            rq.onsuccess = () => res(rq.result || []);
+            rq.onerror   = () => rej(rq.error);
+          });
+        }
       }
+      // Exclure la signature IDE auto-injectée
+      const IDE_SELF_SIG_ID = 'ide_self_signature';
+      const lst = (allSigs || []).filter(s => s.invoice_id !== IDE_SELF_SIG_ID);
+      lst.forEach(s => {
+        const d = new Date(s.signed_at || s.created_at || s.date || 0);
+        if (d.getFullYear() !== Y || (d.getMonth()+1) !== M) return;
+        // Détecter le niveau de force probante : FORTE si geozone+hash, STANDARD si hash, MINIMAL sinon
+        let t = (s.signature_type || '').toUpperCase();
+        if (!t) {
+          if (s.geozone && s.signature_hash) t = 'FORTE';
+          else if (s.signature_hash)         t = 'STANDARD';
+          else                                t = 'MINIMAL';
+        }
+        if (!['FORTE','STANDARD','MINIMAL'].includes(t)) t = 'STANDARD';
+        preuves[t] = (preuves[t] || 0) + 1;
+        preuves.total += 1;
+      });
     } catch (e) {
       console.warn('[RapportJuridique] lecture signatures KO:', e.message);
     }

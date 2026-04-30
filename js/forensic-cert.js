@@ -372,33 +372,39 @@
     if (typeof SUB !== 'undefined' && !SUB.hasAccess('forensic_certificates')) {
       throw new Error('Feature PREMIUM requise');
     }
-    // Lecture directe de l'IDB ami_signatures (même DB que signature.js)
+    // Stratégie de lecture (par ordre de préférence) :
+    //  1. window.getAllSignatures() — helper exposé par signature.js (DB par-utilisateur)
+    //  2. Fallback : scan des IDB existantes (ami_sig_db_*) directement
     let signatures = [];
     try {
-      const sigDb = await new Promise((res, rej) => {
-        const req = indexedDB.open('ami_signatures', 1);
-        req.onsuccess = e => res(e.target.result);
-        req.onerror   = e => rej(e.target.error);
-      });
-      const stores = sigDb.objectStoreNames;
-      const storeName = stores.contains('ami_signatures') ? 'ami_signatures'
-                      : stores.contains('signatures')    ? 'signatures'
-                      : stores[0];
-      if (!storeName) return { generated:0, skipped:0, total:0 };
-      signatures = await new Promise((res, rej) => {
-        const tx = sigDb.transaction(storeName, 'readonly');
-        const rq = tx.objectStore(storeName).getAll();
-        rq.onsuccess = () => res(rq.result || []);
-        rq.onerror   = () => rej(rq.error);
-      });
+      if (typeof window.getAllSignatures === 'function') {
+        signatures = await window.getAllSignatures();
+      } else if (indexedDB.databases) {
+        // Fallback navigateur moderne : énumérer les bases pour trouver ami_sig_db_*
+        const dbs = await indexedDB.databases();
+        const sigDbName = (dbs || []).map(d => d.name).find(n => n && n.startsWith('ami_sig_db_'));
+        if (sigDbName) {
+          const sigDb = await new Promise((res, rej) => {
+            const req = indexedDB.open(sigDbName, 1);
+            req.onsuccess = e => res(e.target.result);
+            req.onerror   = e => rej(e.target.error);
+          });
+          signatures = await new Promise((res, rej) => {
+            const tx = sigDb.transaction('ami_signatures', 'readonly');
+            const rq = tx.objectStore('ami_signatures').getAll();
+            rq.onsuccess = () => res(rq.result || []);
+            rq.onerror   = () => rej(rq.error);
+          });
+        }
+      }
     } catch (e) {
-      console.warn('[ForensicCert] backfill : lecture IDB signatures KO :', e.message);
+      console.warn('[ForensicCert] backfill : lecture signatures KO :', e.message);
       return { generated:0, skipped:0, total:0, error: e.message };
     }
 
     // Filtrer les signatures patient (exclure la signature IDE auto-injectée)
     const IDE_SELF_SIG_ID = 'ide_self_signature';
-    signatures = signatures.filter(s => s.invoice_id && s.invoice_id !== IDE_SELF_SIG_ID);
+    signatures = (signatures || []).filter(s => s.invoice_id && s.invoice_id !== IDE_SELF_SIG_ID);
 
     // Liste des invoice_id qui ont déjà un certificat
     const existing = await _getAll();

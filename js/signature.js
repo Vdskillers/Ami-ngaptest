@@ -1836,6 +1836,31 @@ window.refreshIDESignatureUI = refreshIDESignatureUI;
 window.normalizeSignaturePNG       = _normalizeSignaturePNG;
 window.normalizeSignaturePNGCached = _normalizeSignaturePNGCached;
 
+/* ════════════════════════════════════════════════════════════════════
+   📦 Export public : lecture brute de toutes les signatures
+   ────────────────────────────────────────────────────────────────────
+   Utilisé par les modules Premium (forensic-cert, rapport-juridique)
+   pour itérer sur les signatures sans avoir à connaître le nom dynamique
+   de la DB (ami_sig_db_<userId>).
+
+   Retourne un tableau de signatures incluant la sig IDE + les sig patients.
+   Pour ne récupérer que les signatures patients, filtrer sur :
+     s.invoice_id !== 'ide_self_signature'
+════════════════════════════════════════════════════════════════════════ */
+window.getAllSignatures = async function getAllSignatures() {
+  try {
+    return await _sigExec(db => new Promise((res, rej) => {
+      const tx  = db.transaction(SIG_STORE, 'readonly');
+      const req = tx.objectStore(SIG_STORE).getAll();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror   = () => rej(req.error);
+    }));
+  } catch (e) {
+    console.warn('[signature] getAllSignatures KO:', e.message);
+    return [];
+  }
+};
+
 /* ── Patch printInv pour injecter la signature automatiquement ── */
 document.addEventListener('DOMContentLoaded', () => {
   const _origPrintInv = window.printInv;
