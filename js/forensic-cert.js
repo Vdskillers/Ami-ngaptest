@@ -206,11 +206,64 @@
     return { valid:true, reason:'Certificat valide, chaîne intègre.' };
   }
 
+  /* ───── UI — CSS auto-injecté ──────────────────────────── */
+  function _injectFCStyles() {
+    if (document.getElementById('fc-injected-styles')) return;
+    const css = `
+.fc-toolbar { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; align-items:center; }
+.fc-status  { margin-top:10px; font-size:12px; color:var(--m); font-family:var(--fm); padding:6px 10px;
+              background:var(--s); border:1px solid var(--b); border-radius:8px; display:none; }
+.fc-status.show { display:block; }
+.fc-status.ok    { color:var(--ok); border-color:rgba(0,212,170,.35); background:rgba(0,212,170,.06); }
+.fc-status.err   { color:var(--d);  border-color:rgba(255,95,109,.35); background:rgba(255,95,109,.06); }
+
+.fc-list { margin-top:14px; display:flex; flex-direction:column; gap:10px; }
+.fc-row {
+  display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap;
+  padding:14px 16px; background:var(--s); border:1px solid var(--b);
+  border-radius:12px; transition:all .15s;
+}
+.fc-row:hover { border-color:rgba(0,212,170,.4); transform:translateY(-1px); box-shadow:0 4px 16px rgba(0,0,0,.18); }
+.fc-row[data-type="FORTE"]    { border-left:3px solid var(--ok); }
+.fc-row[data-type="STANDARD"] { border-left:3px solid var(--a); }
+.fc-row[data-type="MINIMAL"]  { border-left:3px solid var(--w); }
+
+.fc-main { flex:1; min-width:0; }
+.fc-title { font-weight:700; font-size:14px; color:var(--t); margin-bottom:4px; word-break:break-all; }
+.fc-seq { display:inline-block; padding:2px 8px; background:rgba(0,212,170,.15); color:var(--a);
+          border-radius:6px; font-family:var(--fm); font-size:11px; margin-right:8px; font-weight:700; }
+.fc-sub { font-size:12px; color:var(--m); margin-bottom:6px; font-family:var(--fm); }
+.fc-type-pill { display:inline-block; padding:2px 8px; border-radius:50px; font-size:10px;
+                font-family:var(--fm); font-weight:700; letter-spacing:.3px; margin-left:6px; }
+.fc-type-pill.FORTE    { background:rgba(0,212,170,.15);  color:var(--ok); border:1px solid rgba(0,212,170,.4); }
+.fc-type-pill.STANDARD { background:rgba(0,212,170,.10);  color:var(--a);  border:1px solid rgba(0,212,170,.3); }
+.fc-type-pill.MINIMAL  { background:rgba(255,180,71,.15); color:var(--w);  border:1px solid rgba(255,180,71,.4); }
+
+.fc-hash { font-family:var(--fm); font-size:10px; color:var(--m); padding:4px 8px;
+           background:rgba(255,255,255,.03); border:1px solid var(--b); border-radius:6px;
+           display:inline-block; word-break:break-all; max-width:100%; }
+
+.fc-actions { display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap; align-items:flex-start; }
+.fc-actions button { padding:6px 12px; font-size:11px; font-family:var(--ff); font-weight:600;
+                     background:var(--c); color:var(--t); border:1px solid var(--b);
+                     border-radius:8px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.fc-actions button:hover { border-color:var(--a); color:var(--a); transform:translateY(-1px); }
+.fc-actions button[data-action="verify"]:hover { border-color:var(--ok); color:var(--ok); }
+.fc-actions button[data-action="pdf"]:hover    { border-color:var(--w);  color:var(--w); }
+.fc-actions button:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+`;
+    const style = document.createElement('style');
+    style.id = 'fc-injected-styles';
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
   /* ───── UI — liste des certificats ─────────────────────── */
 
   async function renderList() {
     // 🔒 Gating
     if (typeof SUB !== 'undefined' && !SUB.requireAccess('forensic_certificates')) return;
+    _injectFCStyles();
 
     // Cible : hub Outils pratiques (préféré) ou ancienne section view
     const root = document.getElementById('hub-host-forensic-cert')
@@ -225,85 +278,112 @@
         <div class="cardh">
           <h2>🛡️ Certificats forensiques</h2>
           <p class="sub">Chaîne de preuve cryptographique · ${all.length} certificat${all.length>1?'s':''} émis</p>
-          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn bs bsm" id="fc-backfill" style="font-size:12px">
+          <div class="fc-toolbar">
+            <button class="btn bs bsm" data-action="backfill" style="font-size:12px">
               ⚡ Générer les certificats des signatures existantes
             </button>
-            <button class="btn bs bsm" id="fc-refresh" style="font-size:12px">↻ Rafraîchir</button>
+            <button class="btn bs bsm" data-action="refresh" style="font-size:12px">↻ Rafraîchir</button>
           </div>
-          <div id="fc-backfill-status" style="margin-top:8px;font-size:12px;color:var(--m)"></div>
+          <div class="fc-status" id="fc-backfill-status"></div>
         </div>
         ${all.length === 0 ? `
-          <div class="ai in">
+          <div class="ai in" style="margin-top:14px">
             Aucun certificat forensique émis pour l'instant.<br>
             Cliquez sur <strong>« Générer les certificats des signatures existantes »</strong>
             pour créer rétroactivement un certificat pour chaque signature déjà enregistrée,
             ou les certificats seront générés automatiquement après chaque nouvelle signature patient.
           </div>
         ` : `
-          <div id="fc-list">
-            ${all.map(c => `
-              <div class="fc-row" data-id="${c.id}">
+          <div class="fc-list">
+            ${all.map(c => {
+              const t = (c.signature_type || 'STANDARD').toUpperCase();
+              const dateStr = new Date(c.created_at).toLocaleString('fr-FR', {
+                day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
+              });
+              return `
+              <div class="fc-row" data-id="${c.id}" data-type="${t}">
                 <div class="fc-main">
-                  <div class="fc-title">#${c.seq} · Facture ${sanitize(c.invoice || '—')}</div>
-                  <div class="fc-sub">${new Date(c.created_at).toLocaleString('fr-FR')} · ${sanitize(c.signature_type)}</div>
-                  <div class="fc-hash" title="${c.hash}">Hash: ${c.hash.slice(0,32)}…</div>
+                  <div class="fc-title">
+                    <span class="fc-seq">#${c.seq}</span>
+                    Facture ${sanitize(c.invoice || '—')}
+                    <span class="fc-type-pill ${t}">${t}</span>
+                  </div>
+                  <div class="fc-sub">${dateStr}</div>
+                  <div class="fc-hash" title="${c.hash}">Hash · ${c.hash.slice(0,40)}…</div>
                 </div>
                 <div class="fc-actions">
-                  <button class="btn-mini fc-verify" data-id="${c.id}">Vérifier</button>
-                  <button class="btn-mini fc-pdf"    data-id="${c.id}">📄 PDF</button>
+                  <button data-action="verify" data-id="${c.id}">✓ Vérifier</button>
+                  <button data-action="pdf"    data-id="${c.id}">📄 PDF</button>
                 </div>
-              </div>
-            `).join('')}
+              </div>`;
+            }).join('')}
           </div>
         `}
       </div>
     `;
 
-    // Backfill button
-    const backfillBtn = document.getElementById('fc-backfill');
-    if (backfillBtn) {
-      backfillBtn.onclick = async () => {
-        const status = document.getElementById('fc-backfill-status');
-        backfillBtn.disabled = true;
-        backfillBtn.textContent = '⏳ Génération en cours…';
-        if (status) status.textContent = 'Lecture des signatures et génération de la chaîne…';
+    /* ───── Délégation d'event sur le root (robuste au re-render) ───── */
+    if (!root._fcDelegated) {
+      root._fcDelegated = true;
+      root.addEventListener('click', async (ev) => {
+        const btn = ev.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
         try {
-          const result = await backfillFromSignatures();
-          if (status) {
-            status.style.color = 'var(--ok)';
-            status.textContent = `✅ ${result.generated} certificat(s) généré(s) · ${result.skipped} déjà existant(s) · ${result.total} signature(s) trouvée(s)`;
+          if (action === 'refresh') {
+            renderList();
+            return;
           }
-          // Re-render après 1s pour voir la liste mise à jour
-          setTimeout(renderList, 1200);
-        } catch (e) {
-          if (status) {
-            status.style.color = 'var(--d)';
-            status.textContent = '❌ ' + e.message;
+          if (action === 'backfill') {
+            const status = document.getElementById('fc-backfill-status');
+            btn.disabled = true;
+            const _origText = btn.textContent;
+            btn.textContent = '⏳ Génération en cours…';
+            if (status) {
+              status.className = 'fc-status show';
+              status.textContent = 'Lecture des signatures et génération de la chaîne…';
+            }
+            try {
+              const result = await backfillFromSignatures();
+              if (status) {
+                status.className = 'fc-status show ok';
+                status.textContent = `✅ ${result.generated} certificat(s) généré(s) · ${result.skipped} déjà existant(s) · ${result.total} signature(s) trouvée(s)`;
+              }
+              setTimeout(renderList, 800);
+            } catch (e) {
+              if (status) {
+                status.className = 'fc-status show err';
+                status.textContent = '❌ ' + (e.message || e);
+              }
+            } finally {
+              btn.disabled = false;
+              btn.textContent = _origText;
+            }
+            return;
           }
-        } finally {
-          backfillBtn.disabled = false;
-          backfillBtn.textContent = '⚡ Générer les certificats des signatures existantes';
+          if (action === 'verify') {
+            const c = await _getById(id);
+            if (!c) {
+              alert('❌ Certificat introuvable');
+              return;
+            }
+            const r = await verify(c);
+            const msg = (r.valid ? '✅ ' : '❌ ') + r.reason;
+            if (typeof showToast === 'function') showToast(msg, r.valid ? 's' : 'e');
+            else alert(msg);
+            return;
+          }
+          if (action === 'pdf') {
+            await exportPDF(id);
+            return;
+          }
+        } catch (err) {
+          console.error('[ForensicCert] click handler KO:', err);
+          alert('❌ Erreur : ' + (err.message || err));
         }
-      };
+      });
     }
-    const refreshBtn = document.getElementById('fc-refresh');
-    if (refreshBtn) refreshBtn.onclick = renderList;
-
-    root.querySelectorAll('.fc-verify').forEach(b => {
-      b.onclick = async () => {
-        const c = await _getById(b.dataset.id);
-        const r = await verify(c);
-        if (typeof showToast === 'function') {
-          showToast((r.valid ? '✅ ' : '❌ ') + r.reason);
-        } else {
-          alert((r.valid ? '✅ ' : '❌ ') + r.reason);
-        }
-      };
-    });
-    root.querySelectorAll('.fc-pdf').forEach(b => {
-      b.onclick = () => exportPDF(b.dataset.id);
-    });
   }
 
   /* ───── Export PDF opposable ───────────────────────────── */
@@ -362,8 +442,25 @@
 
     const blob = new Blob([html], { type:'text/html' });
     const url = URL.createObjectURL(blob);
-    const w = window.open(url);
-    if (w) setTimeout(() => w.print(), 600);
+    const w = window.open(url, '_blank');
+    if (w) {
+      // Popup ouverte : tenter print() après chargement
+      setTimeout(() => { try { w.print(); } catch(_) {} }, 700);
+      // Cleanup URL après quelques secondes (le browser garde le contenu)
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch(_) {} }, 30000);
+    } else {
+      // Popup bloquée → download direct
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `certificat-forensique-${c.seq}-${c.invoice || 'x'}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch(_) {} }, 5000);
+      if (typeof showToast === 'function') {
+        showToast('📄 Certificat téléchargé (popup bloquée)', 's');
+      }
+    }
   }
 
   /* ───── Backfill : génère un certificat pour chaque signature existante

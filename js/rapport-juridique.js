@@ -197,11 +197,103 @@
     };
   }
 
+  /* ───── UI — CSS auto-injecté ──────────────────────────── */
+  function _injectRJStyles() {
+    if (document.getElementById('rj-injected-styles')) return;
+    const css = `
+.rj-toolbar { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-top:14px;
+              padding:14px; background:var(--s); border:1px solid var(--b); border-radius:12px; }
+.rj-toolbar label { display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--m);
+                    font-family:var(--fm); text-transform:uppercase; letter-spacing:.5px; min-width:140px; }
+.rj-toolbar select { padding:8px 12px; background:var(--c); color:var(--t); border:1px solid var(--b);
+                     border-radius:8px; font-size:13px; font-family:var(--ff); cursor:pointer; }
+.rj-toolbar select:hover, .rj-toolbar select:focus { border-color:var(--a); outline:none; }
+.rj-toolbar .rj-actions { display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+.rj-toolbar .rj-btn-primary {
+  padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:var(--ff);
+  background:linear-gradient(135deg,var(--a),#00b891); color:#000; border:1px solid transparent;
+  border-radius:10px; box-shadow:0 4px 14px rgba(0,212,170,.25); transition:all .15s;
+}
+.rj-toolbar .rj-btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 22px rgba(0,212,170,.35); }
+.rj-toolbar .rj-btn-secondary {
+  padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:var(--ff);
+  background:var(--c); color:var(--t); border:1px solid var(--b); border-radius:10px; transition:all .15s;
+}
+.rj-toolbar .rj-btn-secondary:hover:not(:disabled) { border-color:var(--w); color:var(--w); }
+.rj-toolbar .rj-btn-secondary:disabled { opacity:.4; cursor:not-allowed; }
+
+.rj-body { margin-top:18px; }
+.rj-body .rj-loading { padding:30px 20px; text-align:center; color:var(--m); font-size:14px; }
+
+.rj-period-title { font-family:var(--fs,serif); font-size:24px; color:var(--a); margin:0 0 16px;
+                   font-weight:400; }
+
+/* KPI cards */
+.rj-kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:24px; }
+.rj-kpi {
+  padding:14px 16px; background:var(--s); border:1px solid var(--b); border-radius:12px;
+  transition:all .15s;
+}
+.rj-kpi:hover { border-color:rgba(0,212,170,.4); transform:translateY(-1px); }
+.rj-kpi-label { font-size:10px; color:var(--m); text-transform:uppercase; letter-spacing:.6px;
+                font-family:var(--fm); margin-bottom:6px; font-weight:600; }
+.rj-kpi-val { font-size:22px; font-weight:700; color:var(--t); font-family:var(--fs,serif); line-height:1.2; }
+.rj-kpi-val .pct { font-size:14px; color:var(--m); font-family:var(--fm); margin-left:4px; }
+
+/* Sections */
+.rj-section { margin-bottom:22px; }
+.rj-section-h { display:flex; align-items:center; gap:8px; margin:0 0 12px;
+                font-family:var(--fs,serif); font-size:17px; font-weight:400; color:var(--t); }
+.rj-section-h::before { content:''; width:3px; height:18px; background:var(--a); border-radius:2px; }
+
+/* Tableau preuves */
+.rj-table { width:100%; border-collapse:separate; border-spacing:0; background:var(--s);
+            border:1px solid var(--b); border-radius:10px; overflow:hidden; }
+.rj-table th, .rj-table td { padding:10px 14px; text-align:center; font-size:13px; }
+.rj-table th { background:var(--c); color:var(--m); font-family:var(--fm); font-size:10px;
+               text-transform:uppercase; letter-spacing:.6px; font-weight:700;
+               border-bottom:1px solid var(--b); }
+.rj-table td { color:var(--t); font-weight:600; font-family:var(--fm); }
+.rj-table td.forte    { color:var(--ok); }
+.rj-table td.standard { color:var(--a); }
+.rj-table td.minimal  { color:var(--w); }
+.rj-table td.total    { font-weight:800; font-size:15px; }
+
+/* Mini info-cards */
+.rj-info-card { padding:12px 14px; background:var(--s); border:1px solid var(--b); border-radius:10px;
+                font-size:13px; color:var(--t); line-height:1.6; }
+.rj-info-card strong { color:var(--a); }
+.rj-info-card .badge-ok { display:inline-block; padding:2px 8px; background:rgba(0,212,170,.15);
+                          color:var(--ok); border:1px solid rgba(0,212,170,.4); border-radius:50px;
+                          font-size:11px; font-family:var(--fm); font-weight:700; margin-left:6px; }
+.rj-info-card .badge-ko { display:inline-block; padding:2px 8px; background:rgba(255,95,109,.15);
+                          color:var(--d); border:1px solid rgba(255,95,109,.4); border-radius:50px;
+                          font-size:11px; font-family:var(--fm); font-weight:700; margin-left:6px; }
+
+/* Recommandations */
+.rj-reco { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
+.rj-reco li { padding:10px 14px; background:var(--s); border:1px solid var(--b); border-radius:10px;
+              border-left:3px solid var(--a); font-size:13px; color:var(--t); line-height:1.5; }
+.rj-reco li.warn { border-left-color:var(--w); background:linear-gradient(90deg,rgba(255,180,71,.04),var(--s)); }
+.rj-reco li.crit { border-left-color:var(--d); background:linear-gradient(90deg,rgba(255,95,109,.04),var(--s)); }
+.rj-reco li.ok   { border-left-color:var(--ok); background:linear-gradient(90deg,rgba(0,212,170,.04),var(--s)); }
+
+/* Footer */
+.rj-foot { margin-top:24px; padding:12px 14px; border-top:1px dashed var(--b);
+           font-size:11px; color:var(--m); font-family:var(--fm); }
+`;
+    const style = document.createElement('style');
+    style.id = 'rj-injected-styles';
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
   /* ───── UI ─────────────────────────────────────────────── */
 
   async function render() {
     // 🔒 Gating
     if (typeof SUB !== 'undefined' && !SUB.requireAccess('rapport_juridique_mensuel')) return;
+    _injectRJStyles();
 
     // Cible : hub Outils pratiques (préféré) ou ancienne section view
     const root = document.getElementById('hub-host-rapport-juridique')
@@ -216,84 +308,139 @@
           <p class="sub">Synthèse auditée : conformité, preuves, exposition contentieux, recommandations DPO.</p>
         </div>
         <div class="rj-toolbar">
-          <label>Mois :
-            <select id="rj-month"></select>
-          </label>
-          <label>Année :
-            <select id="rj-year"></select>
-          </label>
-          <button class="btn" id="rj-generate">Générer le rapport</button>
-          <button class="btn btn-outline" id="rj-export" disabled>📄 Export PDF</button>
+          <label>Mois<select id="rj-month"></select></label>
+          <label>Année<select id="rj-year"></select></label>
+          <div class="rj-actions">
+            <button class="rj-btn-primary"   data-action="generate">⚡ Générer le rapport</button>
+            <button class="rj-btn-secondary" data-action="export" disabled>📄 Export PDF</button>
+          </div>
         </div>
-        <div id="rj-body"></div>
+        <div id="rj-body" class="rj-body"></div>
       </div>
     `;
 
     // Remplir selects
     const selM = $('rj-month');
     const selY = $('rj-year');
-    for (let m=1; m<=12; m++) {
-      const o = new Option(new Date(2000, m-1, 1).toLocaleDateString('fr-FR',{month:'long'}), m);
-      if (m === now.getMonth() + 1) o.selected = true;
-      selM.add(o);
+    if (selM) {
+      for (let m=1; m<=12; m++) {
+        const o = new Option(new Date(2000, m-1, 1).toLocaleDateString('fr-FR',{month:'long'}), m);
+        if (m === now.getMonth() + 1) o.selected = true;
+        selM.add(o);
+      }
     }
-    for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
-      const o = new Option(y, y);
-      if (y === now.getFullYear()) o.selected = true;
-      selY.add(o);
+    if (selY) {
+      for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
+        const o = new Option(y, y);
+        if (y === now.getFullYear()) o.selected = true;
+        selY.add(o);
+      }
     }
 
-    $('rj-generate').onclick = async () => {
-      $('rj-body').innerHTML = '<div class="ai in">⏳ Génération en cours…</div>';
-      try {
-        const r = await generate(parseInt(selM.value), parseInt(selY.value));
-        $('rj-body').innerHTML = _renderReport(r);
-        $('rj-export').disabled = false;
-        $('rj-export').onclick = () => exportPDF(r);
-      } catch (e) {
-        $('rj-body').innerHTML = `<div class="ai in">⚠️ Erreur : ${sanitize(e.message||'')}</div>`;
-      }
-    };
+    /* ───── Délégation d'event sur le root (robuste au re-render) ───── */
+    let _lastReport = null;
+    if (!root._rjDelegated) {
+      root._rjDelegated = true;
+      root.addEventListener('click', async (ev) => {
+        const btn = ev.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const body = document.getElementById('rj-body');
+        const exportBtn = root.querySelector('button[data-action="export"]');
+        try {
+          if (action === 'generate') {
+            if (body) body.innerHTML = '<div class="rj-loading">⏳ Génération en cours…</div>';
+            const m = parseInt(($('rj-month') || {}).value || (new Date().getMonth()+1));
+            const y = parseInt(($('rj-year')  || {}).value || new Date().getFullYear());
+            const r = await generate(m, y);
+            _lastReport = r;
+            root._rjLastReport = r;
+            if (body) body.innerHTML = _renderReport(r);
+            if (exportBtn) exportBtn.disabled = false;
+            return;
+          }
+          if (action === 'export') {
+            const r = root._rjLastReport;
+            if (!r) {
+              alert('⚠️ Génère d\'abord un rapport avant l\'export PDF');
+              return;
+            }
+            await exportPDF(r);
+            return;
+          }
+        } catch (e) {
+          if (body) body.innerHTML = `<div class="rj-info-card" style="border-color:rgba(255,95,109,.4);color:var(--d)">⚠️ Erreur : ${sanitize(e.message||'')}</div>`;
+        }
+      });
+    }
   }
 
   function _renderReport(r) {
     const conf = r.conformite ? `${r.conformite.score}/100` : '—';
     const chainBadge = r.certificats.chain_valid
-      ? '<span class="fc-badge ok">Intègre</span>'
-      : '<span class="fc-badge ko">Rompue</span>';
-    return `
-      <div class="rj-report">
-        <h3>${r.period.label}</h3>
-        <div class="dash-kpi-row">
-          <div class="dash-kpi"><div class="dash-kpi-label">Cotations</div><div class="dash-kpi-val">${r.stats.nb_cotations}</div></div>
-          <div class="dash-kpi"><div class="dash-kpi-label">CA total</div><div class="dash-kpi-val">${fmt(r.stats.ca_total)}</div></div>
-          <div class="dash-kpi"><div class="dash-kpi-label">Conformité</div><div class="dash-kpi-val">${conf}</div></div>
-          <div class="dash-kpi"><div class="dash-kpi-label">Chaîne forensique</div><div class="dash-kpi-val">${chainBadge}</div></div>
-        </div>
+      ? '<span class="badge-ok">✓ Intègre</span>'
+      : '<span class="badge-ko">✗ Rompue</span>';
 
-        <h4>📝 Preuves collectées</h4>
+    // Classification visuelle des recommandations selon mots-clés
+    const recoItems = (r.recommandations || []).map(x => {
+      const txt = sanitize(x);
+      let cls = 'ok';
+      if (/⚠️|rompue|critique|alerte|attention/i.test(x)) cls = 'crit';
+      else if (/<\s*\d+|moins|inférieur|sous-déclaré|score/i.test(x) && !/aucun signal/i.test(x)) cls = 'warn';
+      return `<li class="${cls}">${txt}</li>`;
+    }).join('');
+
+    const inf = r.infirmiere ? sanitize((r.infirmiere.prenom || '') + ' ' + (r.infirmiere.nom || '')).trim() : '—';
+
+    return `
+      <h3 class="rj-period-title">${r.period.label}</h3>
+
+      <div class="rj-kpi-row">
+        <div class="rj-kpi"><div class="rj-kpi-label">Cotations</div><div class="rj-kpi-val">${r.stats.nb_cotations}</div></div>
+        <div class="rj-kpi"><div class="rj-kpi-label">CA total</div><div class="rj-kpi-val">${fmt(r.stats.ca_total)}</div></div>
+        <div class="rj-kpi"><div class="rj-kpi-label">Conformité</div><div class="rj-kpi-val">${conf}</div></div>
+        <div class="rj-kpi"><div class="rj-kpi-label">Chaîne forensique</div><div class="rj-kpi-val" style="font-size:14px">${chainBadge}</div></div>
+      </div>
+
+      <div class="rj-section">
+        <h4 class="rj-section-h">📝 Preuves collectées</h4>
         <table class="rj-table">
           <tr><th>FORTE</th><th>STANDARD</th><th>MINIMAL</th><th>Total</th></tr>
-          <tr><td>${r.preuves.FORTE}</td><td>${r.preuves.STANDARD}</td><td>${r.preuves.MINIMAL}</td><td><b>${r.preuves.total}</b></td></tr>
+          <tr>
+            <td class="forte">${r.preuves.FORTE}</td>
+            <td class="standard">${r.preuves.STANDARD}</td>
+            <td class="minimal">${r.preuves.MINIMAL}</td>
+            <td class="total">${r.preuves.total}</td>
+          </tr>
         </table>
+      </div>
 
-        <h4>🛡️ Certificats forensiques</h4>
-        <p>${r.certificats.count} certificat${r.certificats.count>1?'s':''} émis ce mois-ci
-           · dernier n° ${r.certificats.last_seq ?? '—'}</p>
-
-        <h4>💸 CA sous-déclaré (signal)</h4>
-        <p>${r.sous_declare.items} écart${r.sous_declare.items>1?'s':''} détecté${r.sous_declare.items>1?'s':''}
-           · ${fmt(r.sous_declare.gain_potentiel)} récupérables (glissant 90j)</p>
-
-        <h4>✅ Recommandations DPO</h4>
-        <ul class="rj-reco">
-          ${r.recommandations.map(x => `<li>${sanitize(x)}</li>`).join('')}
-        </ul>
-
-        <div class="rj-foot">
-          Rapport généré le ${new Date(r.generated_at).toLocaleString('fr-FR')} ·
-          ${r.infirmiere ? sanitize(r.infirmiere.prenom + ' ' + r.infirmiere.nom) : '—'}
+      <div class="rj-section">
+        <h4 class="rj-section-h">🛡️ Certificats forensiques</h4>
+        <div class="rj-info-card">
+          <strong>${r.certificats.count}</strong> certificat${r.certificats.count>1?'s':''} émis ce mois-ci ·
+          dernier n° <strong>${r.certificats.last_seq ?? '—'}</strong>
+          ${chainBadge}
         </div>
+      </div>
+
+      <div class="rj-section">
+        <h4 class="rj-section-h">💸 CA sous-déclaré (signal)</h4>
+        <div class="rj-info-card">
+          <strong>${r.sous_declare.items}</strong> écart${r.sous_declare.items>1?'s':''} détecté${r.sous_declare.items>1?'s':''} ·
+          <strong>${fmt(r.sous_declare.gain_potentiel)}</strong> récupérables
+          <span style="color:var(--m);font-size:12px">(glissant 90j)</span>
+        </div>
+      </div>
+
+      <div class="rj-section">
+        <h4 class="rj-section-h">✅ Recommandations DPO</h4>
+        <ul class="rj-reco">${recoItems}</ul>
+      </div>
+
+      <div class="rj-foot">
+        Rapport généré le ${new Date(r.generated_at).toLocaleString('fr-FR')}
+        ${inf && inf !== '—' ? '· ' + inf : ''}
       </div>
     `;
   }
@@ -354,8 +501,22 @@
 
     const blob = new Blob([html], { type:'text/html' });
     const url = URL.createObjectURL(blob);
-    const w = window.open(url);
-    if (w) setTimeout(() => w.print(), 600);
+    const w = window.open(url, '_blank');
+    if (w) {
+      setTimeout(() => { try { w.print(); } catch(_) {} }, 700);
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch(_) {} }, 30000);
+    } else {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rapport-juridique-${r.period.year}-${String(r.period.month).padStart(2,'0')}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch(_) {} }, 5000);
+      if (typeof showToast === 'function') {
+        showToast('📄 Rapport téléchargé (popup bloquée)', 's');
+      }
+    }
   }
 
   /* ───── Hook navigation ────────────────────────────────── */
