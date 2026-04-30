@@ -2898,20 +2898,45 @@
     <section class="view" id="view-mon-abo"></section>
 
     <!-- ══════════════════════════════════════════
-         🧑‍💼 EXPERT COMPTABLE — 1 hub + 8 sous-vues
-         Gated COMPTABLE via subscription.js (mapping NAV_FEATURE_MAP).
-         Contenu rendu dynamiquement par comptable.js (renderHub, renderDashboard, etc.)
-         déclenchés via l'event ui:navigate émis par navTo().
+         🧑‍💼 EXPERT COMPTABLE — hub à onglets v2
+         1 vue principale (view-comptable-hub) + 8 panneaux (un par sous-feature).
+         Pattern identique au hub Outils pratiques / Carnet patients :
+           - barre d'onglets horizontale
+           - switch via `comptableHubSwitchTab(tab, btn)` (cf. script HUBS À ONGLETS)
+           - état persisté dans sessionStorage 'ami:hub:comptable'
+           - panneaux remplis dynamiquement par `Comptable.render*()` (comptable.js)
+         Gating : feature `dashboard_consolide` (tier COMPTABLE) sur le hub +
+                  gating fin par sous-onglet via _gate() dans chaque render*.
     ══════════════════════════════════════════ -->
-    <section class="view" id="view-comptable-hub"></section>
-    <section class="view" id="view-comptable-dashboard"></section>
-    <section class="view" id="view-comptable-export-fec"></section>
-    <section class="view" id="view-comptable-2042"></section>
-    <section class="view" id="view-comptable-scoring"></section>
-    <section class="view" id="view-comptable-alertes"></section>
-    <section class="view" id="view-comptable-connecteurs"></section>
-    <section class="view" id="view-comptable-anonymisee"></section>
-    <section class="view" id="view-comptable-trimestriel"></section>
+    <section class="view" id="view-comptable-hub">
+      <h1 class="pt">🧑‍💼 Expert <em>comptable</em></h1>
+      <p class="ps">Suivi consolidé du portefeuille IDEL · FEC · Liasse 2035 · 2042-C-PRO · URSSAF · CARPIMKO · Scoring CPAM · RGPD</p>
+
+      <!-- Bandeau mode démo (mount par Comptable.renderDemoBanner) -->
+      <div id="comptable-demo-banner-mount" style="margin-bottom:14px"></div>
+
+      <!-- ── Barre d'onglets ── -->
+      <div class="hub-tabs" role="tablist" aria-label="Onglets Expert comptable" style="display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;border-bottom:1px solid var(--b);padding-bottom:0;overflow-x:auto">
+        <button type="button" class="hub-tab on" data-hub="comptable" data-hub-tab="dashboard"   role="tab" aria-selected="true"  onclick="comptableHubSwitchTab('dashboard', this)"   style="background:transparent;border:none;border-bottom:2px solid var(--a);padding:10px 16px;font-size:13px;font-weight:600;color:var(--a);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">📊</span> Dashboard</button>
+        <button type="button" class="hub-tab"    data-hub="comptable" data-hub-tab="export-fec"  role="tab" aria-selected="false" onclick="comptableHubSwitchTab('export-fec', this)"  style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">📑</span> FEC + Liasse 2035</button>
+        <button type="button" class="hub-tab"    data-hub="comptable" data-hub-tab="2042"        role="tab" aria-selected="false" onclick="comptableHubSwitchTab('2042', this)"        style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">🧾</span> 2042-C-PRO</button>
+        <button type="button" class="hub-tab"    data-hub="comptable" data-hub-tab="scoring"     role="tab" aria-selected="false" onclick="comptableHubSwitchTab('scoring', this)"     style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">🎯</span> Scoring</button>
+        <button type="button" class="hub-tab"    data-hub="comptable" data-hub-tab="alertes"     role="tab" aria-selected="false" onclick="comptableHubSwitchTab('alertes', this)"     style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">🚨</span> Alertes NGAP</button>
+        <button type="button" class="hub-tab"    data-hub="comptable" data-hub-tab="connecteurs" role="tab" aria-selected="false" onclick="comptableHubSwitchTab('connecteurs', this)" style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">🔌</span> Connecteurs</button>
+        <button type="button" class="hub-tab"    data-hub="comptable" data-hub-tab="anonymisee"  role="tab" aria-selected="false" onclick="comptableHubSwitchTab('anonymisee', this)"  style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">🛡️</span> Vue anonymisée</button>
+        <button type="button" class="hub-tab"    data-hub="comptable" data-hub-tab="trimestriel" role="tab" aria-selected="false" onclick="comptableHubSwitchTab('trimestriel', this)" style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">📅</span> Rapports trimestriels</button>
+      </div>
+
+      <!-- ── Panneaux (un par sous-feature) — remplis par comptable.js ── -->
+      <div class="hub-panel" id="hub-panel-comptable-dashboard"   role="tabpanel"></div>
+      <div class="hub-panel" id="hub-panel-comptable-export-fec"  role="tabpanel" style="display:none"></div>
+      <div class="hub-panel" id="hub-panel-comptable-2042"        role="tabpanel" style="display:none"></div>
+      <div class="hub-panel" id="hub-panel-comptable-scoring"     role="tabpanel" style="display:none"></div>
+      <div class="hub-panel" id="hub-panel-comptable-alertes"     role="tabpanel" style="display:none"></div>
+      <div class="hub-panel" id="hub-panel-comptable-connecteurs" role="tabpanel" style="display:none"></div>
+      <div class="hub-panel" id="hub-panel-comptable-anonymisee"  role="tabpanel" style="display:none"></div>
+      <div class="hub-panel" id="hub-panel-comptable-trimestriel" role="tabpanel" style="display:none"></div>
+    </section>
 
   </main>
 </div>
@@ -4045,6 +4070,23 @@ document.addEventListener('keydown', function(e){
         } catch(e) { console.warn('[hubSwitch outils auto-load]', e.message); }
       }, 50);
     }
+
+    // 🧑‍💼 COMPTABLE — auto-render du sous-onglet (cf. comptable.js Comptable.*)
+    if (hubName === 'comptable') {
+      setTimeout(function() {
+        try {
+          if (!window.Comptable) return;
+          if (tab === 'dashboard'    && typeof Comptable.renderDashboard   === 'function') Comptable.renderDashboard();
+          if (tab === 'export-fec'   && typeof Comptable.renderExportFEC   === 'function') Comptable.renderExportFEC();
+          if (tab === '2042'         && typeof Comptable.render2042        === 'function') Comptable.render2042();
+          if (tab === 'scoring'      && typeof Comptable.renderScoring     === 'function') Comptable.renderScoring();
+          if (tab === 'alertes'      && typeof Comptable.renderAlertes     === 'function') Comptable.renderAlertes();
+          if (tab === 'connecteurs'  && typeof Comptable.renderConnecteurs === 'function') Comptable.renderConnecteurs();
+          if (tab === 'anonymisee'   && typeof Comptable.renderAnonymisee  === 'function') Comptable.renderAnonymisee();
+          if (tab === 'trimestriel'  && typeof Comptable.renderTrimestriel === 'function') Comptable.renderTrimestriel();
+        } catch(e) { console.warn('[hubSwitch comptable auto-load]', e.message); }
+      }, 50);
+    }
   }
 
   /* ── Mapping (hub, onglet) → vue clinique attendue par les modules v2 ─ */
@@ -4068,6 +4110,11 @@ document.addEventListener('keydown', function(e){
   /* ── Hub Outils pratiques ──────────────────────────────────────────── */
   window.outilsHubSwitchTab = function(tab, btn) {
     _hubSwitch('outils', tab, btn);
+  };
+
+  /* ── Hub Expert comptable ──────────────────────────────────────────── */
+  window.comptableHubSwitchTab = function(tab, btn) {
+    _hubSwitch('comptable', tab, btn);
   };
 
   /* ── Restauration de l'onglet actif quand on (re)navigue vers un hub ─ */
@@ -4103,7 +4150,23 @@ document.addEventListener('keydown', function(e){
     // 💎 PREMIUM sub-tabs (intégrés au hub Outils pratiques v3.4)
     'ca-sous-declare'   : ['outils', 'ca-sous-declare'],
     'forensic-cert'     : ['outils', 'forensic-cert'],
-    'rapport-juridique' : ['outils', 'rapport-juridique']
+    'rapport-juridique' : ['outils', 'rapport-juridique'],
+    // 🧑‍💼 COMPTABLE sub-tabs (intégrés au hub Expert comptable v2)
+    'comptable-dashboard'   : ['comptable', 'dashboard'],
+    'comptable-export-fec'  : ['comptable', 'export-fec'],
+    'comptable-2042'        : ['comptable', '2042'],
+    'comptable-scoring'     : ['comptable', 'scoring'],
+    'comptable-alertes'     : ['comptable', 'alertes'],
+    'comptable-connecteurs' : ['comptable', 'connecteurs'],
+    'comptable-anonymisee'  : ['comptable', 'anonymisee'],
+    'comptable-trimestriel' : ['comptable', 'trimestriel']
+  };
+
+  /* ── Mapping hubName → view id de la section principale ────────────── */
+  var HUB_VIEW = {
+    'patients'  : 'patients',
+    'outils'    : 'outils-hub',
+    'comptable' : 'comptable-hub'
   };
 
   /* ── Patch navTo : intercepte les anciens alias et redirige proprement
@@ -4122,10 +4185,14 @@ document.addEventListener('keydown', function(e){
       if (redirect) {
         var hubName = redirect[0];
         var tab     = redirect[1];
-        var hubView = (hubName === 'patients') ? 'patients' : 'outils-hub';
+        var hubView = HUB_VIEW[hubName] || 'outils-hub';
         var hubBtn  = document.querySelector('[data-v="' + hubView + '"]') || btn || null;
         _origNavTo(hubView, hubBtn);
         setTimeout(function() {
+          // Pour comptable : monter le bandeau démo avant le switch
+          if (hubName === 'comptable' && window.Comptable && typeof Comptable.renderDemoBanner === 'function') {
+            try { Comptable.renderDemoBanner(); } catch(_) {}
+          }
           var t = document.querySelector(
             '.hub-tab[data-hub="' + hubName + '"][data-hub-tab="' + tab + '"]');
           _hubSwitch(hubName, tab, t);
@@ -4135,8 +4202,22 @@ document.addEventListener('keydown', function(e){
 
       // Vue normale → appel original puis éventuelle restauration d'onglet
       var ret = _origNavTo(view, btn);
-      if (view === 'patients')   setTimeout(function(){ _restoreHubTab('patients'); }, 80);
-      if (view === 'outils-hub') setTimeout(function(){ _restoreHubTab('outils');   }, 80);
+      if (view === 'patients')      setTimeout(function(){ _restoreHubTab('patients'); }, 80);
+      if (view === 'outils-hub')    setTimeout(function(){ _restoreHubTab('outils');   }, 80);
+      if (view === 'comptable-hub') setTimeout(function(){
+        // Monter le bandeau démo + restaurer l'onglet actif (par défaut : dashboard)
+        if (window.Comptable && typeof Comptable.renderDemoBanner === 'function') {
+          try { Comptable.renderDemoBanner(); } catch(_) {}
+        }
+        _restoreHubTab('comptable');
+        // Si aucun onglet sauvegardé → forcer le rendu initial du dashboard
+        try {
+          var saved = sessionStorage.getItem('ami:hub:comptable');
+          if (!saved && window.Comptable && typeof Comptable.renderDashboard === 'function') {
+            Comptable.renderDashboard();
+          }
+        } catch(_) {}
+      }, 80);
       return ret;
     };
 

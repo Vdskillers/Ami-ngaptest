@@ -68,14 +68,19 @@
     catch (e) { console.warn('[comptable] localStorage unavailable', e); }
   }
 
-  /** Re-rendre la vue comptable courante après changement de mode. */
+  /** Re-rendre le panneau comptable actif après un toggle de mode démo.
+      Utilise sessionStorage pour retrouver l'onglet actif (synchro avec _hubSwitch). */
   function _refreshCurrentView() {
-    const currentEl = document.querySelector('.view.on');
-    if (!currentEl) return;
-    const id = currentEl.id || '';
-    if (!id.startsWith('view-comptable-')) return;
-    const v = id.replace('view-', '');
-    document.dispatchEvent(new CustomEvent('ui:navigate', { detail: { view: v } }));
+    // Sommes-nous bien sur la vue comptable ?
+    const view = document.querySelector('.view.on');
+    if (!view || view.id !== 'view-comptable-hub') return;
+    // Re-mounter le bandeau démo
+    renderDemoBanner();
+    // Re-rendre l'onglet actif
+    let activeTab = 'dashboard';
+    try { activeTab = sessionStorage.getItem('ami:hub:comptable') || 'dashboard'; } catch(_) {}
+    const renderer = _TAB_RENDERERS[activeTab];
+    if (renderer) renderer();
   }
 
   /** Désactive le mode démo (avec confirmation). À appeler quand un vrai
@@ -400,28 +405,49 @@
       `Une invitation sera envoyée à ${email} dès que le backend multi-IDEL sera activé.`);
   }
 
-  function _renderBack() {
-    return `<div class="cpt-back" onclick="navTo('comptable-hub',null)">← Retour à la vue d'ensemble</div>`;
+  /** Mount/refresh du bandeau mode démo dans le hub.
+      Appelé au navTo('comptable-hub') et à chaque toggle du mode démo. */
+  function renderDemoBanner() {
+    const mount = $('comptable-demo-banner-mount');
+    if (!mount) return;
+    mount.innerHTML = _renderDemoBanner();
   }
 
-  async function renderHub() {
+  /** Liste des sous-onglets — utilisée pour le re-rendu par
+      _refreshCurrentView() après un toggle de mode démo. */
+  const _TAB_RENDERERS = {
+    'dashboard'   : () => renderDashboard(),
+    'export-fec'  : () => renderExportFEC(),
+    '2042'        : () => render2042(),
+    'scoring'     : () => renderScoring(),
+    'alertes'     : () => renderAlertes(),
+    'connecteurs' : () => renderConnecteurs(),
+    'anonymisee'  : () => renderAnonymisee(),
+    'trimestriel' : () => renderTrimestriel()
+  };
+
+  /* ═══════════════════════════════════════════════════════════════
+     5. DASHBOARD MULTI-IDEL
+  ═══════════════════════════════════════════════════════════════ */
+
+  async function renderDashboard() {
     if (!_gate('dashboard_consolide')) return;
     _injectStyle();
-    const root = $('view-comptable-hub');
+    const root = $('hub-panel-comptable-dashboard');
     if (!root) return;
 
     const portfolio = await getPortfolio();
 
-    // Empty state si aucune IDEL (mode démo OFF + portefeuille vide)
     if (!portfolio.length) {
       root.innerHTML = `
-        ${_renderDemoBanner()}
-        ${_renderHero('Vue d\'ensemble cabinet', 'Portefeuille vide — aucune IDEL cliente pour le moment')}
         ${_renderEmptyPortfolio()}
       `;
       return;
     }
 
+    portfolio.sort((a,b) => b.kpis.caTotal - a.kpis.caTotal);
+
+    // KPIs portefeuille agrégés
     const totals = portfolio.reduce((acc, i) => {
       acc.ca        += i.kpis.caTotal;
       acc.actes     += i.kpis.nbActes;
@@ -431,67 +457,6 @@
     }, { ca:0, actes:0, benefice:0, anomalies:0 });
     const avgConformite = Math.round(portfolio.reduce((s,i)=>s+i.kpis.conformite,0) / portfolio.length);
     const idelsRisque   = portfolio.filter(i => i.kpis.risqueCpam >= 60).length;
-
-    const cards = [
-      { v:'comptable-dashboard',   ic:'📊', title:'Dashboard multi-IDEL',         sub:'Vue agrégée du portefeuille (jusqu\'à 20 IDEL incluses)' },
-      { v:'comptable-export-fec',  ic:'📑', title:'Export FEC + liasse 2035',     sub:'Fichier des écritures comptables et liasse fiscale BNC' },
-      { v:'comptable-2042',        ic:'🧾', title:'Générateur 2042-C-PRO',        sub:'Pré-remplissage URSSAF · CARPIMKO · DGFiP' },
-      { v:'comptable-scoring',     ic:'🎯', title:'Scoring risque portfolio',     sub:'Notation CPAM/fiscal de chaque cliente' },
-      { v:'comptable-alertes',     ic:'🚨', title:'Alertes NGAP en masse',        sub:'Détection batch d\'anomalies de cotation' },
-      { v:'comptable-connecteurs', ic:'🔌', title:'Connecteurs comptables',       sub:'Cegid · EBP · Quadra · API directe' },
-      { v:'comptable-anonymisee',  ic:'🛡️', title:'Vue anonymisée',               sub:'Pseudo-FEC RGPD (aucune donnée patient)' },
-      { v:'comptable-trimestriel', ic:'📅', title:'Rapports trimestriels',         sub:'Génération automatique par cliente' }
-    ];
-
-    root.innerHTML = `
-      ${_renderDemoBanner()}
-      ${_renderHero('Vue d\'ensemble cabinet', `Portefeuille : ${portfolio.length} IDEL clientes · Suivi consolidé temps réel`)}
-
-      <div class="cpt-kpis">
-        <div class="cpt-kpi"><div class="cpt-kpi-label">CA Cumulé portfolio</div><div class="cpt-kpi-val">${_fmt0(totals.ca)} €</div><div class="cpt-kpi-sub">Sur 12 mois glissants</div></div>
-        <div class="cpt-kpi"><div class="cpt-kpi-label">Actes facturés</div><div class="cpt-kpi-val">${_fmt0(totals.actes)}</div><div class="cpt-kpi-sub">Toutes IDEL confondues</div></div>
-        <div class="cpt-kpi"><div class="cpt-kpi-label">Bénéfice net agrégé</div><div class="cpt-kpi-val">${_fmt0(totals.benefice)} €</div><div class="cpt-kpi-sub">Après cotisations + frais</div></div>
-        <div class="cpt-kpi"><div class="cpt-kpi-label">Conformité moyenne</div><div class="cpt-kpi-val">${avgConformite}/100</div><div class="cpt-bar"><div class="cpt-bar-fill" style="width:${avgConformite}%;background:${avgConformite>=80?'#00d4aa':avgConformite>=60?'#ffb547':'#ff5f6d'}"></div></div></div>
-        <div class="cpt-kpi"><div class="cpt-kpi-label">IDEL à risque</div><div class="cpt-kpi-val" style="color:${idelsRisque>0?'#FF7A85':'#00d4aa'}">${idelsRisque}</div><div class="cpt-kpi-sub">Score CPAM ≥ 60</div></div>
-        <div class="cpt-kpi"><div class="cpt-kpi-label">Anomalies NGAP</div><div class="cpt-kpi-val" style="color:${totals.anomalies>50?'#ff5f6d':'#ffb547'}">${totals.anomalies}</div><div class="cpt-kpi-sub">À traiter ce mois</div></div>
-      </div>
-
-      <div class="cpt-grid">
-        ${cards.map(c => `
-          <div class="cpt-card" onclick="navTo('${c.v}',null)">
-            <div class="cpt-card-arrow">→</div>
-            <div class="cpt-card-ic">${c.ic}</div>
-            <div class="cpt-card-title">${c.title}</div>
-            <div class="cpt-card-sub">${c.sub}</div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     5. DASHBOARD MULTI-IDEL
-  ═══════════════════════════════════════════════════════════════ */
-
-  async function renderDashboard() {
-    if (!_gate('dashboard_consolide')) return;
-    _injectStyle();
-    const root = $('view-comptable-dashboard');
-    if (!root) return;
-
-    const portfolio = await getPortfolio();
-
-    if (!portfolio.length) {
-      root.innerHTML = `
-        ${_renderBack()}
-        ${_renderDemoBanner()}
-        ${_renderHero('Dashboard multi-IDEL', 'Portefeuille vide', '📊')}
-        ${_renderEmptyPortfolio()}
-      `;
-      return;
-    }
-
-    portfolio.sort((a,b) => b.kpis.caTotal - a.kpis.caTotal);
 
     const rows = portfolio.map(i => {
       const conf = i.kpis.conformite;
@@ -511,13 +476,18 @@
     }).join('');
 
     root.innerHTML = `
-      ${_renderBack()}
-      ${_renderDemoBanner()}
-      ${_renderHero('Dashboard multi-IDEL', `Vue agrégée du portefeuille (${portfolio.length} IDEL incluses)`, '📊')}
+      <div class="cpt-kpis">
+        <div class="cpt-kpi"><div class="cpt-kpi-label">CA Cumulé portfolio</div><div class="cpt-kpi-val">${_fmt0(totals.ca)} €</div><div class="cpt-kpi-sub">Sur 12 mois glissants</div></div>
+        <div class="cpt-kpi"><div class="cpt-kpi-label">Actes facturés</div><div class="cpt-kpi-val">${_fmt0(totals.actes)}</div><div class="cpt-kpi-sub">Toutes IDEL confondues</div></div>
+        <div class="cpt-kpi"><div class="cpt-kpi-label">Bénéfice net agrégé</div><div class="cpt-kpi-val">${_fmt0(totals.benefice)} €</div><div class="cpt-kpi-sub">Après cotisations + frais</div></div>
+        <div class="cpt-kpi"><div class="cpt-kpi-label">Conformité moyenne</div><div class="cpt-kpi-val">${avgConformite}/100</div><div class="cpt-bar"><div class="cpt-bar-fill" style="width:${avgConformite}%;background:${avgConformite>=80?'#00d4aa':avgConformite>=60?'#ffb547':'#ff5f6d'}"></div></div></div>
+        <div class="cpt-kpi"><div class="cpt-kpi-label">IDEL à risque</div><div class="cpt-kpi-val" style="color:${idelsRisque>0?'#FF7A85':'#00d4aa'}">${idelsRisque}</div><div class="cpt-kpi-sub">Score CPAM ≥ 60</div></div>
+        <div class="cpt-kpi"><div class="cpt-kpi-label">Anomalies NGAP</div><div class="cpt-kpi-val" style="color:${totals.anomalies>50?'#ff5f6d':'#ffb547'}">${totals.anomalies}</div><div class="cpt-kpi-sub">À traiter ce mois</div></div>
+      </div>
 
       <div class="cpt-table-wrap">
         <div class="cpt-table-head">
-          <div class="cpt-table-title">Portefeuille — tri par CA décroissant</div>
+          <div class="cpt-table-title">Portefeuille — tri par CA décroissant (${portfolio.length} IDEL)</div>
           <div class="cpt-table-actions">
             <button class="btn bs bsm" onclick="Comptable.exportPortfolioCSV()">📥 Export CSV</button>
             <button class="btn bs bsm" onclick="Comptable.renderDashboard()">↻ Actualiser</button>
@@ -561,16 +531,13 @@
   async function renderExportFEC() {
     if (!_gate('export_fiscal')) return;
     _injectStyle();
-    const root = $('view-comptable-export-fec');
+    const root = $('hub-panel-comptable-export-fec');
     if (!root) return;
 
     const portfolio = await getPortfolio();
 
     if (!portfolio.length) {
       root.innerHTML = `
-        ${_renderBack()}
-        ${_renderDemoBanner()}
-        ${_renderHero('Export FEC + liasse fiscale 2035', 'Aucune IDEL à exporter', '📑')}
         ${_renderEmptyPortfolio()}
       `;
       return;
@@ -580,9 +547,6 @@
     const opts = portfolio.map(i => `<option value="${i.id}">${_esc(i.prenom)} ${_esc(i.nom)} — ${_esc(i.ville)}</option>`).join('');
 
     root.innerHTML = `
-      ${_renderBack()}
-      ${_renderDemoBanner()}
-      ${_renderHero('Export FEC + liasse fiscale 2035', 'Fichier des Écritures Comptables (PCG) et liasse BNC règlementaire', '📑')}
 
       <div class="cpt-section">
         <h3 class="cpt-section-title">📑 Export FEC (Fichier des Écritures Comptables)</h3>
@@ -751,16 +715,13 @@ Conserver 6 ans (article L102 B du LPF).
   async function render2042() {
     if (!_gate('generateur_2042')) return;
     _injectStyle();
-    const root = $('view-comptable-2042');
+    const root = $('hub-panel-comptable-2042');
     if (!root) return;
 
     const portfolio = await getPortfolio();
 
     if (!portfolio.length) {
       root.innerHTML = `
-        ${_renderBack()}
-        ${_renderDemoBanner()}
-        ${_renderHero('Générateur 2042-C-PRO · URSSAF · CARPIMKO', 'Aucune IDEL à déclarer', '🧾')}
         ${_renderEmptyPortfolio()}
       `;
       return;
@@ -770,9 +731,6 @@ Conserver 6 ans (article L102 B du LPF).
     const opts = portfolio.map(i => `<option value="${i.id}">${_esc(i.prenom)} ${_esc(i.nom)} — ${_esc(i.ville)}</option>`).join('');
 
     root.innerHTML = `
-      ${_renderBack()}
-      ${_renderDemoBanner()}
-      ${_renderHero('Générateur 2042-C-PRO · URSSAF · CARPIMKO', 'Pré-remplissage des déclarations sociales et fiscales annuelles', '🧾')}
 
       <div class="cpt-section">
         <h3 class="cpt-section-title">⚙️ Paramètres</h3>
@@ -890,16 +848,13 @@ Conserver 6 ans (article L102 B du LPF).
   async function renderScoring() {
     if (!_gate('scoring_risque')) return;
     _injectStyle();
-    const root = $('view-comptable-scoring');
+    const root = $('hub-panel-comptable-scoring');
     if (!root) return;
 
     const portfolio = await getPortfolio();
 
     if (!portfolio.length) {
       root.innerHTML = `
-        ${_renderBack()}
-        ${_renderDemoBanner()}
-        ${_renderHero('Scoring risque portfolio', 'Aucune IDEL à scorer', '🎯')}
         ${_renderEmptyPortfolio()}
       `;
       return;
@@ -939,9 +894,6 @@ Conserver 6 ans (article L102 B du LPF).
     };
 
     root.innerHTML = `
-      ${_renderBack()}
-      ${_renderDemoBanner()}
-      ${_renderHero('Scoring risque portfolio', 'Notation CPAM/fiscal de chaque IDEL sous mandat avec recommandations d\'action', '🎯')}
 
       <div class="cpt-kpis">
         <div class="cpt-kpi"><div class="cpt-kpi-label">🔴 Risque élevé</div><div class="cpt-kpi-val" style="color:#FF7A85">${high.length}</div><div class="cpt-kpi-sub">Score ≥ 60</div></div>
@@ -973,16 +925,13 @@ Conserver 6 ans (article L102 B du LPF).
   async function renderAlertes() {
     if (!_gate('alertes_ngap_masse')) return;
     _injectStyle();
-    const root = $('view-comptable-alertes');
+    const root = $('hub-panel-comptable-alertes');
     if (!root) return;
 
     const portfolio = await getPortfolio();
 
     if (!portfolio.length) {
       root.innerHTML = `
-        ${_renderBack()}
-        ${_renderDemoBanner()}
-        ${_renderHero('Alertes anomalies NGAP en masse', 'Aucune IDEL à analyser', '🚨')}
         ${_renderEmptyPortfolio()}
       `;
       return;
@@ -1021,9 +970,6 @@ Conserver 6 ans (article L102 B du LPF).
     }).join('');
 
     root.innerHTML = `
-      ${_renderBack()}
-      ${_renderDemoBanner()}
-      ${_renderHero('Alertes anomalies NGAP en masse', `Détection batch sur ${portfolio.length} IDEL clientes — analyse temps réel`, '🚨')}
 
       <div class="cpt-kpis">
         <div class="cpt-kpi"><div class="cpt-kpi-label">Total anomalies</div><div class="cpt-kpi-val">${allAnoms.length}</div></div>
@@ -1084,16 +1030,13 @@ Conserver 6 ans (article L102 B du LPF).
   async function renderConnecteurs() {
     if (!_gate('connecteurs_compta')) return;
     _injectStyle();
-    const root = $('view-comptable-connecteurs');
+    const root = $('hub-panel-comptable-connecteurs');
     if (!root) return;
 
     const portfolio = await getPortfolio();
 
     if (!portfolio.length) {
       root.innerHTML = `
-        ${_renderBack()}
-        ${_renderDemoBanner()}
-        ${_renderHero('Connecteurs comptables', 'Aucune IDEL à exporter', '🔌')}
         ${_renderEmptyPortfolio()}
       `;
       return;
@@ -1114,9 +1057,6 @@ Conserver 6 ans (article L102 B du LPF).
     `).join('');
 
     root.innerHTML = `
-      ${_renderBack()}
-      ${_renderDemoBanner()}
-      ${_renderHero('Connecteurs comptables', 'Export direct vers les principaux logiciels comptables du marché', '🔌')}
 
       <div class="cpt-section">
         <h3 class="cpt-section-title">⚙️ Sélection IDEL</h3>
@@ -1197,16 +1137,13 @@ Conserver 6 ans (article L102 B du LPF).
   async function renderAnonymisee() {
     if (!_gate('vue_anonymisee')) return;
     _injectStyle();
-    const root = $('view-comptable-anonymisee');
+    const root = $('hub-panel-comptable-anonymisee');
     if (!root) return;
 
     const portfolio = await getPortfolio();
 
     if (!portfolio.length) {
       root.innerHTML = `
-        ${_renderBack()}
-        ${_renderDemoBanner()}
-        ${_renderHero('Vue anonymisée (pseudo-FEC)', 'Aucune IDEL à anonymiser', '🛡️')}
         ${_renderEmptyPortfolio()}
       `;
       return;
@@ -1235,9 +1172,6 @@ Conserver 6 ans (article L102 B du LPF).
     `).join('');
 
     root.innerHTML = `
-      ${_renderBack()}
-      ${_renderDemoBanner()}
-      ${_renderHero('Vue anonymisée (pseudo-FEC)', 'Mode RGPD strict : aucune donnée nominative, uniquement les flux financiers agrégés', '🛡️')}
 
       <div class="cpt-section" style="background:rgba(0,212,170,.04);border-color:rgba(0,212,170,.25)">
         <h3 class="cpt-section-title">🔒 Garanties RGPD</h3>
@@ -1288,16 +1222,13 @@ Conserver 6 ans (article L102 B du LPF).
   async function renderTrimestriel() {
     if (!_gate('rapport_trimestriel')) return;
     _injectStyle();
-    const root = $('view-comptable-trimestriel');
+    const root = $('hub-panel-comptable-trimestriel');
     if (!root) return;
 
     const portfolio = await getPortfolio();
 
     if (!portfolio.length) {
       root.innerHTML = `
-        ${_renderBack()}
-        ${_renderDemoBanner()}
-        ${_renderHero('Rapports trimestriels automatiques', 'Aucune IDEL pour générer des rapports', '📅')}
         ${_renderEmptyPortfolio()}
       `;
       return;
@@ -1308,9 +1239,6 @@ Conserver 6 ans (article L102 B du LPF).
     const opts = portfolio.map(i => `<option value="${i.id}">${_esc(i.prenom)} ${_esc(i.nom)}</option>`).join('');
 
     root.innerHTML = `
-      ${_renderBack()}
-      ${_renderDemoBanner()}
-      ${_renderHero('Rapports trimestriels automatiques', 'Génération automatique des rapports trimestriels pour chaque IDEL cliente', '📅')}
 
       <div class="cpt-section">
         <h3 class="cpt-section-title">⚙️ Paramètres</h3>
@@ -1454,21 +1382,23 @@ Document à conserver 6 ans (article L102 B du LPF).
 
   /* ═══════════════════════════════════════════════════════════════
      13. HOOK NAVIGATION + EXPORT API
+     ────────────────────────────────────────────────────────────────
+     Le hub à onglets est géré par `comptableHubSwitchTab(tab, btn)` côté
+     index.html (script HUBS À ONGLETS), qui appelle directement les
+     `Comptable.render*()` de chaque sous-onglet. Le seul travail du
+     listener ici : injecter le style + monter le bandeau démo quand
+     l'utilisateur entre dans la vue comptable. Les sous-onglets dépréciés
+     (anciens data-v 'comptable-X') sont redirigés via HUB_REDIRECTS.
   ═══════════════════════════════════════════════════════════════ */
 
   document.addEventListener('ui:navigate', e => {
     const v = e.detail?.view;
-    switch (v) {
-      case 'comptable-hub':         renderHub(); break;
-      case 'comptable-dashboard':   renderDashboard(); break;
-      case 'comptable-export-fec':  renderExportFEC(); break;
-      case 'comptable-2042':        render2042(); break;
-      case 'comptable-scoring':     renderScoring(); break;
-      case 'comptable-alertes':     renderAlertes(); break;
-      case 'comptable-connecteurs': renderConnecteurs(); break;
-      case 'comptable-anonymisee':  renderAnonymisee(); break;
-      case 'comptable-trimestriel': renderTrimestriel(); break;
-    }
+    if (v !== 'comptable-hub') return;
+    if (!_gate('dashboard_consolide')) return;
+    _injectStyle();
+    renderDemoBanner();
+    // Le rendu de l'onglet actif est déclenché par _hubSwitch via auto-load
+    // (cf. script HUBS À ONGLETS dans index.html, branche `if (hubName === 'comptable')`).
   });
 
   /* Export public API */
@@ -1478,8 +1408,10 @@ Document à conserver 6 ans (article L102 B du LPF).
     isDemoMode: _isDemoMode,
     enableDemoMode, disableDemoMode,
     inviteIdel,
-    // Vues
-    renderHub, renderDashboard, renderExportFEC, render2042,
+    // Bandeau démo (mount sur #comptable-demo-banner-mount)
+    renderDemoBanner,
+    // Vues (panneaux du hub)
+    renderDashboard, renderExportFEC, render2042,
     renderScoring, renderAlertes, renderConnecteurs,
     renderAnonymisee, renderTrimestriel,
     // Helpers exposés pour onclick inline
