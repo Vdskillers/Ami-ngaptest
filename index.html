@@ -689,6 +689,11 @@
       <div class="slbl">Cabinet</div>
       <div class="ni nurse-only" id="nav-cabinet-item" data-v="cabinet"><span class="nic">🏥</span> Cabinet &amp; synchronisation <span id="cabinet-nav-badge" style="display:none;background:rgba(0,212,170,.2);color:var(--a);border-radius:20px;font-size:9px;padding:1px 7px;margin-left:4px;font-family:var(--fm)">0</span></div>
           </div>
+    <!-- 🧑‍💼 EXPERT COMPTABLE — gated COMPTABLE (lock auto via subscription.js applyUILocks) -->
+    <div class="sl" style="margin-top:8px">
+      <div class="slbl">Expert comptable</div>
+      <div class="ni" data-v="comptable-hub"><span class="nic">🧑‍💼</span> Expert comptable</div>
+    </div>
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Système</div>
       <div class="ni nurse-only" data-v="ngap-ref"><span class="nic">📚</span> Référentiel NGAP</div>
@@ -728,6 +733,7 @@
       <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="sig" onclick="navTo('sig',this);toggleMobileMenu()"><span class="bn-ic">✍️</span>Signatures</button>
       <button class="bn-item" style="background:rgba(0,212,170,.05);border:1px solid rgba(0,212,170,.2);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="outils-hub" onclick="navTo('outils-hub',this);toggleMobileMenu()"><span class="bn-ic">🛠️</span>Outils</button>
       <button class="bn-item nurse-only" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="cabinet" onclick="navTo('cabinet',this);toggleMobileMenu()"><span class="bn-ic">🏥</span>Cabinet</button>
+      <button class="bn-item" style="background:rgba(255,95,109,.05);border:1px solid rgba(255,95,109,.2);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="comptable-hub" onclick="navTo('comptable-hub',this);toggleMobileMenu()"><span class="bn-ic">🧑‍💼</span>Comptable</button>
       <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="ngap-ref" onclick="navTo('ngap-ref',this);toggleMobileMenu()"><span class="bn-ic">📚</span>Référentiel</button>
       <button class="bn-item nurse-only" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="contact" onclick="navTo('contact',this);toggleMobileMenu()"><span class="bn-ic">💬</span>Contact</button>
       <button class="bn-item" style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 4px;height:auto;flex:none" data-v="aide" onclick="navTo('aide',this);toggleMobileMenu()"><span class="bn-ic">📖</span>Aide</button>
@@ -2891,6 +2897,22 @@
     ══════════════════════════════════════════ -->
     <section class="view" id="view-mon-abo"></section>
 
+    <!-- ══════════════════════════════════════════
+         🧑‍💼 EXPERT COMPTABLE — 1 hub + 8 sous-vues
+         Gated COMPTABLE via subscription.js (mapping NAV_FEATURE_MAP).
+         Contenu rendu dynamiquement par comptable.js (renderHub, renderDashboard, etc.)
+         déclenchés via l'event ui:navigate émis par navTo().
+    ══════════════════════════════════════════ -->
+    <section class="view" id="view-comptable-hub"></section>
+    <section class="view" id="view-comptable-dashboard"></section>
+    <section class="view" id="view-comptable-export-fec"></section>
+    <section class="view" id="view-comptable-2042"></section>
+    <section class="view" id="view-comptable-scoring"></section>
+    <section class="view" id="view-comptable-alertes"></section>
+    <section class="view" id="view-comptable-connecteurs"></section>
+    <section class="view" id="view-comptable-anonymisee"></section>
+    <section class="view" id="view-comptable-trimestriel"></section>
+
   </main>
 </div>
 
@@ -2986,6 +3008,7 @@
 <script src="js/ca-sous-declare.js?v=1.1"></script><!-- 💸 v1.1 : sous-onglet hub Outils + retrait suffixe PREMIUM -->
 <script src="js/forensic-cert.js?v=1.4"></script><!-- 🛡️ v1.4 : CSS injecté + délégation event handlers + PDF download fallback -->
 <script src="js/rapport-juridique.js?v=1.4"></script><!-- ⚖️ v1.4 : CSS injecté (KPI cards + table + reco classifiées) + délégation event + PDF fallback -->
+<script src="js/comptable.js?v=1.0"></script><!-- 🧑‍💼 AMI Comptable — 8 features expert-comptable santé (dashboard multi-IDEL, FEC, 2035, 2042, scoring, alertes, connecteurs, pseudo-FEC, rapports trimestriels) — gated COMPTABLE -->
 
 <!-- 🚀 NGAP Update Manager — gestionnaire unifié de mise à jour (Avenant 11 embarqué) -->
 <!-- Doit être chargé AVANT le fetch du référentiel pour que le bootstrap IDB ait priorité -->
