@@ -467,15 +467,37 @@ window.SUB = (function(){
   /* ───── 8. ADMIN SIM (admin uniquement) ──────────────────────────── */
 
   function setAdminSim(tier) {
-    if (_role !== 'admin') return false;
+    // 🛡️ Auto-récupération du rôle depuis window.S si _role pas encore défini
+    if (!_role && window.S && window.S.role) {
+      _role = window.S.role;
+      _userId = window.S.user?.id || null;
+    }
+    if (_role !== 'admin') {
+      console.warn('[SUB] setAdminSim refusé — _role n\'est pas admin (actuel: %s)', _role);
+      return false;
+    }
     if (tier && !TIERS[tier] && tier !== 'LOCKED') return false;
+    // 🛡️ Si _state est null (pas encore bootstrapé), créer un state minimal
+    if (!_state) {
+      _state = {
+        appMode:'TEST', tier:'ADMIN', isTrial:false, isAdmin:true,
+        simTier:null, isAdminSim:false, previewTier:null, isPreview:false,
+        cabinetMember:false, cabinetSize:0, cabinetRole:null,
+        premiumAddon:false, premiumAddonUntil:null, _fallback:true
+      };
+    }
     _state.simTier = tier || null;
     _state.isAdminSim = !!tier;
     if (tier) sessionStorage.setItem(STORAGE_ADMIN_SIM, tier);
     else sessionStorage.removeItem(STORAGE_ADMIN_SIM);
     _applyTrialBanner();
     applyUILocks();
-    if (document.getElementById('view-mon-abo')?.classList.contains('on')) renderAbonnementPage();
+    // Re-render de la page abonnement si elle est ouverte (visible)
+    const aboView = document.getElementById('view-mon-abo');
+    if (aboView && (aboView.classList.contains('on') || aboView.offsetParent !== null)) {
+      renderAbonnementPage();
+    }
+    console.info('[SUB] setAdminSim(%s) — sim active: %s', tier, _state.isAdminSim);
     return true;
   }
   function clearAdminSim() { return setAdminSim(null); }
@@ -486,16 +508,32 @@ window.SUB = (function(){
      les vraies permissions sur les opérations privilégiées. */
 
   function previewTier(tier) {
+    // 🛡️ Auto-récupération du rôle depuis window.S si _role pas encore défini
+    if (!_role && window.S && window.S.role) {
+      _role = window.S.role;
+      _userId = window.S.user?.id || null;
+    }
     if (_role === 'admin') return setAdminSim(tier);   // admin → utilise sim
-    if (!_state) return false;
     if (tier && !TIERS[tier] && tier !== 'LOCKED') return false;
+    // 🛡️ Si _state est null, créer un state minimal
+    if (!_state) {
+      _state = {
+        appMode:'TEST', tier:'TEST', isTrial:false, isAdmin:false,
+        simTier:null, isAdminSim:false, previewTier:null, isPreview:false,
+        cabinetMember:false, cabinetSize:0, cabinetRole:null,
+        premiumAddon:false, premiumAddonUntil:null, _fallback:true
+      };
+    }
     _state.previewTier = tier || null;
     _state.isPreview = !!tier;
     if (tier) sessionStorage.setItem(STORAGE_PREVIEW, tier);
     else sessionStorage.removeItem(STORAGE_PREVIEW);
     _applyPreviewBanner();
     applyUILocks();
-    if (document.getElementById('view-mon-abo')?.classList.contains('on')) renderAbonnementPage();
+    const aboView = document.getElementById('view-mon-abo');
+    if (aboView && (aboView.classList.contains('on') || aboView.offsetParent !== null)) {
+      renderAbonnementPage();
+    }
     return true;
   }
   function clearPreview() { return previewTier(null); }
@@ -709,6 +747,21 @@ window.SUB = (function(){
       console.warn('[SUB] view-mon-abo introuvable — ajouter <section id="view-mon-abo" class="view"></section> dans index.html');
       return;
     }
+
+    // 🚀 Si pas encore bootstrapé et que la session est disponible, déclencher le bootstrap
+    //    (renderAbonnementPage sera ré-appelée à la fin du bootstrap automatiquement)
+    if (!_state && window.S && window.S.user && window.S.user.id && window.S.role) {
+      console.info('[SUB] renderAbonnementPage → bootstrap manquant, déclenchement auto');
+      bootstrap(window.S.user.id, window.S.role).catch(()=>{});
+    }
+
+    // 🛡️ Fallback admin : si _role n'est pas encore défini mais window.S.role === 'admin',
+    //    on traite comme admin pour l'affichage (les boutons feront le bootstrap au besoin)
+    if (!_role && window.S && window.S.role) {
+      _role = window.S.role;
+      _userId = window.S.user?.id || null;
+    }
+
     const st = getState();
 
     // ─── 1. Bandeau Mode test actif ───
@@ -1128,7 +1181,42 @@ window.SUB = (function(){
   } else {
     _injectStyles();
   }
-  console.info('[SUB] subscription.js v3.1 chargé — CSS injecté, en attente de bootstrap()');
+
+  /* ───── 🚀 AUTO-BOOTSTRAP ────────────────────────────────────────────
+     Personne n'appelle SUB.bootstrap() explicitement dans le projet.
+     On détecte automatiquement quand window.S (session globale) est
+     disponible et on lance le bootstrap. Polling court avec timeout
+     pour ne pas bloquer indéfiniment. */
+  function _autoBootstrap() {
+    if (_state || _userId) return; // déjà bootstrapé
+    const S = window.S;
+    if (S && S.user && S.user.id && S.role) {
+      console.info('[SUB] auto-bootstrap déclenché : user=%s role=%s', S.user.id, S.role);
+      bootstrap(S.user.id, S.role).catch(e => console.warn('[SUB] auto-bootstrap KO:', e.message));
+      return true;
+    }
+    return false;
+  }
+
+  function _waitForSession(maxAttempts = 60) {
+    let attempts = 0;
+    const tick = () => {
+      if (_autoBootstrap()) return;
+      if (++attempts >= maxAttempts) {
+        console.warn('[SUB] auto-bootstrap : window.S indisponible après %d tentatives — bootstrap manuel requis', maxAttempts);
+        return;
+      }
+      setTimeout(tick, 200);
+    };
+    tick();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => _waitForSession());
+  } else {
+    _waitForSession();
+  }
+  console.info('[SUB] subscription.js v3.2 chargé — CSS injecté, auto-bootstrap en attente de window.S');
 
   /* ───── 16. NOTIFICATIONS J-7 (expiration) ───────────────────────── */
 
