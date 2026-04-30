@@ -206,13 +206,15 @@
     // 🔒 Gating — redirige vers paywall si non-PREMIUM
     if (typeof SUB !== 'undefined' && !SUB.requireAccess('ca_sous_declare')) return;
 
-    const root = document.getElementById('view-ca-sous-declare');
+    // Cible : conteneur dans le hub Outils pratiques (préféré) ou ancienne section view
+    const root = document.getElementById('hub-host-ca-sous-declare')
+              || document.getElementById('view-ca-sous-declare');
     if (!root) return;
 
     root.innerHTML = `
       <div class="card">
         <div class="cardh">
-          <h2>💸 Détection CA sous-déclaré <span class="sub-feat-pill">PREMIUM</span></h2>
+          <h2>💸 Détection CA sous-déclaré</h2>
           <p class="sub">Croisement tournées · cotations · carnet patients sur 90 jours.</p>
         </div>
         <div id="sdc-loading" class="ai in">⏳ Analyse en cours…</div>
@@ -271,6 +273,10 @@
   /* ───── Hook navigation ────────────────────────────────── */
   document.addEventListener('ui:navigate', e => {
     if (e.detail?.view === 'ca-sous-declare') render();
+  });
+  // Hook hub-tab : déclenche le render quand on clique sur le sous-onglet du hub Outils
+  document.addEventListener('ami:hub-tab', e => {
+    if (e.detail?.hub === 'outils' && e.detail?.tab === 'ca-sous-declare') render();
   });
 
   /* Export */

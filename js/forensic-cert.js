@@ -212,7 +212,9 @@
     // 🔒 Gating
     if (typeof SUB !== 'undefined' && !SUB.requireAccess('forensic_certificates')) return;
 
-    const root = document.getElementById('view-forensic-cert');
+    // Cible : hub Outils pratiques (préféré) ou ancienne section view
+    const root = document.getElementById('hub-host-forensic-cert')
+              || document.getElementById('view-forensic-cert');
     if (!root) return;
 
     const all = await _getAll();
@@ -221,7 +223,7 @@
     root.innerHTML = `
       <div class="card">
         <div class="cardh">
-          <h2>🛡️ Certificats forensiques <span class="sub-feat-pill">PREMIUM</span></h2>
+          <h2>🛡️ Certificats forensiques</h2>
           <p class="sub">Chaîne de preuve cryptographique · ${all.length} certificat${all.length>1?'s':''} émis</p>
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn bs bsm" id="fc-backfill" style="font-size:12px">
@@ -474,6 +476,10 @@
   /* ───── Hook navigation ────────────────────────────────── */
   document.addEventListener('ui:navigate', e => {
     if (e.detail?.view === 'forensic-cert') renderList();
+  });
+  // Hook hub-tab : déclenche le render quand on clique sur le sous-onglet du hub Outils
+  document.addEventListener('ami:hub-tab', e => {
+    if (e.detail?.hub === 'outils' && e.detail?.tab === 'forensic-cert') renderList();
   });
 
   /* Export */

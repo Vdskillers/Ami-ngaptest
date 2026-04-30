@@ -684,9 +684,6 @@
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Outils pratiques</div>
       <div class="ni" data-v="outils-hub"><span class="nic">🛠️</span> Outils pratiques <span class="ni-alert-badge red" id="nav-outils-badge" style="display:none"></span></div>
-      <div class="ni nurse-only" data-v="ca-sous-declare"><span class="nic">💸</span> Détection CA sous-déclaré 💎</div>
-      <div class="ni nurse-only" data-v="forensic-cert"><span class="nic">🛡️</span> Certificats forensiques 💎</div>
-      <div class="ni nurse-only" data-v="rapport-juridique"><span class="nic">⚖️</span> Rapport juridique mensuel 💎</div>
     </div>
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Cabinet</div>
@@ -1936,6 +1933,9 @@
         <button type="button" class="hub-tab" data-hub="outils" data-hub-tab="audit" role="tab" aria-selected="false" onclick="outilsHubSwitchTab('audit', this)" style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">🔍</span> Audit CPAM</button>
         <button type="button" class="hub-tab" data-hub="outils" data-hub-tab="charges" role="tab" aria-selected="false" onclick="outilsHubSwitchTab('charges', this)" style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">💰</span> Charges</button>
         <button type="button" class="hub-tab" data-hub="outils" data-hub-tab="modeles" role="tab" aria-selected="false" onclick="outilsHubSwitchTab('modeles', this)" style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">📝</span> Modèles</button>
+        <button type="button" class="hub-tab" data-hub="outils" data-hub-tab="ca-sous-declare" role="tab" aria-selected="false" onclick="outilsHubSwitchTab('ca-sous-declare', this)" style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">💸</span> Détection CA sous-déclaré 💎</button>
+        <button type="button" class="hub-tab" data-hub="outils" data-hub-tab="forensic-cert" role="tab" aria-selected="false" onclick="outilsHubSwitchTab('forensic-cert', this)" style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">🛡️</span> Certificats forensiques 💎</button>
+        <button type="button" class="hub-tab" data-hub="outils" data-hub-tab="rapport-juridique" role="tab" aria-selected="false" onclick="outilsHubSwitchTab('rapport-juridique', this)" style="background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;font-family:var(--ff);transition:all .15s;white-space:nowrap"><span style="font-size:14px">⚖️</span> Rapport juridique mensuel 💎</button>
       </div>
       <div class="hub-panel" id="hub-panel-outils-dash" role="tabpanel">
 
@@ -2379,6 +2379,19 @@
         <button class="btn bp" onclick="sauvegarderModele()"><span>💾</span> Sauvegarder le modèle</button>
       </div>
     
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           💎 PREMIUM Sub-tabs (intégrés dans le hub Outils pratiques)
+      ════════════════════════════════════════════ -->
+      <div class="hub-panel" id="hub-panel-outils-ca-sous-declare" role="tabpanel" style="display:none">
+        <div id="hub-host-ca-sous-declare"></div>
+      </div>
+      <div class="hub-panel" id="hub-panel-outils-forensic-cert" role="tabpanel" style="display:none">
+        <div id="hub-host-forensic-cert"></div>
+      </div>
+      <div class="hub-panel" id="hub-panel-outils-rapport-juridique" role="tabpanel" style="display:none">
+        <div id="hub-host-rapport-juridique"></div>
       </div>
     </section>
 
@@ -2873,13 +2886,6 @@
     ══════════════════════════════════════════ -->
 
     <!-- ══════════════════════════════════════════
-         💎 PREMIUM — Add-on Detection / Forensique / Rapport juridique
-    ══════════════════════════════════════════ -->
-    <section class="view" id="view-ca-sous-declare"></section>
-    <section class="view" id="view-forensic-cert"></section>
-    <section class="view" id="view-rapport-juridique"></section>
-
-    <!-- ══════════════════════════════════════════
          💎 ABONNEMENT — refonte v3 (subscription.js renderAbonnementPage)
          Le contenu est rempli dynamiquement au premier navTo('mon-abo')
     ══════════════════════════════════════════ -->
@@ -2903,7 +2909,7 @@
 <script src="js/offline-auth.js?v=1.0"></script><!-- Login hors-ligne par PIN (doit être AVANT auth.js) -->
 <script src="js/auth.js?v=3.8"></script>
 <script src="js/subscription.js?v=3.4"></script><!-- 💎 Système abonnement v3.4 (icônes 💎 features Premium + intelligence_terrain feature + nav items Premium) -->
-<script src="js/cabinet.js?v=3.9"></script><!-- Mode cabinet multi-IDE + sync sélective + 🛡️ consentements partagés -->
+<script src="js/cabinet.js?v=4.0"></script><!-- v4.0 : rôle Manager + gating onglets dashboard/conformité + démo manager admin -->
 <script src="js/security.js?v=3.8"></script><!-- RGPD + AES + PIN + Consentement -->
 <script src="js/admin.js?v=3.8"></script>
 <script src="js/admin-subscription-ui.js?v=1.0"></script><!-- 💎 Override admin Comptes (pill abonnement + bouton bascule TEST↔PAYANT + modale gestion tier) -->
@@ -2977,9 +2983,9 @@
 <!-- ════════════════════════════════════
      💎 Modules Premium add-on (gated par SUB.requireAccess)
 ════════════════════════════════════ -->
-<script src="js/ca-sous-declare.js?v=1.0"></script><!-- 💸 Détection CA sous-déclaré (PREMIUM) -->
-<script src="js/forensic-cert.js?v=1.1"></script><!-- 🛡️ v1.1 : event ami:preuve_updated + backfill signatures existantes -->
-<script src="js/rapport-juridique.js?v=1.1"></script><!-- ⚖️ v1.1 : lecture directe IDB ami_signatures (au lieu de loadSignatureList UI-only) -->
+<script src="js/ca-sous-declare.js?v=1.1"></script><!-- 💸 v1.1 : sous-onglet hub Outils + retrait suffixe PREMIUM -->
+<script src="js/forensic-cert.js?v=1.2"></script><!-- 🛡️ v1.2 : sous-onglet hub Outils + retrait suffixe PREMIUM -->
+<script src="js/rapport-juridique.js?v=1.2"></script><!-- ⚖️ v1.2 : sous-onglet hub Outils + retrait suffixe PREMIUM -->
 
 <!-- 🚀 NGAP Update Manager — gestionnaire unifié de mise à jour (Avenant 11 embarqué) -->
 <!-- Doit être chargé AVANT le fetch du référentiel pour que le bootstrap IDB ait priorité -->
@@ -4003,6 +4009,16 @@ document.addEventListener('keydown', function(e){
           if (tab === 'modeles' && typeof window.loadModeles === 'function') {
             window.loadModeles();
           }
+          // 💎 PREMIUM sub-tabs — auto-render quand on entre dans l'onglet
+          if (tab === 'ca-sous-declare' && window.CASousDeclare && typeof window.CASousDeclare.render === 'function') {
+            window.CASousDeclare.render();
+          }
+          if (tab === 'forensic-cert' && window.ForensicCert && typeof window.ForensicCert.renderList === 'function') {
+            window.ForensicCert.renderList();
+          }
+          if (tab === 'rapport-juridique' && window.RapportJuridique && typeof window.RapportJuridique.render === 'function') {
+            window.RapportJuridique.render();
+          }
         } catch(e) { console.warn('[hubSwitch outils auto-load]', e.message); }
       }, 50);
     }
@@ -4060,7 +4076,11 @@ document.addEventListener('keydown', function(e){
     'compte-rendu'   : ['patients', 'cr'],
     'audit-cpam'     : ['outils', 'audit'],
     'outils-charges' : ['outils', 'charges'],
-    'outils-modeles' : ['outils', 'modeles']
+    'outils-modeles' : ['outils', 'modeles'],
+    // 💎 PREMIUM sub-tabs (intégrés au hub Outils pratiques v3.4)
+    'ca-sous-declare'   : ['outils', 'ca-sous-declare'],
+    'forensic-cert'     : ['outils', 'forensic-cert'],
+    'rapport-juridique' : ['outils', 'rapport-juridique']
   };
 
   /* ── Patch navTo : intercepte les anciens alias et redirige proprement

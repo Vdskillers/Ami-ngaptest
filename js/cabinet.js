@@ -237,6 +237,10 @@ async function renderCabinetSection() {
       window.cabSwitchTab(activeTab, document.querySelector(`.cab-tab[data-cab-tab="${activeTab}"]`));
     }
   } catch (e) { console.warn('[cabSwitchTab refresh]', e.message); }
+
+  /* 🔒 Appliquer la visibilité des onglets selon le rôle (manager/titulaire vs membre) */
+  try { if (typeof window.cabApplyRoleVisibility === 'function') window.cabApplyRoleVisibility(); }
+  catch (e) { console.warn('[cabApplyRoleVisibility]', e.message); }
 }
 
 /* ════════════════════════════════════════════════
@@ -252,8 +256,149 @@ async function renderCabinetSection() {
    la demande au moment du clic sur l'onglet, pour ne pas alourdir la vue
    par défaut.
 ═══════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════
+   🔒 GATING CABINET — Manager / Titulaire / Membre
+   ────────────────────────────────────────────────
+   Rôles cabinet :
+     • titulaire : créateur du cabinet, accès total
+     • manager   : promu par le titulaire, accès au dashboard + conformité
+     • membre    : accès uniquement à sync + transmissions
+
+   Override admin (pour démos) :
+     sessionStorage['ami:cabinet:demo_manager'] = '1' → l'admin est traité
+     comme manager même s'il n'est pas dans le cabinet.
+════════════════════════════════════════════════ */
+
+/** Renvoie le rôle effectif de l'utilisateur courant dans le cabinet courant.
+ *  Retours possibles : 'titulaire' | 'manager' | 'membre' | null
+ *  Pour les admins en mode démo, renvoie 'manager' si le toggle est actif. */
+window.cabGetMyRole = function() {
+  try {
+    // 1. Mode démo admin : override session
+    const isAdmin = (typeof S !== 'undefined' && S?.role === 'admin');
+    if (isAdmin && sessionStorage.getItem('ami:cabinet:demo_manager') === '1') {
+      return 'manager';
+    }
+    // 2. Rôle réel depuis APP.cabinet
+    const cab = (typeof APP !== 'undefined') ? APP.cabinet : null;
+    if (!cab) return null;
+    if (cab.my_role === 'titulaire') return 'titulaire';
+    // Lecture depuis members[]
+    const myId = (typeof S !== 'undefined' && S?.user?.id) || cab.my_id || null;
+    if (myId && Array.isArray(cab.members)) {
+      const me = cab.members.find(m => String(m.id) === String(myId));
+      if (me) return me.role || 'membre';
+    }
+    return cab.my_role || 'membre';
+  } catch (_) { return null; }
+};
+
+/** True si l'utilisateur peut voir les onglets cabinet privilégiés (dashboard, conformité). */
+window.cabIsManager = function() {
+  const r = window.cabGetMyRole();
+  return r === 'titulaire' || r === 'manager';
+};
+
+/** Affiche / cache les onglets dashboard + conformité selon le rôle.
+ *  Appelée à chaque rendu de la vue cabinet et après changement de rôle. */
+window.cabApplyRoleVisibility = function() {
+  const isManager = window.cabIsManager();
+  document.querySelectorAll('.cab-tab[data-cab-tab="dashboard"], .cab-tab[data-cab-tab="conformite"]').forEach(btn => {
+    btn.style.display = isManager ? '' : 'none';
+  });
+  // Si l'utilisateur n'est pas manager et qu'il est sur un onglet caché, le rediriger sur sync
+  const activeTab = document.querySelector('.cab-tab.on');
+  if (!isManager && activeTab) {
+    const t = activeTab.getAttribute('data-cab-tab');
+    if (t === 'dashboard' || t === 'conformite') {
+      const syncBtn = document.querySelector('.cab-tab[data-cab-tab="sync"]');
+      if (syncBtn && typeof window.cabSwitchTab === 'function') window.cabSwitchTab('sync', syncBtn);
+    }
+  }
+};
+
+/** Toggle démo admin — seul un admin peut activer ce mode. */
+window.cabToggleDemoManager = function(force) {
+  const isAdmin = (typeof S !== 'undefined' && S?.role === 'admin');
+  if (!isAdmin) {
+    if (typeof showToast === 'function') showToast('❌ Réservé aux admins', 'e');
+    return false;
+  }
+  const current = sessionStorage.getItem('ami:cabinet:demo_manager') === '1';
+  const next = (typeof force === 'boolean') ? force : !current;
+  if (next) sessionStorage.setItem('ami:cabinet:demo_manager', '1');
+  else      sessionStorage.removeItem('ami:cabinet:demo_manager');
+  window.cabApplyRoleVisibility();
+  if (typeof showToast === 'function') {
+    showToast(next ? '✅ Mode démo manager activé' : '↩️ Mode démo manager désactivé', 's');
+  }
+  // Re-render la section cabinet si elle est ouverte
+  if (typeof window.renderCabinetSection === 'function') {
+    setTimeout(() => window.renderCabinetSection(), 100);
+  }
+  return next;
+};
+
+/** Promotion d'un membre en manager (réservé titulaire).
+ *  Stockage local (membre.role = 'manager') + best-effort backend. */
+window.cabPromoteToManager = async function(memberId) {
+  const myRole = window.cabGetMyRole();
+  if (myRole !== 'titulaire' && !(typeof S !== 'undefined' && S?.role === 'admin')) {
+    if (typeof showToast === 'function') showToast('❌ Réservé au titulaire du cabinet', 'e');
+    return false;
+  }
+  const cab = APP?.cabinet;
+  if (!cab || !Array.isArray(cab.members)) return false;
+  const m = cab.members.find(x => String(x.id) === String(memberId));
+  if (!m) return false;
+  if (m.role === 'titulaire') {
+    if (typeof showToast === 'function') showToast('⚠️ Le titulaire est déjà manager par défaut', 'w');
+    return false;
+  }
+  m.role = (m.role === 'manager') ? 'membre' : 'manager';
+  // Best-effort backend (l'endpoint peut ne pas exister, on dégrade silencieusement)
+  try {
+    if (typeof apiCall === 'function') {
+      await apiCall('/webhook/cabinet-set-role', {
+        method:'POST',
+        body: JSON.stringify({ cabinet_id: cab.id, member_id: memberId, role: m.role })
+      });
+    }
+  } catch (_) {}
+  if (typeof showToast === 'function') {
+    showToast(m.role === 'manager'
+      ? `✅ ${m.prenom||''} ${m.nom||''} est maintenant manager`
+      : `↩️ ${m.prenom||''} ${m.nom||''} repassé en membre`, 's');
+  }
+  if (typeof window.renderCabinetSection === 'function') window.renderCabinetSection();
+  return true;
+};
+
+/** Helper d'affichage du rôle d'un membre (icône + label). */
+function _cabRoleLabel(role) {
+  if (role === 'titulaire') return '👑 Titulaire';
+  if (role === 'manager')   return '⭐ Manager';
+  return '👤 Membre';
+}
+function _cabRoleIcon(role) {
+  if (role === 'titulaire') return '👑';
+  if (role === 'manager')   return '⭐';
+  return '👤';
+}
+window._cabRoleLabel = _cabRoleLabel;
+window._cabRoleIcon  = _cabRoleIcon;
+
 window.cabSwitchTab = function (tab, btn) {
   if (!tab) tab = 'sync';
+
+  // 🔒 Gating : empêcher l'accès aux onglets privilégiés
+  if ((tab === 'dashboard' || tab === 'conformite') && !window.cabIsManager()) {
+    if (typeof showToast === 'function') {
+      showToast('🔒 Réservé aux managers du cabinet', 'w');
+    }
+    tab = 'sync';
+    btn = document.querySelector('.cab-tab[data-cab-tab="sync"]');
+  }
 
   // 1) Mise à jour visuelle des onglets (active = couleur accent + bordure basse)
   const tabs = document.querySelectorAll('.cab-tab[data-cab-tab]');
@@ -271,6 +416,9 @@ window.cabSwitchTab = function (tab, btn) {
     const isActive = p.id === 'cab-panel-' + tab;
     p.style.display = isActive ? '' : 'none';
   });
+
+  // 2bis) Refresh visibilité (au cas où le rôle aurait changé entre 2 clics)
+  window.cabApplyRoleVisibility();
 
   // 3) Rendu différé selon l'onglet
   switch (tab) {
@@ -412,15 +560,22 @@ function _renderCabinetDashboard(root, d) {
   const membersHTML = members.map(m => {
     const isMe = m.id === APP.user?.id;
     const syncWith = prefs.with[m.id] !== false; // true par défaut pour les membres
+    // Bouton "Promouvoir manager" — visible uniquement pour le titulaire et sur les autres membres non-titulaires
+    const canPromote = (myRole === 'titulaire') && !isMe && (m.role !== 'titulaire');
+    const promoteLabel = (m.role === 'manager') ? '↩️ Retirer manager' : '⭐ Manager';
+    const promoteBtn = canPromote
+      ? `<button class="btn bs bsm" onclick="cabPromoteToManager('${m.id}')" style="font-size:11px;flex-shrink:0">${promoteLabel}</button>`
+      : '';
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--b)">
         <div style="width:36px;height:36px;border-radius:50%;background:rgba(0,212,170,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">
-          ${m.role === 'titulaire' ? '👑' : '👤'}
+          ${_cabRoleIcon(m.role)}
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:14px">${m.prenom} ${m.nom} ${isMe ? '<span style="font-size:10px;color:var(--a);font-family:var(--fm)">(moi)</span>' : ''}</div>
-          <div style="font-size:11px;color:var(--m);font-family:var(--fm)">${m.role === 'titulaire' ? '👑 Titulaire' : '👤 Membre'}</div>
+          <div style="font-size:11px;color:var(--m);font-family:var(--fm)">${_cabRoleLabel(m.role)}</div>
         </div>
+        ${promoteBtn}
         ${!isMe ? `
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--m);cursor:pointer;flex-shrink:0">
           <input type="checkbox" id="sync-with-${m.id}" ${syncWith ? 'checked' : ''}
@@ -470,7 +625,7 @@ function _renderCabinetDashboard(root, d) {
         <div>
           <div style="font-size:20px;font-family:var(--fs);font-weight:700">🏥 ${cab.nom}</div>
           <div style="font-size:12px;color:var(--m);font-family:var(--fm);margin-top:2px">
-            ${myRole === 'titulaire' ? '👑 Titulaire' : '👤 Membre'} · ${members.length} membre(s)
+            ${_cabRoleLabel(myRole)} · ${members.length} membre(s)
           </div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -484,6 +639,27 @@ function _renderCabinetDashboard(root, d) {
         <span style="font-family:var(--fm);font-size:11px;color:var(--a);word-break:break-all">${cab.id}</span>
       </div>` : ''}
     </div>
+
+    <!-- Démo manager (admin uniquement) -->
+    ${(typeof S !== 'undefined' && S?.role === 'admin') ? `
+    <div class="card" style="margin-bottom:16px;border:1px dashed rgba(255,180,0,.4);background:linear-gradient(135deg,rgba(255,180,0,.03),var(--c))">
+      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div style="font-size:24px">🎬</div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-weight:700;font-size:14px;color:var(--w);margin-bottom:4px">Mode démo manager</div>
+          <div style="font-size:12px;color:var(--m);line-height:1.5;margin-bottom:8px">
+            Active ce mode pour visualiser les onglets <strong>📊 Dashboard</strong> et <strong>🛡️ Conformité</strong> du cabinet
+            comme un manager nommé, sans avoir à créer un cabinet réel.
+          </div>
+          <button class="btn ${sessionStorage.getItem('ami:cabinet:demo_manager') === '1' ? 'bd' : 'bp'} bsm"
+                  onclick="cabToggleDemoManager()" style="font-size:12px">
+            ${sessionStorage.getItem('ami:cabinet:demo_manager') === '1'
+              ? '↩️ Désactiver mode démo manager'
+              : '⭐ Activer mode démo manager'}
+          </button>
+        </div>
+      </div>
+    </div>` : ''}
 
     <!-- Membres -->
     <div class="card" style="margin-bottom:16px">
@@ -531,7 +707,7 @@ function _renderCabinetDashboard(root, d) {
                       style="width:18px;height:18px;accent-color:var(--a)">
                     <div>
                       <div style="font-weight:600;font-size:13px">${m.prenom} ${m.nom}</div>
-                      <div style="font-size:11px;color:var(--m);font-family:var(--fm)">${m.role === 'titulaire' ? '👑 Titulaire' : '👤 Membre'}</div>
+                      <div style="font-size:11px;color:var(--m);font-family:var(--fm)">${_cabRoleLabel(m.role)}</div>
                     </div>
                   </label>`;
               }).join('');
@@ -714,11 +890,11 @@ function _renderCabinetDemoDashboard(root, cab) {
       ${members.map(m => `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--b)">
           <div style="width:36px;height:36px;border-radius:50%;background:rgba(0,212,170,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">
-            ${m.role === 'titulaire' ? '👑' : '👤'}
+            ${_cabRoleIcon(m.role)}
           </div>
           <div style="flex:1">
             <div style="font-weight:600;font-size:14px">${m.prenom} ${m.nom} ${m.id===APP.user?.id?'<span style="font-size:10px;color:var(--a);font-family:var(--fm)">(moi)</span>':''}</div>
-            <div style="font-size:11px;color:var(--m);font-family:var(--fm)">${m.role === 'titulaire' ? '👑 Titulaire' : '👤 Membre simulé'}</div>
+            <div style="font-size:11px;color:var(--m);font-family:var(--fm)">${m.role === 'titulaire' ? '👑 Titulaire' : (m.role === 'manager' ? '⭐ Manager simulé' : '👤 Membre simulé')}</div>
           </div>
         </div>`).join('')}
     </div>
@@ -1777,7 +1953,7 @@ async function cabinetSyncStatus() {
         + '<div style="font-weight:600;font-size:13px">' + (m.prenom||'') + ' ' + (m.nom||'') + '</div>'
         + (isSelf ? '<span style="font-size:10px;color:var(--a);font-family:var(--fm)">(moi)</span>' : '')
         + '<span style="font-size:10px;color:var(--m);font-family:var(--fm);margin-left:auto">'
-        + (m.role === 'titulaire' ? '👑 Titulaire' : '👤 Membre') + '</span>'
+        + _cabRoleLabel(m.role) + '</span>'
         + '</div>'
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;font-family:var(--fm)">'
         + '<div style="padding:8px;background:var(--dd);border-radius:6px;border-left:3px solid ' + pushColor + '">'

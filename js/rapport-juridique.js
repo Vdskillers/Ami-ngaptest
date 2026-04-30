@@ -198,14 +198,16 @@
     // 🔒 Gating
     if (typeof SUB !== 'undefined' && !SUB.requireAccess('rapport_juridique_mensuel')) return;
 
-    const root = document.getElementById('view-rapport-juridique');
+    // Cible : hub Outils pratiques (préféré) ou ancienne section view
+    const root = document.getElementById('hub-host-rapport-juridique')
+              || document.getElementById('view-rapport-juridique');
     if (!root) return;
 
     const now = new Date();
     root.innerHTML = `
       <div class="card">
         <div class="cardh">
-          <h2>⚖️ Rapport juridique mensuel <span class="sub-feat-pill">PREMIUM</span></h2>
+          <h2>⚖️ Rapport juridique mensuel</h2>
           <p class="sub">Synthèse auditée : conformité, preuves, exposition contentieux, recommandations DPO.</p>
         </div>
         <div class="rj-toolbar">
@@ -354,6 +356,10 @@
   /* ───── Hook navigation ────────────────────────────────── */
   document.addEventListener('ui:navigate', e => {
     if (e.detail?.view === 'rapport-juridique') render();
+  });
+  // Hook hub-tab : déclenche le render quand on clique sur le sous-onglet du hub Outils
+  document.addEventListener('ami:hub-tab', e => {
+    if (e.detail?.hub === 'outils' && e.detail?.tab === 'rapport-juridique') render();
   });
 
   /* Export */
