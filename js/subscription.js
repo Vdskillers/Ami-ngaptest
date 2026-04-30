@@ -278,6 +278,11 @@ window.SUB = (function(){
           _closePaywall();
         }
       }
+      // 🔄 Re-render de la page abonnement si elle est déjà ouverte
+      const aboView = document.getElementById('view-mon-abo');
+      if (aboView && aboView.classList.contains('on')) {
+        renderAbonnementPage();
+      }
     }, 150);
     return _state;
   }
@@ -296,7 +301,19 @@ window.SUB = (function(){
   }
 
   function getState() {
-    if (!_state) return { tier:'LOCKED', locked:true, appMode:'TEST' };
+    if (!_state) {
+      // Fallback pré-bootstrap : tous les champs définis pour éviter les undefined dans le rendu
+      return {
+        tier:'LOCKED', realTier:'LOCKED', locked:true, appMode:'TEST',
+        isTrial:false, daysLeft:null, trialEnd:null, trialStart:null, paidUntil:null,
+        isAdmin: (_role === 'admin'),
+        isAdminSim:false, simTier:null,
+        isPreview:false, previewTier:null,
+        cabinetMember:false, cabinetSize:0, cabinetRole:null, isCabinetManager:false,
+        premiumAddon:false, premiumAddonUntil:null, premiumActive:false, premiumStatus:'inactive',
+        fallback:true, prebootstrap:true
+      };
+    }
     return {
       tier: currentTier(),
       realTier: _state.tier,
@@ -686,6 +703,7 @@ window.SUB = (function(){
   /* ───── 13. PAGE ABONNEMENT — NOUVELLE UI v3.0 ───────────────────── */
 
   function renderAbonnementPage() {
+    _injectStyles();  // 🔒 garde : s'assure que le CSS est injecté même si bootstrap n'a pas encore tourné
     const root = document.getElementById('view-mon-abo');
     if (!root) {
       console.warn('[SUB] view-mon-abo introuvable — ajouter <section id="view-mon-abo" class="view"></section> dans index.html');
@@ -1100,6 +1118,17 @@ window.SUB = (function(){
   } else {
     _installNavGate();
   }
+
+  /* ───── 🔒 INJECTION CSS IMMÉDIATE (avant bootstrap) ─────────────────
+     Le CSS doit être disponible dès le chargement du module, pour que
+     renderAbonnementPage() puisse être appelé via ui:navigate AVANT
+     que bootstrap() ait fini sa requête réseau. */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _injectStyles);
+  } else {
+    _injectStyles();
+  }
+  console.info('[SUB] subscription.js v3.1 chargé — CSS injecté, en attente de bootstrap()');
 
   /* ───── 16. NOTIFICATIONS J-7 (expiration) ───────────────────────── */
 
