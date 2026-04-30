@@ -1964,10 +1964,16 @@ async function loadSignatureList() {
       // ⚡ FIX naming signatures — Préférer le nom patient lisible (ex:
       //    "Mme Dupont · Pansement") au champ technique invoice_id quand on
       //    l'a (signatures v5.11+). Pour les signatures legacy sans nom,
-      //    on retombe gracieusement sur l'ancien rendu (invoice_id).
+      //    on retombe gracieusement sur l'ancien rendu (invoice_id), MAIS on
+      //    transforme les invoice_id cryptiques "uber_pat_XXX_YYY" en
+      //    "Patient — XXX_YYY" pour rester lisible (v5.8).
       const _patNomRaw = (sig.patient_nom || sig.proof_payload?.patient_nom || '').trim();
       const _hasName   = _patNomRaw.length > 0;
-      const _displayTitle = _hasName ? _patNomRaw : invoiceId;
+      let _displayTitle = _hasName ? _patNomRaw : invoiceId;
+      if (!_hasName && typeof _displayTitle === 'string') {
+        const _m = _displayTitle.match(/^uber_pat_(\d+)_(\d+)$/);
+        if (_m) _displayTitle = `Patient — ${_m[1]}_${_m[2]}`;
+      }
       const _previewSrc = sig.png || sig.data_url || null;
 
       // ── 5 critères de preuve médico-légale ──

@@ -684,12 +684,9 @@
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Outils pratiques</div>
       <div class="ni" data-v="outils-hub"><span class="nic">🛠️</span> Outils pratiques <span class="ni-alert-badge red" id="nav-outils-badge" style="display:none"></span></div>
-    </div>
-    <div class="sl" style="margin-top:8px">
-      <div class="slbl">💎 Premium</div>
-      <div class="ni nurse-only" data-v="ca-sous-declare"><span class="nic">💸</span> Détection CA sous-déclaré</div>
-      <div class="ni nurse-only" data-v="forensic-cert"><span class="nic">🛡️</span> Certificats forensiques</div>
-      <div class="ni nurse-only" data-v="rapport-juridique"><span class="nic">⚖️</span> Rapport juridique mensuel</div>
+      <div class="ni nurse-only" data-v="ca-sous-declare"><span class="nic">💸</span> Détection CA sous-déclaré 💎</div>
+      <div class="ni nurse-only" data-v="forensic-cert"><span class="nic">🛡️</span> Certificats forensiques 💎</div>
+      <div class="ni nurse-only" data-v="rapport-juridique"><span class="nic">⚖️</span> Rapport juridique mensuel 💎</div>
     </div>
     <div class="sl" style="margin-top:8px">
       <div class="slbl">Cabinet</div>
@@ -2952,7 +2949,7 @@
 <script src="js/onboarding.js?v=3.8"></script>
 
 <!-- Nouveaux modules SaaS médical -->
-<script src="js/signature.js?v=5.7"></script>
+<script src="js/signature.js?v=5.8"></script>
 <script src="js/copilote.js?v=3.8"></script>
 <script src="js/rapport.js?v=3.8"></script>
 
@@ -2981,8 +2978,8 @@
      💎 Modules Premium add-on (gated par SUB.requireAccess)
 ════════════════════════════════════ -->
 <script src="js/ca-sous-declare.js?v=1.0"></script><!-- 💸 Détection CA sous-déclaré (PREMIUM) -->
-<script src="js/forensic-cert.js?v=1.0"></script><!-- 🛡️ Certificats forensiques horodatés (PREMIUM) -->
-<script src="js/rapport-juridique.js?v=1.0"></script><!-- ⚖️ Rapport juridique mensuel (PREMIUM) -->
+<script src="js/forensic-cert.js?v=1.1"></script><!-- 🛡️ v1.1 : event ami:preuve_updated + backfill signatures existantes -->
+<script src="js/rapport-juridique.js?v=1.1"></script><!-- ⚖️ v1.1 : lecture directe IDB ami_signatures (au lieu de loadSignatureList UI-only) -->
 
 <!-- 🚀 NGAP Update Manager — gestionnaire unifié de mise à jour (Avenant 11 embarqué) -->
 <!-- Doit être chargé AVANT le fetch du référentiel pour que le bootstrap IDB ait priorité -->

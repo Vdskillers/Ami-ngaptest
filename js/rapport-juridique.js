@@ -55,23 +55,47 @@
       }
     } catch (_) {}
 
-    // 3. Preuves signatures (signature.js IDB)
+    // 3. Preuves signatures (lecture directe IDB ami_signatures)
+    //    loadSignatureList() est UI-only et ne renvoie rien — on lit l'IDB directement.
     let preuves = { FORTE:0, STANDARD:0, MINIMAL:0, total:0 };
     try {
-      // Adapter à l'API AMI : loadSignatureList (signature.js) ou listSignatures en fallback
-      const _list = (typeof loadSignatureList === 'function') ? loadSignatureList
-                   : (typeof listSignatures === 'function')   ? listSignatures : null;
-      if (_list) {
-        const lst = await _list();
-        (lst || []).forEach(s => {
-          const d = new Date(s.created_at || s.date || 0);
+      const sigDb = await new Promise((res, rej) => {
+        const req = indexedDB.open('ami_signatures', 1);
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+      });
+      const stores = sigDb.objectStoreNames;
+      const storeName = stores.contains('ami_signatures') ? 'ami_signatures'
+                      : stores.contains('signatures')    ? 'signatures'
+                      : stores[0];
+      if (storeName) {
+        const allSigs = await new Promise((res, rej) => {
+          const tx = sigDb.transaction(storeName, 'readonly');
+          const rq = tx.objectStore(storeName).getAll();
+          rq.onsuccess = () => res(rq.result || []);
+          rq.onerror   = () => rej(rq.error);
+        });
+        // Exclure la signature IDE auto-injectée
+        const IDE_SELF_SIG_ID = 'ide_self_signature';
+        const lst = allSigs.filter(s => s.invoice_id !== IDE_SELF_SIG_ID);
+        lst.forEach(s => {
+          const d = new Date(s.signed_at || s.created_at || s.date || 0);
           if (d.getFullYear() !== Y || (d.getMonth()+1) !== M) return;
-          const t = (s.signature_type || 'STANDARD').toUpperCase();
+          // Détecter le niveau de force probante : FORTE si geozone+hash, STANDARD si hash, MINIMAL sinon
+          let t = (s.signature_type || '').toUpperCase();
+          if (!t) {
+            if (s.geozone && s.signature_hash) t = 'FORTE';
+            else if (s.signature_hash)         t = 'STANDARD';
+            else                                t = 'MINIMAL';
+          }
+          if (!['FORTE','STANDARD','MINIMAL'].includes(t)) t = 'STANDARD';
           preuves[t] = (preuves[t] || 0) + 1;
           preuves.total += 1;
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      console.warn('[RapportJuridique] lecture signatures KO:', e.message);
+    }
 
     // 4. Certificats forensiques
     let certificats = { count:0, chain_valid:true, last_seq:null };

@@ -223,12 +223,20 @@
         <div class="cardh">
           <h2>🛡️ Certificats forensiques <span class="sub-feat-pill">PREMIUM</span></h2>
           <p class="sub">Chaîne de preuve cryptographique · ${all.length} certificat${all.length>1?'s':''} émis</p>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn bs bsm" id="fc-backfill" style="font-size:12px">
+              ⚡ Générer les certificats des signatures existantes
+            </button>
+            <button class="btn bs bsm" id="fc-refresh" style="font-size:12px">↻ Rafraîchir</button>
+          </div>
+          <div id="fc-backfill-status" style="margin-top:8px;font-size:12px;color:var(--m)"></div>
         </div>
         ${all.length === 0 ? `
           <div class="ai in">
             Aucun certificat forensique émis pour l'instant.<br>
-            Les certificats sont générés automatiquement après chaque signature
-            patient verrouillée si votre add-on PREMIUM est actif.
+            Cliquez sur <strong>« Générer les certificats des signatures existantes »</strong>
+            pour créer rétroactivement un certificat pour chaque signature déjà enregistrée,
+            ou les certificats seront générés automatiquement après chaque nouvelle signature patient.
           </div>
         ` : `
           <div id="fc-list">
@@ -249,6 +257,36 @@
         `}
       </div>
     `;
+
+    // Backfill button
+    const backfillBtn = document.getElementById('fc-backfill');
+    if (backfillBtn) {
+      backfillBtn.onclick = async () => {
+        const status = document.getElementById('fc-backfill-status');
+        backfillBtn.disabled = true;
+        backfillBtn.textContent = '⏳ Génération en cours…';
+        if (status) status.textContent = 'Lecture des signatures et génération de la chaîne…';
+        try {
+          const result = await backfillFromSignatures();
+          if (status) {
+            status.style.color = 'var(--ok)';
+            status.textContent = `✅ ${result.generated} certificat(s) généré(s) · ${result.skipped} déjà existant(s) · ${result.total} signature(s) trouvée(s)`;
+          }
+          // Re-render après 1s pour voir la liste mise à jour
+          setTimeout(renderList, 1200);
+        } catch (e) {
+          if (status) {
+            status.style.color = 'var(--d)';
+            status.textContent = '❌ ' + e.message;
+          }
+        } finally {
+          backfillBtn.disabled = false;
+          backfillBtn.textContent = '⚡ Générer les certificats des signatures existantes';
+        }
+      };
+    }
+    const refreshBtn = document.getElementById('fc-refresh');
+    if (refreshBtn) refreshBtn.onclick = renderList;
 
     root.querySelectorAll('.fc-verify').forEach(b => {
       b.onclick = async () => {
@@ -326,11 +364,100 @@
     if (w) setTimeout(() => w.print(), 600);
   }
 
-  /* ───── Hook : génération auto après signature verrouillée ─ */
+  /* ───── Backfill : génère un certificat pour chaque signature existante
+            qui n'en a pas encore un (lien via invoice_id) ────────────── */
+  async function backfillFromSignatures() {
+    if (typeof SUB !== 'undefined' && !SUB.hasAccess('forensic_certificates')) {
+      throw new Error('Feature PREMIUM requise');
+    }
+    // Lecture directe de l'IDB ami_signatures (même DB que signature.js)
+    let signatures = [];
+    try {
+      const sigDb = await new Promise((res, rej) => {
+        const req = indexedDB.open('ami_signatures', 1);
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+      });
+      const stores = sigDb.objectStoreNames;
+      const storeName = stores.contains('ami_signatures') ? 'ami_signatures'
+                      : stores.contains('signatures')    ? 'signatures'
+                      : stores[0];
+      if (!storeName) return { generated:0, skipped:0, total:0 };
+      signatures = await new Promise((res, rej) => {
+        const tx = sigDb.transaction(storeName, 'readonly');
+        const rq = tx.objectStore(storeName).getAll();
+        rq.onsuccess = () => res(rq.result || []);
+        rq.onerror   = () => rej(rq.error);
+      });
+    } catch (e) {
+      console.warn('[ForensicCert] backfill : lecture IDB signatures KO :', e.message);
+      return { generated:0, skipped:0, total:0, error: e.message };
+    }
+
+    // Filtrer les signatures patient (exclure la signature IDE auto-injectée)
+    const IDE_SELF_SIG_ID = 'ide_self_signature';
+    signatures = signatures.filter(s => s.invoice_id && s.invoice_id !== IDE_SELF_SIG_ID);
+
+    // Liste des invoice_id qui ont déjà un certificat
+    const existing = await _getAll();
+    const certifiedInvoices = new Set(existing.map(c => c.invoice).filter(Boolean));
+
+    let generated = 0, skipped = 0;
+    for (const sig of signatures) {
+      const invoiceId = sig.invoice_id;
+      if (certifiedInvoices.has(invoiceId)) { skipped++; continue; }
+      try {
+        await generate({
+          invoice:    invoiceId,
+          patient_id: sig.patient_id || sig.proof_payload?.patient_id || '',
+          actes:      Array.isArray(sig.actes) ? sig.actes : (sig.proof_payload?.actes || []),
+          base_proof_hash: sig.signature_hash || sig.proof_hash || '',
+          signature_type:  (sig.geozone && sig.signature_hash) ? 'FORTE' : (sig.signature_hash ? 'STANDARD' : 'MINIMAL'),
+          geozone:    sig.geozone || null
+        });
+        generated++;
+      } catch (e) {
+        console.warn('[ForensicCert] backfill skip invoice=%s : %s', invoiceId, e.message);
+        skipped++;
+      }
+    }
+    console.info('[ForensicCert] backfill : %d générés, %d skipped sur %d signatures',
+      generated, skipped, signatures.length);
+    return { generated, skipped, total: signatures.length };
+  }
+
+  /* ───── Hook : génération auto après signature verrouillée ─
+     L'event réel dispatché par signature.js est `ami:preuve_updated`
+     (et non `ami:signature_locked` comme initialement supposé). */
+  document.addEventListener('ami:preuve_updated', async e => {
+    try {
+      if (typeof SUB !== 'undefined' && !SUB.hasAccess('forensic_certificates')) return;
+      const detail = e.detail || {};
+      // On n'agit que sur les signatures patient (pas sur les preuves photo seules)
+      if (detail.type && detail.type !== 'signature_patient') return;
+      // Eviter les doublons : si déjà certifié, on skip
+      const all = await _getAll();
+      if (all.some(c => c.invoice === detail.invoice_number)) return;
+      await generate({
+        invoice:    detail.invoice_number,
+        patient_id: detail.patient_id || '',
+        actes:      detail.actes || [],
+        base_proof_hash: detail.hash_preuve || '',
+        signature_type:  detail.force_probante || 'STANDARD',
+        geozone:    detail.geozone || null
+      });
+    } catch (err) {
+      console.warn('[ForensicCert] auto-gen KO:', err.message);
+    }
+  });
+  // Conservation de l'ancien hook pour rétro-compatibilité si jamais signature.js
+  // dispatch un jour cet event
   document.addEventListener('ami:signature_locked', async e => {
     try {
       if (typeof SUB !== 'undefined' && !SUB.hasAccess('forensic_certificates')) return;
       const detail = e.detail || {};
+      const all = await _getAll();
+      if (all.some(c => c.invoice === detail.invoice)) return;
       await generate({
         invoice:   detail.invoice,
         patient_id: detail.patient_id,
@@ -340,7 +467,7 @@
         geozone:    detail.geozone
       });
     } catch (err) {
-      console.warn('[ForensicCert] auto-gen KO:', err.message);
+      console.warn('[ForensicCert] auto-gen (legacy event) KO:', err.message);
     }
   });
 
@@ -350,6 +477,6 @@
   });
 
   /* Export */
-  window.ForensicCert = { generate, verify, renderList, exportPDF };
+  window.ForensicCert = { generate, verify, renderList, exportPDF, backfillFromSignatures };
 
 })();
