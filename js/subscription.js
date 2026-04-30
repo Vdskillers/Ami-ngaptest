@@ -76,6 +76,7 @@ window.SUB = (function(){
     forensic_certificates:   { tier:'PREMIUM', label:'Preuves légales opposables',      desc:'Bouclier anti-contrôle CPAM : certificats horodatés RFC 3161.' },
     sla_support:             { tier:'PREMIUM', label:'SLA support prioritaire < 2h',    desc:'Engagement contractuel de réponse support < 2h ouvrées.' },
     rapport_juridique_mensuel:{ tier:'PREMIUM', label:'Rapport juridique mensuel',      desc:'Synthèse mensuelle auditée : conformité, preuves, exposition contentieux.' },
+    intelligence_terrain:    { tier:'PREMIUM', label:'Intelligence terrain (Tournée IA+)', desc:'Mode automatique, simulation de journée, recommandation de départ, vocal — IA terrain qui apprend.' },
     /* ═══ 🧑‍💼 COMPTABLE — Expertise comptable santé ═══ */
     dashboard_consolide: { tier:'COMPTABLE', label:'Dashboard consolidé multi-IDEL',  desc:'Vue agrégée du portefeuille (jusqu\'à 20 IDEL incluses).' },
     export_fiscal:       { tier:'COMPTABLE', label:'Export FEC + liasse fiscale 2035', desc:'Génération automatique du Fichier des Écritures Comptables.' },
@@ -154,12 +155,16 @@ window.SUB = (function(){
       subtitle: '« Zéro stress. Zéro contrôle surprise. »',
       price: '+29 € HT / mois',
       features: [
-        { txt:'✨ S\'ajoute à Pro ou Cabinet',       icon:'✓', bold:true },
-        { txt:'Détection des pertes invisibles',    icon:'✓' },
-        { txt:'Optimisation IA avancée',            icon:'✓' },
-        { txt:'Protection juridique renforcée',     icon:'✓' },
-        { txt:'Audit mensuel automatique',          icon:'✓' },
-        { txt:'💎 Chaque mois, tu récupères plus que ce que ça coûte', icon:'✓' }
+        { txt:'✨ S\'ajoute à Pro ou Cabinet',                          icon:'✓', bold:true },
+        { txt:'Optimisation CA avancée (+150 à +300 € / mois)',         icon:'💎' },
+        { txt:'Détection des pertes invisibles (actes non cotés)',      icon:'💎' },
+        { txt:'Protection juridique renforcée (anti-redressement)',     icon:'💎' },
+        { txt:'Preuves légales opposables CPAM',                        icon:'💎' },
+        { txt:'Audit mensuel automatique',                              icon:'💎' },
+        { txt:'Support prioritaire < 2h',                               icon:'💎' },
+        { txt:'Rapport légal mensuel auditable',                        icon:'💎' },
+        { txt:'Intelligence terrain (Tournée IA+)',                     icon:'💎' },
+        { txt:'💎 Chaque mois, tu récupères plus que ce que ça coûte', icon:'✓', bold:true }
       ],
       cta: 'Simuler ce tier',
       pricePrefix: '+',
@@ -960,9 +965,12 @@ window.SUB = (function(){
     }
 
     // ─── Liste des features ───
-    const featuresList = detail.features.map(f =>
-      `<li class="sub-plan-feat ${f.bold?'bold':''}"><span class="sub-plan-check" style="color:${tinfo.color}">${f.icon||'✓'}</span><span>${f.txt}</span></li>`
-    ).join('');
+    const featuresList = detail.features.map(f => {
+      const isDiamond = (f.icon === '💎');
+      const checkClass = isDiamond ? 'sub-plan-check sub-plan-check-diamond' : 'sub-plan-check';
+      const checkColor = isDiamond ? '#fbbf24' : tinfo.color;
+      return `<li class="sub-plan-feat ${f.bold?'bold':''} ${isDiamond?'premium-feat':''}"><span class="${checkClass}" style="color:${checkColor}">${f.icon||'✓'}</span><span>${f.txt}</span></li>`;
+    }).join('');
 
     // ─── CTA principal : "Simuler ce tier" pour TOUS (admin → setAdminSim, non-admin → previewTier) ───
     let btnLabel, btnAction;
@@ -1456,6 +1464,9 @@ body.sub-in-preview .ni-locked { opacity:1 !important; filter:none !important; }
   padding:5px 0; line-height:1.4; }
 .sub-plan-feat.bold { font-weight:600; padding-top:4px; padding-bottom:6px; }
 .sub-plan-check { font-weight:700; flex-shrink:0; font-size:14px; line-height:1.4; }
+.sub-plan-check-diamond { font-size:13px; filter:drop-shadow(0 0 4px rgba(251,191,36,.5)); }
+.sub-plan-feat.premium-feat { background:linear-gradient(90deg, rgba(251,191,36,.05), transparent);
+  border-left:2px solid rgba(251,191,36,.4); padding-left:8px; margin-left:-2px; border-radius:3px; }
 
 .sub-plan-cta { width:100%; padding:13px 18px; border-radius:10px;
   font-family:var(--ff); font-size:14px; font-weight:700; cursor:pointer;

@@ -75,11 +75,41 @@
   /**
    * Injecte le panneau "🧠 Intelligence terrain" dans la vue Pilotage,
    * juste avant le panel cabinet multi-IDE.
+   *
+   * 💎 GATED PREMIUM : si l'utilisateur n'a pas l'add-on Premium, on injecte
+   *    une carte d'invitation à upgrader à la place du vrai panneau.
    */
   function _injectPilotagePanel() {
     if ($('smart-pilotage-panel')) return; // déjà injecté
     const cabinet = $('tur-cabinet-panel');
     if (!cabinet) return;
+
+    // 💎 Gating Premium
+    const hasAccess = (typeof SUB !== 'undefined' && typeof SUB.hasAccess === 'function')
+      ? SUB.hasAccess('intelligence_terrain')
+      : true; // si SUB pas chargé, on laisse passer (pas de blocage par défaut)
+
+    if (!hasAccess) {
+      // Carte d'invitation Premium (à la place du vrai panneau)
+      const inviteHtml = `
+        <div id="smart-pilotage-panel" class="smart-premium-invite" style="margin-top:16px;padding:18px;border:1px solid rgba(251,191,36,.35);border-radius:12px;background:linear-gradient(135deg,rgba(251,191,36,.06),rgba(124,77,255,.04))">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:24px">💎</span>
+            <div>
+              <div style="font-weight:700;font-size:15px;color:#fbbf24">Intelligence terrain — réservé Premium</div>
+              <div style="font-size:12px;color:var(--m)">Mode automatique · Simulation · Vocal · Recommandation de départ</div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--t);margin:10px 0 14px;line-height:1.5">
+            Active l'add-on <strong style="color:#fbbf24">💎 Premium (+29 € HT/mois)</strong> pour débloquer l'IA terrain qui apprend de tes tournées et te fait gagner ~1h par jour.
+          </div>
+          <button class="btn bp" onclick="if(typeof navTo==='function')navTo('mon-abo',null)" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;border:none;padding:10px 20px;border-radius:10px;font-weight:700;cursor:pointer;font-family:var(--ff)">
+            💎 Voir l'abonnement Premium
+          </button>
+        </div>`;
+      cabinet.insertAdjacentHTML('beforebegin', inviteHtml);
+      return;
+    }
 
     const html = `
       <div id="smart-pilotage-panel" style="margin-top:16px;padding:14px;border:1px solid rgba(124,77,255,.25);border-radius:10px;background:linear-gradient(135deg,rgba(124,77,255,.04),rgba(0,212,170,.04))">

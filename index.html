@@ -686,6 +686,12 @@
       <div class="ni" data-v="outils-hub"><span class="nic">🛠️</span> Outils pratiques <span class="ni-alert-badge red" id="nav-outils-badge" style="display:none"></span></div>
     </div>
     <div class="sl" style="margin-top:8px">
+      <div class="slbl">💎 Premium</div>
+      <div class="ni nurse-only" data-v="ca-sous-declare"><span class="nic">💸</span> Détection CA sous-déclaré</div>
+      <div class="ni nurse-only" data-v="forensic-cert"><span class="nic">🛡️</span> Certificats forensiques</div>
+      <div class="ni nurse-only" data-v="rapport-juridique"><span class="nic">⚖️</span> Rapport juridique mensuel</div>
+    </div>
+    <div class="sl" style="margin-top:8px">
       <div class="slbl">Cabinet</div>
       <div class="ni nurse-only" id="nav-cabinet-item" data-v="cabinet"><span class="nic">🏥</span> Cabinet &amp; synchronisation <span id="cabinet-nav-badge" style="display:none;background:rgba(0,212,170,.2);color:var(--a);border-radius:20px;font-size:9px;padding:1px 7px;margin-left:4px;font-family:var(--fm)">0</span></div>
           </div>
@@ -2870,6 +2876,13 @@
     ══════════════════════════════════════════ -->
 
     <!-- ══════════════════════════════════════════
+         💎 PREMIUM — Add-on Detection / Forensique / Rapport juridique
+    ══════════════════════════════════════════ -->
+    <section class="view" id="view-ca-sous-declare"></section>
+    <section class="view" id="view-forensic-cert"></section>
+    <section class="view" id="view-rapport-juridique"></section>
+
+    <!-- ══════════════════════════════════════════
          💎 ABONNEMENT — refonte v3 (subscription.js renderAbonnementPage)
          Le contenu est rempli dynamiquement au premier navTo('mon-abo')
     ══════════════════════════════════════════ -->
@@ -2892,7 +2905,7 @@
 <!-- Modules fonctionnels -->
 <script src="js/offline-auth.js?v=1.0"></script><!-- Login hors-ligne par PIN (doit être AVANT auth.js) -->
 <script src="js/auth.js?v=3.8"></script>
-<script src="js/subscription.js?v=3.3"></script><!-- 💎 Système abonnement v3.3 (auto-bootstrap depuis window.S + boutons sim/preview tolérants) -->
+<script src="js/subscription.js?v=3.4"></script><!-- 💎 Système abonnement v3.4 (icônes 💎 features Premium + intelligence_terrain feature + nav items Premium) -->
 <script src="js/cabinet.js?v=3.9"></script><!-- Mode cabinet multi-IDE + sync sélective + 🛡️ consentements partagés -->
 <script src="js/security.js?v=3.8"></script><!-- RGPD + AES + PIN + Consentement -->
 <script src="js/admin.js?v=3.8"></script>
@@ -2924,7 +2937,7 @@
 <!-- Moteurs IA (pas de dépendance Leaflet) — doivent précéder tournee.js -->
 <script src="js/ai-tournee.js?v=5.10.2"></script>
 <script src="js/ai-smart-tour.js?v=5.10.5"></script><!-- 🧠 v5.10 : Couches IA terrain (no-show, difficulté, météo, autopilot opt-in, vocal, simulation) -->
-<script src="js/ai-smart-ui.js?v=5.10.5"></script><!-- 🎨 v5.10.2 : UI pour la couche IA terrain (panneau Pilotage + pills HUD + 3 modals) -->
+<script src="js/ai-smart-ui.js?v=5.10.6"></script><!-- 🎨 v5.10.6 : Panneau Intelligence terrain gated PREMIUM -->
 <script src="js/ai-assistant.js?v=5.9.2"></script>
 <script src="js/pwa.js?v=3.8"></script>
 <script src="js/sw-version-check.js?v=1.0"></script><!-- Purge cache PWA déclenchée par admin -->
@@ -2963,6 +2976,13 @@
 <script src="js/ngap-correction-hints.js?v=1.0"></script><!-- 💡 Badge suggestions AMI côté infirmière -->
 <script src="js/notif-messages.js?v=1.0"></script><!-- 🔔 Panneau notifications enrichi -->
 <script src="js/incident.js?v=1.0"></script><!-- 🚨 Plan incident RGPD/CNIL <72h -->
+
+<!-- ════════════════════════════════════
+     💎 Modules Premium add-on (gated par SUB.requireAccess)
+════════════════════════════════════ -->
+<script src="js/ca-sous-declare.js?v=1.0"></script><!-- 💸 Détection CA sous-déclaré (PREMIUM) -->
+<script src="js/forensic-cert.js?v=1.0"></script><!-- 🛡️ Certificats forensiques horodatés (PREMIUM) -->
+<script src="js/rapport-juridique.js?v=1.0"></script><!-- ⚖️ Rapport juridique mensuel (PREMIUM) -->
 
 <!-- 🚀 NGAP Update Manager — gestionnaire unifié de mise à jour (Avenant 11 embarqué) -->
 <!-- Doit être chargé AVANT le fetch du référentiel pour que le bootstrap IDB ait priorité -->
