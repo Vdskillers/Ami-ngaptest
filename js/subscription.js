@@ -103,63 +103,74 @@ window.SUB = (function(){
 
   const PLAN_DETAILS = {
     ESSENTIEL: {
+      cardName: 'AMI Starter',
       tag: '🟢 Starter',
       subtitle: '« Arrête de perdre de l\'argent »',
+      price: '29 € HT / mois',
       features: [
         { txt:'Cotation intelligente', icon:'✓' },
         { txt:'Alertes erreurs',       icon:'✓' },
         { txt:'Journal des actes',     icon:'✓' },
         { txt:'Support standard',      icon:'✓' }
       ],
-      cta: 'Commencer'
+      cta: 'Simuler ce tier'
     },
     PRO: {
+      cardName: 'AMI Pro',
       tag: '🔵 Pro',
       subtitle: '« Optimise tes revenus sans effort »',
+      price: '49 € HT / mois',
       features: [
-        { txt:'Tout Starter, plus :',   icon:'✓', bold:true },
+        { txt:'✨ Tout AMI Starter, plus :',   icon:'✓', bold:true },
         { txt:'Dashboard & statistiques', icon:'✓' },
         { txt:'Simulateur CPAM',         icon:'✓' },
         { txt:'Alertes avancées',        icon:'✓' },
-        { txt:'Suggestions d\'optimisation IA', icon:'✓' }
+        { txt:'Suggestions d\'optimisation IA', icon:'✓' },
+        { txt:'💸 +150 à +300 € / mois récupérés', icon:'✓' }
       ],
-      callout: { txt:'+150 à +300 € / mois récupérés', icon:'💸', color:'var(--a)' },
       popular: true,
-      cta: 'Choisir ce plan'
+      cta: 'Simuler ce tier'
     },
     CABINET: {
+      cardName: 'AMI Cabinet',
       tag: '🟣 Cabinet',
       subtitle: '« Gère ton cabinet comme un pro »',
+      price: 'Dégressif · à partir de 29 € HT / IDE / mois',
       features: [
-        { txt:'Tout Pro, plus :',         icon:'✓', bold:true },
+        { txt:'✨ Tout AMI Pro, plus :',         icon:'✓', bold:true },
         { txt:'Multi-IDE (sync sélective)', icon:'✓' },
         { txt:'Statistiques globales',     icon:'✓' },
         { txt:'Gestion des tournées',      icon:'✓' },
         { txt:'Accès manager / planning',  icon:'✓' }
       ],
-      cta: 'Démarrer mon cabinet',
+      cta: 'Simuler ce tier',
       pricePrefix: 'Dégressif',
-      priceDetail: '1-2 IDE → 49 € · 3-5 IDE → 39 € · 6+ IDE → 29 €',
+      priceDetail: '1-2 IDE → 49 € · 3-5 IDE → 39 € · 6+ IDE → 29 € HT / IDE / mois',
       priceSuffix: 'par IDE / mois'
     },
     PREMIUM: {
+      cardName: 'AMI Premium',
       tag: '💎 Premium',
       subtitle: '« Zéro stress. Zéro contrôle surprise. »',
+      price: '+29 € HT / mois',
       features: [
+        { txt:'✨ S\'ajoute à Pro ou Cabinet',       icon:'✓', bold:true },
         { txt:'Détection des pertes invisibles',    icon:'✓' },
         { txt:'Optimisation IA avancée',            icon:'✓' },
         { txt:'Protection juridique renforcée',     icon:'✓' },
-        { txt:'Audit mensuel automatique',          icon:'✓' }
+        { txt:'Audit mensuel automatique',          icon:'✓' },
+        { txt:'💎 Chaque mois, tu récupères plus que ce que ça coûte', icon:'✓' }
       ],
-      callout: { txt:'Chaque mois, tu récupères plus que ce que ça coûte', icon:'💎', color:'#fbbf24' },
-      cta: 'Activer Premium',
+      cta: 'Simuler ce tier',
       pricePrefix: '+',
       priceSuffix: '€ / mois',
       addonNote: 'À ajouter à ton plan actuel'
     },
     COMPTABLE: {
+      cardName: 'AMI Comptable',
       tag: '🧑‍💼 Comptable',
       subtitle: 'Cabinet d\'expertise comptable santé',
+      price: '99 € HT / mois',
       features: [
         { txt:'Dashboard consolidé multi-IDEL',     icon:'✓' },
         { txt:'Export FEC + liasse fiscale 2035',   icon:'✓' },
@@ -169,7 +180,7 @@ window.SUB = (function(){
         { txt:'Connecteurs Cegid · EBP · Quadra',    icon:'✓' },
         { txt:'Rapports trimestriels automatiques',  icon:'✓' }
       ],
-      cta: 'Choisir ce plan'
+      cta: 'Simuler ce tier'
     }
   };
 
@@ -681,105 +692,106 @@ window.SUB = (function(){
       return;
     }
     const st = getState();
-    const premiumOn = !!st.premiumActive || (st.tier === 'PREMIUM');
 
-    // ─── Bandeaux d'état ───
+    // ─── 1. Bandeau Mode test actif ───
     let modeBanner = '';
-    if (st.appMode === 'TEST' && !st.isAdminSim && !st.isPreview) {
+    if (st.appMode === 'TEST') {
       modeBanner = `
-        <div class="sub-mode-banner test">
-          <span style="font-size:22px">🧪</span>
-          <div>
-            <div style="font-weight:700;color:var(--a);margin-bottom:2px">Mode test actif</div>
-            <div style="font-size:13px;color:var(--m)">L'application est en mode démonstration. Toutes les fonctionnalités sont accessibles sans limite pour tous les utilisateurs.</div>
+        <div class="sub-banner sub-banner-test">
+          <span class="sub-banner-ic">🪄</span>
+          <div class="sub-banner-content">
+            <div class="sub-banner-title">Mode test actif</div>
+            <div class="sub-banner-desc">L'application est en mode démonstration. Toutes les fonctionnalités sont accessibles sans limite pour tous les utilisateurs.</div>
           </div>
         </div>`;
     }
 
-    let cabinetBanner = '';
-    if (st.cabinetMember && !st.isAdmin) {
-      cabinetBanner = `
-        <div class="sub-mode-banner cabinet">
-          <span style="font-size:22px">🏥</span>
-          <div>
-            <div style="font-weight:700;color:var(--w);margin-bottom:2px">Bonus cabinet actif (${st.cabinetSize} IDE)</div>
-            <div style="font-size:13px;color:var(--m)">Vous êtes membre d'un cabinet multi-IDE. Les fonctionnalités cabinet sont débloquées automatiquement.</div>
-          </div>
+    // ─── 2. Bandeau MODE ADMIN bypass (admin uniquement) ───
+    let adminBanner = '';
+    if (st.isAdmin) {
+      const isSimming = !!st.simTier;
+      const tierColor = isSimming ? (TIERS[st.simTier]?.color || '#00d4aa') : '#4fa8ff';
+      const tierLabel = isSimming ? `Simulation : ${TIERS[st.simTier]?.label || st.simTier}` : 'Accès illimité (bypass)';
+      const tierDesc = isSimming
+        ? `Vous visualisez l'app comme une IDEL au tier ${TIERS[st.simTier]?.label || st.simTier}. Cliquez "Bypass" pour reprendre l'accès admin total.`
+        : (st.appMode === 'TEST'
+            ? 'App en mode test · Utilisez la simulation ci-dessous pour tester un tier.'
+            : 'Vous avez accès à toutes les fonctionnalités sans contrainte de tier.');
+      adminBanner = `
+        <div class="sub-banner sub-banner-admin" style="--admin-color:${tierColor}">
+          <div class="sub-banner-label">MODE ADMIN</div>
+          <div class="sub-banner-bigtitle">💎 ${tierLabel}</div>
+          <div class="sub-banner-desc">${tierDesc}</div>
         </div>`;
     }
 
-    // ─── Carte "Statut actuel" ───
-    let header = _renderCurrentStatusCard(st);
+    // ─── 3. Section Simulation tier (admin uniquement) ───
+    let simulationSection = '';
+    if (st.isAdmin) {
+      const simTier = st.simTier;
+      const simButtons = [
+        { tier:null,         label:'Bypass (accès total)', isBypass:true },
+        { tier:'TRIAL',      label:'Essai gratuit' },
+        { tier:'ESSENTIEL',  label:'AMI Starter' },
+        { tier:'PRO',        label:'AMI Pro' },
+        { tier:'CABINET',    label:'AMI Cabinet' },
+        { tier:'PREMIUM',    label:'AMI Premium' },
+        { tier:'COMPTABLE',  label:'AMI Comptable' },
+        { tier:'LOCKED',     label:'Aucun abonnement' }
+      ].map(b => {
+        const active = (b.isBypass && !simTier) || (b.tier === simTier);
+        const color = b.tier ? (TIERS[b.tier]?.color || '#6a8099') : '#00d4aa';
+        const action = b.isBypass ? 'SUB.clearAdminSim()' : `SUB.setAdminSim('${b.tier}')`;
+        const activeStyle = active
+          ? `background:${color};color:#000;border-color:${color};font-weight:700`
+          : '';
+        return `<button class="sub-sim-btn ${active?'active':''}" style="${activeStyle}" onclick="${action}">${b.label}</button>`;
+      }).join('');
 
-    // ─── Toggle Premium (style landing) ───
-    const premiumToggle = `
-      <label class="sub-premium-toggle-wrap">
-        <span class="sub-premium-toggle-label">
-          Activer l'option <strong style="color:#fbbf24">💎 Premium</strong> · +29 €/mois
-        </span>
-        <span class="sub-premium-toggle">
-          <input type="checkbox" id="sub-premium-toggle-input" ${premiumOn?'checked':''} onchange="SUB._togglePremiumPreview(this.checked)">
-          <span class="sub-premium-toggle-slider"></span>
-        </span>
-      </label>`;
+      simulationSection = `
+        <div class="sub-banner sub-banner-sim">
+          <div class="sub-banner-label sub-banner-label-danger">🛡️ Simulation tier (admin uniquement)</div>
+          <div class="sub-banner-desc" style="margin-bottom:14px">Visualisez l'application comme la verrait une IDEL au tier de votre choix.</div>
+          <div class="sub-sim-buttons">${simButtons}</div>
+        </div>`;
+    }
 
-    // ─── 4 cartes principales (Essentiel / Pro / Cabinet / Premium) ───
+    // ─── 4. Section IDEL (titre de groupe) ───
+    const idelHeader = `
+      <div class="sub-group-header">
+        <div class="sub-group-title">👤 Pour les infirmières libérales</div>
+        <div class="sub-group-sub">Abonnements individuels — l'IDEL choisit et paie son plan.</div>
+      </div>`;
+
+    // ─── 5. Grille 4 cartes IDEL ───
     const idelCards = ['ESSENTIEL','PRO','CABINET','PREMIUM']
       .map(k => _renderPlanCardV3(k, st))
       .join('');
 
-    // ─── Carte Comptable (séparée, grand format) ───
+    // ─── 6. Section Comptable (séparée) ───
+    const comptableHeader = `
+      <div class="sub-group-header sub-group-compta">
+        <div class="sub-group-title">🧑‍💼 Pour les experts-comptables santé</div>
+        <div class="sub-group-sub">Plan multi-cabinets pour les experts-comptables qui gèrent plusieurs IDEL clientes.</div>
+      </div>`;
     const comptableCard = _renderPlanCardV3('COMPTABLE', st);
 
-    // ─── Panel admin (simulation) ───
-    let adminPanel = '';
-    if (st.isAdmin) {
-      const currentSim = st.simTier;
-      adminPanel = `
-        <div class="sub-admin-panel">
-          <h3>🛡️ Simulation tier (admin uniquement)</h3>
-          <p>Visualisez l'application comme la verrait une IDEL au tier de votre choix.</p>
-          <div class="sub-admin-buttons">
-            <button class="sub-admin-btn ${!currentSim?'active':''}" onclick="SUB.clearAdminSim()">Bypass (accès total)</button>
-            ${['TRIAL','ESSENTIEL','PRO','CABINET','PREMIUM','COMPTABLE','LOCKED'].map(t => `
-              <button class="sub-admin-btn ${currentSim===t?'active':''}" onclick="SUB.setAdminSim('${t}')"
-                      style="${currentSim===t?`background:${TIERS[t]?.color||'var(--a)'};color:#000;border-color:${TIERS[t]?.color||'var(--a)'}`:''}">
-                ${TIERS[t]?.label || t}
-              </button>
-            `).join('')}
-          </div>
-        </div>`;
-    }
-
-    // ─── Matrice comparative (toggle) ───
-    const comparator = _renderFeatureComparator(st);
-
+    // ─── Render final ───
     root.innerHTML = `
       <div class="sub-abo-page">
         <div class="sub-abo-hero">
           <h1 class="sub-abo-h1">💎 Mon abonnement</h1>
-          <p class="sub-abo-h2">Choisis ton niveau d'<em>optimisation</em></p>
+          <p class="sub-abo-h2">Choisissez le plan adapté à votre activité.</p>
         </div>
         ${modeBanner}
-        ${cabinetBanner}
-        ${header}
-        ${adminPanel}
+        ${adminBanner}
+        ${simulationSection}
 
-        <div class="sub-pricing">
-          ${premiumToggle}
-          <div class="sub-price-grid">${idelCards}</div>
-        </div>
+        ${idelHeader}
+        <div class="sub-price-grid">${idelCards}</div>
 
-        <div class="sub-plans-group-header compta">
-          <div class="sub-plans-group-title">
-            <span style="font-size:22px">🧑‍💼</span>
-            <span>Pour les experts-comptables santé</span>
-          </div>
-          <div class="sub-plans-group-sub">Plan multi-cabinets pour les experts-comptables qui gèrent plusieurs IDEL clientes.</div>
-        </div>
-        <div class="sub-price-grid compta">${comptableCard}</div>
-
-        ${comparator}
+        ${comptableHeader}
+        <div class="sub-price-grid sub-price-grid-compta">${comptableCard}</div>
 
         <div class="sub-abo-footer">
           <div class="sub-abo-footer-line">
@@ -787,7 +799,7 @@ window.SUB = (function(){
             <span>Annulation en 1 clic</span> · 
             <span>Données 100 % récupérables</span>
           </div>
-          <div class="sub-abo-footer-line" style="color:var(--a);font-size:12px">
+          <div class="sub-abo-footer-line" style="color:var(--a);font-size:12px;margin-top:6px">
             Tarif préférentiel garanti à vie pour les 100 premières inscrites
           </div>
         </div>
@@ -852,95 +864,71 @@ window.SUB = (function(){
     if (!detail || !tinfo) return '';
 
     const isCurrent = !st.isAdmin && st.tier === key;
+    const isSimming = st.isAdmin && st.simTier === key;
     const isPreviewing = st.isPreview && st.previewTier === key;
-    const popularBadge = detail.popular ? '<div class="sub-plan-popular">⭐ Le plus choisi</div>' : '';
-    const currentBadge = isCurrent ? '<div class="sub-plan-current-badge">✓ Plan actuel</div>' : '';
-    const tagBadge = `<div class="sub-plan-tag" style="color:${tinfo.color};background:${tinfo.color}1a;border-color:${tinfo.color}33">${detail.tag||tinfo.label}</div>`;
+    const isPopular = !!detail.popular;
+    const cardName = detail.cardName || tinfo.label;
 
-    // Bloc prix
+    const popularBadge = isPopular
+      ? `<div class="sub-plan-popular-badge">⭐ Le plus choisi</div>`
+      : '';
+    const currentBadge = isCurrent
+      ? `<div class="sub-plan-current-badge">✓ Plan actuel</div>`
+      : '';
+
+    // ─── Bloc prix : différent pour Cabinet (encadré dégressif) ───
     let priceHTML = '';
     if (key === 'CABINET') {
       priceHTML = `
-        <div class="sub-plan-price-degressif">
-          <div class="sub-plan-amount-text" style="color:${tinfo.color}">Dégressif</div>
-          <div class="sub-plan-price-detail">${detail.priceDetail}</div>
-          <div class="sub-plan-price-suffix">${detail.priceSuffix}</div>
+        <div class="sub-plan-price-main" style="color:${tinfo.color}">Dégressif · à partir de 29 € HT / IDE / mois</div>
+        <div class="sub-plan-price-degbox">
+          1-2 IDE → 49 € · 3-5 IDE → 39 € · 6+ IDE → 29 € HT / IDE / mois
         </div>`;
-    } else if (key === 'PREMIUM') {
-      priceHTML = `
-        <div class="sub-plan-price-block">
-          <span class="sub-plan-amount-prefix">+</span>
-          <span class="sub-plan-amount" style="color:${tinfo.color}">29</span>
-          <span class="sub-plan-period">€ / mois</span>
-        </div>
-        <div class="sub-plan-subprice">${detail.addonNote || ''}</div>`;
-    } else if (key === 'COMPTABLE') {
-      priceHTML = `
-        <div class="sub-plan-price-block">
-          <span class="sub-plan-amount" style="color:${tinfo.color}">99</span>
-          <span class="sub-plan-period">€ HT / mois</span>
-        </div>
-        <div class="sub-plan-subprice">${tinfo.pricingDetail || ''}</div>`;
     } else {
-      // ESSENTIEL, PRO
-      const amount = key === 'ESSENTIEL' ? '29' : '49';
-      priceHTML = `
-        <div class="sub-plan-price-block">
-          <span class="sub-plan-amount" style="color:${tinfo.color}">${amount}</span>
-          <span class="sub-plan-period">€ / mois</span>
-        </div>
-        <div class="sub-plan-subprice">${key==='PRO'?'Sans engagement · ROI dès le 1ᵉʳ mois':'Sans engagement'}</div>`;
+      priceHTML = `<div class="sub-plan-price-main" style="color:${tinfo.color}">${detail.price}</div>`;
     }
 
+    // ─── Liste des features ───
     const featuresList = detail.features.map(f =>
-      `<li class="sub-plan-feat ${f.bold?'bold':''}"><span class="sub-plan-check" style="color:${tinfo.color}">${f.icon||'✓'}</span> ${f.txt}</li>`
+      `<li class="sub-plan-feat ${f.bold?'bold':''}"><span class="sub-plan-check" style="color:${tinfo.color}">${f.icon||'✓'}</span><span>${f.txt}</span></li>`
     ).join('');
 
-    const callout = detail.callout
-      ? `<div class="sub-plan-callout" style="background:${detail.callout.color}1a;border-color:${detail.callout.color}55;color:${detail.callout.color}">
-           <span>${detail.callout.icon}</span> ${detail.callout.txt}
-         </div>` : '';
-
-    // CTA
+    // ─── CTA principal : "Simuler ce tier" pour TOUS (admin → setAdminSim, non-admin → previewTier) ───
     let btnLabel, btnAction;
     if (st.isAdmin) {
-      btnLabel = (st.simTier === key) ? '✓ Simulé' : 'Simuler ce tier';
-      btnAction = `SUB.setAdminSim('${key}')`;
+      btnLabel = isSimming ? '✓ En simulation — cliquer pour Bypass' : 'Simuler ce tier';
+      btnAction = isSimming ? `SUB.clearAdminSim()` : `SUB.setAdminSim('${key}')`;
     } else if (isCurrent) {
       btnLabel = '✓ Plan actuel';
       btnAction = '';
+    } else if (isPreviewing) {
+      btnLabel = '✓ En aperçu — cliquer pour quitter';
+      btnAction = `SUB.clearPreview()`;
     } else {
-      btnLabel = detail.cta || 'Choisir ce plan';
-      btnAction = `SUB._confirmUpgrade('${key}')`;
+      btnLabel = detail.cta || 'Simuler ce tier';
+      btnAction = `SUB.previewTier('${key}')`;
     }
 
-    // Bouton "Aperçu" (non-admin uniquement, pas le tier courant)
-    const previewBtn = (!st.isAdmin && !isCurrent) ? `
-      <button class="sub-plan-preview-btn ${isPreviewing?'active':''}"
-              onclick="SUB.previewTier('${isPreviewing?'':key}')"
-              title="${isPreviewing?'Quitter l’aperçu':'Visualiser ce plan dans l’app'}">
-        ${isPreviewing ? '✓ En aperçu — cliquer pour quitter' : '👁️ Aperçu de ce plan'}
-      </button>` : '';
+    const btnStyle = isCurrent
+      ? `background:transparent;color:${tinfo.color};border:1px solid ${tinfo.color}`
+      : `background:${tinfo.color};color:#000;border:1px solid ${tinfo.color}`;
 
     return `
-      <div class="sub-plan-card sub-plan-${key.toLowerCase()} ${detail.popular?'popular':''} ${isCurrent?'current':''} ${isPreviewing?'previewing':''}"
+      <div class="sub-plan-card sub-plan-${key.toLowerCase()} ${isPopular?'popular':''} ${isCurrent?'current':''} ${isSimming?'simming':''} ${isPreviewing?'previewing':''}"
            data-tier="${key}" style="--tier-color:${tinfo.color}">
         ${popularBadge}
         ${currentBadge}
         <div class="sub-plan-header">
-          ${tagBadge}
-          <div class="sub-plan-name">${tinfo.label}</div>
-          <div class="sub-plan-tagline">${detail.subtitle}</div>
+          <div class="sub-plan-name" style="color:${tinfo.color}">${cardName}</div>
+          <div class="sub-plan-tagline">${detail.subtitle || ''}</div>
           ${priceHTML}
         </div>
         <ul class="sub-plan-feats">${featuresList}</ul>
-        ${callout}
         <button class="sub-plan-cta ${isCurrent?'current':''}" ${isCurrent?'disabled':''}
-                style="background:${isCurrent?'transparent':tinfo.color};color:${isCurrent?tinfo.color:'#000'};border-color:${tinfo.color}"
+                style="${btnStyle}"
                 onclick="${btnAction}">
           ${btnLabel}
         </button>
-        ${previewBtn}
       </div>`;
   }
 
@@ -1202,7 +1190,12 @@ window.SUB = (function(){
   function _injectStyles() {
     if (document.getElementById('sub-injected-styles')) return;
     const css = `
-/* ════ Bandeau trial / lock / sim ════ */
+/* ════════════════════════════════════════════════════
+   subscription.js v3.1 — CSS auto-injecté
+   Design : retour à l'ancien layout (4 cartes + bandeaux)
+════════════════════════════════════════════════════ */
+
+/* ════ Bandeau trial (J-7) ════ */
 .sub-trial-banner { display:flex; align-items:center; gap:12px; padding:10px 16px;
   background:linear-gradient(90deg, rgba(0,212,170,.10), rgba(0,212,170,.04));
   border:1px solid rgba(0,212,170,.25); border-radius:10px;
@@ -1215,7 +1208,7 @@ window.SUB = (function(){
 .sub-trial-banner .stb-btn-cta { background:linear-gradient(135deg,var(--a),#00b891);
   color:#000; border-color:transparent; box-shadow:0 4px 18px rgba(0,212,170,.3); }
 
-/* ════ Bandeau aperçu utilisateur ════ */
+/* ════ Bandeau aperçu utilisateur (preview) ════ */
 .sub-preview-banner { display:flex; align-items:center; gap:12px; padding:10px 16px;
   background:linear-gradient(90deg, rgba(167,139,250,.14), rgba(167,139,250,.06));
   border:1px solid rgba(167,139,250,.4); border-radius:10px;
@@ -1230,144 +1223,135 @@ window.SUB = (function(){
 .sub-preview-banner .spb-btn:last-child { margin-left:auto; }
 body.sub-in-preview .ni-locked { opacity:1 !important; filter:none !important; }
 
-/* ════ Bandeau de mode (test / cabinet) ════ */
-.sub-mode-banner { display:flex; align-items:flex-start; gap:14px; padding:14px 18px;
-  background:var(--s); border:1px solid var(--b); border-radius:12px; margin-bottom:16px; }
-.sub-mode-banner.test { border-color:rgba(0,212,170,.28); background:linear-gradient(135deg, rgba(0,212,170,.06), var(--s)); }
-.sub-mode-banner.cabinet { border-color:rgba(255,181,71,.28); background:linear-gradient(135deg, rgba(255,181,71,.06), var(--s)); }
-
-/* ════ Carte statut actuel ════ */
-.sub-current-card { padding:18px 22px; background:var(--c); border:1px solid var(--b);
-  border-radius:14px; margin-bottom:20px; }
-.sub-current-card.active { border-color:rgba(0,212,170,.3); }
-.sub-current-card.locked { border-color:rgba(255,95,109,.4); background:linear-gradient(135deg,rgba(255,95,109,.04),var(--c)); }
-.sub-current-card.urgent { border-color:rgba(255,181,71,.5); background:linear-gradient(135deg,rgba(255,181,71,.04),var(--c)); }
-.sub-current-card.sub-card-admin { border-color:rgba(255,95,109,.4); background:linear-gradient(135deg,rgba(255,95,109,.04),var(--c)); }
-.sub-current-label { font-size:11px; color:var(--m); text-transform:uppercase; letter-spacing:1px; font-family:var(--fm); margin-bottom:6px; }
-.sub-current-tier { font-family:var(--fs,serif); font-size:24px; color:var(--t); margin-bottom:4px; }
-.sub-current-sub { font-size:13px; color:var(--m); }
-.sub-current-progress { margin-top:12px; height:6px; background:rgba(255,255,255,.06); border-radius:3px; overflow:hidden; }
-.sub-current-progress-bar { height:100%; background:linear-gradient(90deg,var(--a),#00b891); border-radius:3px; transition:width .3s; }
-
 /* ════ Page abonnement ════ */
-.sub-abo-page { max-width:1200px; margin:0 auto; padding:8px 0 60px; }
-.sub-abo-hero { text-align:center; margin-bottom:28px; padding:16px 0 8px; }
-.sub-abo-h1 { font-family:var(--fs,serif); font-size:34px; color:var(--t); margin:0 0 8px; }
-.sub-abo-h2 { font-size:16px; color:var(--m); margin:0; }
-.sub-abo-h2 em { color:var(--a); font-style:italic; }
+.sub-abo-page { max-width:1280px; margin:0 auto; padding:8px 0 60px; }
+.sub-abo-hero { text-align:center; margin-bottom:24px; padding:8px 0 4px; }
+.sub-abo-h1 { font-family:var(--fs,serif); font-size:34px; color:var(--a); margin:0 0 6px; font-weight:400; }
+.sub-abo-h2 { font-size:14px; color:var(--m); margin:0; }
 
-/* ════ Toggle Premium (style landing) ════ */
-.sub-pricing { background:radial-gradient(ellipse at top, rgba(0,212,170,.04), transparent 70%);
-  padding:24px 12px; border-radius:18px; }
-.sub-premium-toggle-wrap { display:flex; align-items:center; justify-content:center; gap:14px;
-  padding:14px 22px; background:linear-gradient(90deg, rgba(251,191,36,.08), rgba(0,212,170,.06));
-  border:1px solid rgba(251,191,36,.25); border-radius:50px;
-  max-width:520px; margin:0 auto 28px; cursor:pointer; transition:all .2s; }
-.sub-premium-toggle-wrap:hover { border-color:rgba(251,191,36,.5); transform:translateY(-1px); }
-.sub-premium-toggle-label { font-size:14px; color:var(--t); }
-.sub-premium-toggle { position:relative; width:48px; height:26px; flex-shrink:0; }
-.sub-premium-toggle input { opacity:0; width:0; height:0; position:absolute; }
-.sub-premium-toggle-slider { position:absolute; inset:0; background:var(--b); border-radius:26px;
-  cursor:pointer; transition:.3s; }
-.sub-premium-toggle-slider::before { content:''; position:absolute; height:20px; width:20px; left:3px; bottom:3px;
-  background:#fff; border-radius:50%; transition:.3s; }
-.sub-premium-toggle input:checked + .sub-premium-toggle-slider { background:linear-gradient(135deg, #fbbf24, #f59e0b); }
-.sub-premium-toggle input:checked + .sub-premium-toggle-slider::before { transform:translateX(22px); }
+/* ════ Bandeaux (test / admin / sim) ════ */
+.sub-banner { padding:18px 22px; border-radius:14px; margin-bottom:14px;
+  background:var(--s); border:1px solid var(--b); }
+
+.sub-banner-test {
+  background:linear-gradient(90deg, rgba(0,212,170,.10), rgba(0,212,170,.02));
+  border:1px solid rgba(0,212,170,.32);
+  display:flex; align-items:flex-start; gap:14px;
+}
+.sub-banner-test .sub-banner-ic { font-size:22px; flex-shrink:0; line-height:1.3; }
+.sub-banner-test .sub-banner-content { flex:1; }
+.sub-banner-test .sub-banner-title { font-weight:700; color:var(--a); font-size:15px; margin-bottom:4px; }
+.sub-banner-test .sub-banner-desc { font-size:13px; color:var(--m); line-height:1.5; }
+
+.sub-banner-admin {
+  background:linear-gradient(135deg, rgba(20,30,46,.6), var(--s));
+  border:1px solid var(--admin-color, #4fa8ff);
+  padding:18px 22px;
+}
+.sub-banner-admin .sub-banner-label {
+  font-size:10px; text-transform:uppercase; letter-spacing:1.5px;
+  color:var(--admin-color, #4fa8ff); font-family:var(--fm); font-weight:700;
+  margin-bottom:8px; opacity:.9;
+}
+.sub-banner-admin .sub-banner-bigtitle {
+  font-family:var(--fs,serif); font-size:24px; color:var(--admin-color, #4fa8ff);
+  margin-bottom:6px; font-weight:400;
+}
+.sub-banner-admin .sub-banner-desc { font-size:13px; color:var(--m); line-height:1.5; }
+
+.sub-banner-sim {
+  background:linear-gradient(135deg, rgba(255,95,109,.06), var(--s));
+  border:1px solid rgba(255,95,109,.32);
+  padding:18px 22px;
+}
+.sub-banner-sim .sub-banner-label-danger {
+  font-size:13px; color:var(--d); font-weight:700; font-family:var(--ff);
+  margin-bottom:6px;
+}
+.sub-banner-sim .sub-banner-desc { font-size:13px; color:var(--m); }
+
+/* Boutons de simulation tier (admin) */
+.sub-sim-buttons { display:flex; flex-wrap:wrap; gap:8px; }
+.sub-sim-btn {
+  padding:8px 14px; background:var(--c); color:var(--t);
+  border:1px solid var(--b); border-radius:8px; font-size:12px;
+  cursor:pointer; font-family:var(--ff); font-weight:600; transition:all .15s;
+}
+.sub-sim-btn:hover { border-color:var(--bl); background:var(--s); transform:translateY(-1px); }
+.sub-sim-btn.active { box-shadow:0 4px 18px rgba(0,212,170,.18); }
+
+/* ════ Header de groupe (IDEL / Comptable) ════ */
+.sub-group-header { margin:32px 0 16px; padding:14px 18px;
+  background:linear-gradient(90deg, rgba(0,212,170,.05), transparent);
+  border-radius:12px; }
+.sub-group-compta {
+  background:linear-gradient(90deg, rgba(255,95,109,.05), transparent);
+  margin-top:42px;
+}
+.sub-group-title { font-family:var(--fs,serif); font-size:20px; color:var(--t); margin-bottom:4px; }
+.sub-group-sub { font-size:13px; color:var(--m); }
 
 /* ════ Grille 4 cartes ════ */
-.sub-price-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
-.sub-price-grid.compta { grid-template-columns:1fr; max-width:680px; margin:0 auto; }
-@media (max-width:1080px) { .sub-price-grid { grid-template-columns:repeat(2,1fr); } }
-@media (max-width:560px)  { .sub-price-grid { grid-template-columns:1fr; } }
+.sub-price-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:20px; }
+.sub-price-grid-compta { grid-template-columns:1fr; max-width:720px; margin:0 auto 20px; }
+@media (max-width:1100px) { .sub-price-grid { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:580px)  { .sub-price-grid { grid-template-columns:1fr; } }
 
-/* ════ Carte plan v3 (style landing) ════ */
+/* ════ Carte plan ════ */
 .sub-plan-card { position:relative; background:var(--c); border:1px solid var(--b);
-  border-radius:16px; padding:24px 20px 20px; display:flex; flex-direction:column;
-  transition:all .25s; min-height:520px; }
-.sub-plan-card:hover { transform:translateY(-3px); border-color:var(--tier-color); box-shadow:0 12px 32px rgba(0,0,0,.3); }
-.sub-plan-card.popular { border-color:var(--tier-color); box-shadow:0 0 0 1px var(--tier-color), 0 12px 32px rgba(0,212,170,.15);
-  transform:scale(1.02); }
-.sub-plan-card.current { border-color:var(--tier-color); background:linear-gradient(180deg, var(--c), rgba(0,212,170,.03)); }
-.sub-plan-card.previewing { border-color:#a78bfa; box-shadow:0 0 0 2px rgba(167,139,250,.3); }
-.sub-plan-popular { position:absolute; top:-12px; left:50%; transform:translateX(-50%);
-  background:linear-gradient(135deg,#fbbf24,#f59e0b); color:#000; padding:5px 16px; border-radius:50px;
-  font-size:11px; font-weight:700; font-family:var(--fm); letter-spacing:.5px; white-space:nowrap; }
-.sub-plan-current-badge { position:absolute; top:-12px; right:14px; background:var(--ad); color:var(--a);
-  border:1px solid var(--ab); padding:4px 12px; border-radius:50px; font-size:10px; font-weight:700; font-family:var(--fm); }
-.sub-plan-tag { display:inline-block; padding:4px 10px; border-radius:20px; font-size:10px;
-  font-weight:700; letter-spacing:.5px; font-family:var(--fm); border:1px solid; margin-bottom:14px; }
-.sub-plan-name { font-family:var(--fs,serif); font-size:26px; color:var(--t); margin:0 0 4px; }
-.sub-plan-tagline { font-size:12px; color:var(--m); font-style:italic; margin-bottom:16px; min-height:18px; }
-.sub-plan-price-block { display:flex; align-items:baseline; gap:6px; margin-bottom:4px; }
-.sub-plan-amount-prefix { font-family:var(--fs,serif); font-size:36px; color:var(--m); }
-.sub-plan-amount { font-family:var(--fs,serif); font-size:48px; line-height:1; font-weight:400; }
-.sub-plan-period { font-size:13px; color:var(--m); font-family:var(--fm); }
-.sub-plan-subprice { font-size:11px; color:var(--m); font-family:var(--fm); margin-bottom:18px; }
-.sub-plan-price-degressif { margin-bottom:18px; }
-.sub-plan-amount-text { font-family:var(--fs,serif); font-size:34px; line-height:1; margin-bottom:4px; }
-.sub-plan-price-detail { font-size:11px; color:var(--m); font-family:var(--fm); margin-bottom:2px; line-height:1.5; }
-.sub-plan-price-suffix { font-size:11px; color:var(--m); font-family:var(--fm); }
-.sub-plan-feats { list-style:none; padding:0; margin:0 0 14px; flex:1; }
+  border-radius:14px; padding:22px 18px 18px; display:flex; flex-direction:column;
+  transition:all .25s; min-height:480px; }
+.sub-plan-card:hover { transform:translateY(-3px); border-color:var(--tier-color);
+  box-shadow:0 10px 30px rgba(0,0,0,.3); }
+.sub-plan-card.popular { border-color:var(--tier-color);
+  box-shadow:0 0 0 1px var(--tier-color), 0 12px 32px rgba(0,212,170,.15); }
+.sub-plan-card.current { border-color:var(--tier-color);
+  background:linear-gradient(180deg, var(--c), rgba(0,212,170,.03)); }
+.sub-plan-card.simming { border-color:var(--tier-color); border-width:2px;
+  box-shadow:0 0 0 2px rgba(0,212,170,.15); }
+.sub-plan-card.previewing { border-color:#a78bfa; border-width:2px;
+  box-shadow:0 0 0 2px rgba(167,139,250,.2); }
+
+.sub-plan-popular-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%);
+  background:linear-gradient(135deg,#00d4aa,#00b891); color:#000;
+  padding:5px 16px; border-radius:50px; font-size:11px; font-weight:700;
+  font-family:var(--fm); letter-spacing:.3px; white-space:nowrap;
+  box-shadow:0 4px 16px rgba(0,212,170,.4); }
+.sub-plan-current-badge { position:absolute; top:-12px; right:14px;
+  background:rgba(0,212,170,.18); color:var(--a);
+  border:1px solid rgba(0,212,170,.5); padding:4px 12px; border-radius:50px;
+  font-size:10px; font-weight:700; font-family:var(--fm); }
+
+.sub-plan-header { margin-bottom:18px; }
+.sub-plan-name { font-family:var(--fs,serif); font-size:22px; margin:0 0 4px; font-weight:400; }
+.sub-plan-tagline { font-size:12px; color:var(--m); font-style:italic; margin-bottom:14px; min-height:18px; }
+
+.sub-plan-price-main { font-family:var(--fs,serif); font-size:24px; line-height:1.2;
+  margin-bottom:8px; font-weight:400; }
+.sub-plan-card.sub-plan-cabinet .sub-plan-price-main { font-size:18px; line-height:1.4; }
+
+.sub-plan-price-degbox { font-size:11px; color:var(--m); font-family:var(--fm);
+  padding:8px 12px; background:rgba(255,255,255,.03); border:1px solid var(--b);
+  border-radius:8px; line-height:1.5; margin-bottom:10px; }
+
+.sub-plan-feats { list-style:none; padding:0; margin:0 0 18px; flex:1; }
 .sub-plan-feat { display:flex; align-items:flex-start; gap:8px; font-size:13px; color:var(--t);
   padding:5px 0; line-height:1.4; }
-.sub-plan-feat.bold { font-weight:600; color:var(--t); padding-top:8px; }
-.sub-plan-check { font-weight:700; flex-shrink:0; font-size:14px; }
-.sub-plan-callout { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:10px;
-  font-size:12px; border:1px solid; margin-bottom:14px; font-family:var(--fm); font-weight:600; }
-.sub-plan-cta { width:100%; padding:14px 20px; border-radius:12px; font-family:var(--ff); font-size:14px;
-  font-weight:700; cursor:pointer; border:1px solid; transition:all .2s; }
-.sub-plan-cta:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 6px 22px rgba(0,0,0,.3); filter:brightness(1.05); }
+.sub-plan-feat.bold { font-weight:600; padding-top:4px; padding-bottom:6px; }
+.sub-plan-check { font-weight:700; flex-shrink:0; font-size:14px; line-height:1.4; }
+
+.sub-plan-cta { width:100%; padding:13px 18px; border-radius:10px;
+  font-family:var(--ff); font-size:14px; font-weight:700; cursor:pointer;
+  transition:all .2s; border:1px solid; }
+.sub-plan-cta:hover:not(:disabled) { transform:translateY(-1px);
+  box-shadow:0 6px 22px rgba(0,0,0,.3); filter:brightness(1.05); }
 .sub-plan-cta.current { cursor:default; }
-.sub-plan-preview-btn { width:100%; padding:8px 14px; margin-top:8px; background:transparent;
-  color:var(--m); border:1px dashed var(--b); border-radius:10px; font-size:11px; cursor:pointer;
-  font-family:var(--ff); transition:all .15s; }
-.sub-plan-preview-btn:hover { color:#a78bfa; border-color:rgba(167,139,250,.4); background:rgba(167,139,250,.04); }
-.sub-plan-preview-btn.active { color:#a78bfa; border-color:#a78bfa; border-style:solid; background:rgba(167,139,250,.06); }
-
-/* ════ Groupe expert-comptable ════ */
-.sub-plans-group-header { margin:48px 0 18px; }
-.sub-plans-group-header.compta { border-top:1px dashed var(--b); padding-top:32px; }
-.sub-plans-group-title { display:flex; align-items:center; gap:10px; font-family:var(--fs,serif);
-  font-size:22px; color:var(--t); margin-bottom:6px; }
-.sub-plans-group-sub { font-size:13px; color:var(--m); max-width:680px; }
-
-/* ════ Comparateur (matrice) ════ */
-.sub-comparator { margin:32px 0 16px; background:var(--c); border:1px solid var(--b); border-radius:14px;
-  padding:0; overflow:hidden; }
-.sub-comparator > summary { padding:16px 22px; cursor:pointer; font-weight:600; color:var(--t);
-  font-size:14px; list-style:none; display:flex; justify-content:space-between; align-items:center; }
-.sub-comparator > summary::-webkit-details-marker { display:none; }
-.sub-comparator > summary::after { content:'▾'; color:var(--m); font-size:14px; transition:.2s; }
-.sub-comparator[open] > summary::after { transform:rotate(180deg); }
-.sub-comparator > summary:hover { background:var(--s); }
-.sub-comparator-wrap { padding:0 16px 20px; overflow-x:auto; }
-.sub-comp-table { width:100%; border-collapse:collapse; font-size:12px; }
-.sub-comp-table th, .sub-comp-table td { padding:10px 14px; text-align:center; border-bottom:1px solid var(--b); }
-.sub-comp-feat-h, .sub-comp-feat { text-align:left !important; color:var(--t); font-weight:500; }
-.sub-comp-feat { font-size:12.5px; }
-.sub-comp-table thead th { background:var(--s); font-family:var(--fm); font-weight:700;
-  position:sticky; top:0; z-index:1; }
-.sub-comp-th-price { font-size:10px; color:var(--m); font-family:var(--fm); font-weight:400; }
-.sub-comp-grp td { background:linear-gradient(90deg, rgba(0,212,170,.08), transparent);
-  font-weight:600; color:var(--t); padding:10px 14px; font-size:12px; text-transform:uppercase;
-  letter-spacing:.5px; font-family:var(--fm); border-top:1px solid var(--b); }
-.sub-comp-yes { color:var(--ok); font-weight:700; font-size:16px; }
-.sub-comp-no { color:var(--m); opacity:.5; }
+.sub-plan-cta:disabled { cursor:default; opacity:.85; }
 
 /* ════ Footer abonnement ════ */
-.sub-abo-footer { margin-top:32px; padding:20px 0; text-align:center; border-top:1px dashed var(--b); }
+.sub-abo-footer { margin-top:32px; padding:20px 0; text-align:center;
+  border-top:1px dashed var(--b); }
 .sub-abo-footer-line { font-size:12px; color:var(--m); margin-bottom:6px; }
-
-/* ════ Panel admin ════ */
-.sub-admin-panel { padding:18px; background:linear-gradient(135deg, rgba(255,95,109,.05), var(--s));
-  border:1px solid rgba(255,95,109,.3); border-radius:12px; margin-bottom:20px; }
-.sub-admin-panel h3 { margin:0 0 6px; font-size:15px; color:var(--d); font-family:var(--fs,serif); }
-.sub-admin-panel p { margin:0 0 12px; font-size:12px; color:var(--m); }
-.sub-admin-buttons { display:flex; flex-wrap:wrap; gap:8px; }
-.sub-admin-btn { padding:6px 14px; background:var(--c); color:var(--t); border:1px solid var(--b);
-  border-radius:8px; font-size:12px; cursor:pointer; font-family:var(--ff); font-weight:600; transition:all .15s; }
-.sub-admin-btn:hover { border-color:var(--bl); background:var(--s); }
-.sub-admin-btn.active { background:var(--a); color:#000; border-color:var(--a); }
 
 /* ════ Paywall ════ */
 .sub-paywall-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:9999;
@@ -1425,8 +1409,8 @@ body.sub-in-preview .ni-locked { opacity:1 !important; filter:none !important; }
 /* ════ Sidebar / nav item "Mon abonnement" mise en avant ════ */
 .ni[data-v="mon-abo"] { position:relative; }
 .ni[data-v="mon-abo"] .ni-trial-badge { position:absolute; right:8px; top:50%; transform:translateY(-50%);
-  font-size:10px; padding:2px 8px; border-radius:50px; background:var(--ad); color:var(--a);
-  border:1px solid var(--ab); font-family:var(--fm); font-weight:700; }
+  font-size:10px; padding:2px 8px; border-radius:50px; background:rgba(0,212,170,.18); color:var(--a);
+  border:1px solid rgba(0,212,170,.4); font-family:var(--fm); font-weight:700; }
 `;
     const style = document.createElement('style');
     style.id = 'sub-injected-styles';
