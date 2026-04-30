@@ -1,0 +1,38 @@
+{
+  "name": "AMI NGAP — Cotation intelligente",
+  "short_name": "AMI",
+  "description": "Assistant infirmier IA · Cotation NGAP · Tournée optimisée · Offline",
+  "id": "/Ami-ngap/",
+  "start_url": "/Ami-ngap/index.html",
+  "scope": "/Ami-ngap/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait-primary",
+  "background_color": "#0b0f14",
+  "theme_color": "#0b0f14",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["medical", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "/Ami-ngap/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/Ami-ngap/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/Ami-ngap/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/Ami-ngap/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Cotation rapide",
+      "short_name": "Coter",
+      "url": "/Ami-ngap/index.html#cot",
+      "icons": [{ "src": "/Ami-ngap/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tournée du jour",
+      "short_name": "Tournée",
+      "url": "/Ami-ngap/index.html#tur",
+      "icons": [{ "src": "/Ami-ngap/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
