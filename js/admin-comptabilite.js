@@ -586,35 +586,21 @@
     for (let m = 1; m <= 12; m++) {
       const ym = `${STATE.selectedYear}-${String(m).padStart(2,'0')}`;
       const snap = STATE.snapshots[ym] || null;
-      const isFuture  = ym > nowYM;
+      const isFuture = ym > nowYM;
       const isCurrent = ym === nowYM;
-      const isPast    = !isFuture && !isCurrent;
 
-      let revHT, charges, frozen = false, noData = false;
+      let revHT, charges, frozen = false;
       if (snap && snap.frozen) {
-        // Mois figé : valeurs historisées au moment du snapshot
         revHT = snap.revHT; charges = snap.charges; frozen = true;
       } else if (isFuture) {
-        // Mois futur : pas encore arrivé
         revHT = 0; charges = 0;
-      } else if (isPast) {
-        // ⚡ FIX (2026-05-01) : mois passé SANS snapshot figé → AUCUNE donnée.
-        //   AVANT : on recopiait les valeurs du mois COURANT (currentRev), ce qui
-        //   faisait croire à tort que Janvier/Février/etc. avaient la même
-        //   clientèle et les mêmes charges qu'aujourd'hui — affichage trompeur
-        //   surtout après un démarrage récent (5 mois identiques).
-        //   APRÈS : on affiche 0 + flag noData → le rendu mettra "—" (pas de
-        //   donnée). L'admin peut figer rétroactivement un mois s'il a les
-        //   chiffres réels (bouton 🔒 dans la table).
-        revHT = 0; charges = 0; noData = true;
       } else {
-        // Mois courant : seul cas où on utilise le calcul temps réel
         revHT = currentRev.totalHT;
         charges = currentCharges;
       }
       const benef = revHT - charges;
       const marge = revHT > 0 ? (benef / revHT) * 100 : 0;
-      months.push({ ym, revHT, charges, benef, marge, frozen, isCurrent, isFuture, noData });
+      months.push({ ym, revHT, charges, benef, marge, frozen, isCurrent, isFuture });
     }
     return months;
   }
@@ -622,20 +608,10 @@
   /* ─── Graphique d'évolution mensuelle (SVG pur, zéro dépendance) ─── */
   function _renderChart(currentRev, currentCharges) {
     const series = _buildMonthlySeries(currentRev, currentCharges);
-    // ⚡ "visible" = mois avec données affichables (= ni futur, ni noData).
-    //   Si aucun mois exploitable (ex: année passée sans aucun snapshot),
-    //   on affiche un placeholder explicatif plutôt que des barres vides
-    //   ou trompeuses.
-    const visible = series.filter(m => !m.isFuture && !m.noData);
+    const visible = series.filter(m => !m.isFuture);
 
     if (!visible.length) {
-      const yearLbl = STATE.selectedYear;
-      const isCurrentYear = yearLbl === new Date().getFullYear();
-      return `<div class="cmpt-chart-empty">${
-        isCurrentYear
-          ? 'Aucune donnée disponible pour cette année.'
-          : `Aucune donnée historique pour ${yearLbl}. Utilisez le bouton 🔒 dans le tableau ci-dessous pour saisir rétroactivement les chiffres si vous les connaissez.`
-      }</div>`;
+      return `<div class="cmpt-chart-empty">Aucune donnée disponible pour cette année.</div>`;
     }
 
     // Dimensions SVG
@@ -677,10 +653,9 @@
     const C_BEN = '#00d4aa';   // var(--a)
     const C_NEG = '#ff5f6d';   // var(--d)
 
-    // Barres : recettes (gauche), charges (droite).
-    // ⚡ Skip futurs ET noData : pas de barre pour ces mois (juste le label X).
+    // Barres : recettes (gauche), charges (droite)
     const barsHTML = series.map((m, i) => {
-      if (m.isFuture || m.noData) return '';
+      if (m.isFuture) return '';
       const cx = x(i);
       const xRev = cx - barW - barGap/2;
       const xChg = cx + barGap/2;
@@ -731,10 +706,8 @@
     const xLabelsHTML = series.map((m, i) => {
       const cx = x(i);
       const fontWeight = m.isCurrent ? '700' : '400';
-      // ⚡ noData et isFuture sont traités pareil visuellement (gris, opacité réduite)
-      const dimmed = m.isFuture || m.noData;
-      const color = m.isCurrent ? 'var(--a)' : (dimmed ? 'var(--m)' : 'var(--t)');
-      const opacity = dimmed ? '0.4' : '1';
+      const color = m.isCurrent ? 'var(--a)' : (m.isFuture ? 'var(--m)' : 'var(--t)');
+      const opacity = m.isFuture ? '0.4' : '1';
       return `
         <text x="${cx}" y="${H - PAD.bottom + 18}" text-anchor="middle"
               font-family="DM Mono, monospace" font-size="11"
@@ -799,27 +772,17 @@
     const avgBen = totalBen / visible.length;
     const best = visible.reduce((a,b)=>b.benef>a.benef?b:a, visible[0]);
     const worst = visible.reduce((a,b)=>b.benef<a.benef?b:a, visible[0]);
-    // ⚡ Tendance : compare le PREMIER mois exploitable au DERNIER mois exploitable
-    //   (avant le fix, "vs janvier" était hardcodé alors qu'on n'avait pas
-    //   forcément de données en janvier — affichage incohérent).
-    const firstYM = visible[0].ym;
-    const lastYM  = visible[visible.length-1].ym;
     const trend = visible.length >= 2
       ? visible[visible.length-1].benef - visible[0].benef
       : 0;
     const trendArrow = trend > 0 ? '↗' : (trend < 0 ? '↘' : '→');
     const trendColor = trend > 0 ? 'var(--a)' : (trend < 0 ? 'var(--d)' : 'var(--m)');
-    // Label tendance : "vs <premier mois>" si > 1 mois, sinon "donnée unique"
-    const trendSubLabel = visible.length >= 2
-      ? `vs ${_ymLabel(firstYM).toLowerCase().split(' ')[0]}`  // ex: "vs mai"
-      : 'donnée unique';
 
     return `
       <div class="cmpt-chart-stats">
         <div class="cmpt-chart-stat">
           <div class="cmpt-chart-stat-lbl">Bénéfice moyen / mois</div>
           <div class="cmpt-chart-stat-val ${avgBen>=0?'cmpt-pos':'cmpt-neg'}">${_eur(avgBen)}</div>
-          <div class="cmpt-chart-stat-sub">sur ${visible.length} mois</div>
         </div>
         <div class="cmpt-chart-stat">
           <div class="cmpt-chart-stat-lbl">Meilleur mois</div>
@@ -834,7 +797,7 @@
         <div class="cmpt-chart-stat">
           <div class="cmpt-chart-stat-lbl">Tendance</div>
           <div class="cmpt-chart-stat-val" style="color:${trendColor}">${trendArrow} ${_eur(Math.abs(trend))}</div>
-          <div class="cmpt-chart-stat-sub">${trendSubLabel}</div>
+          <div class="cmpt-chart-stat-sub">vs janvier</div>
         </div>
       </div>
     `;
@@ -845,61 +808,40 @@
     const months = _buildMonthlySeries(currentRev, currentCharges);
 
     const body = months.map(m => {
-      // ⚡ "Pas de données affichables" = soit futur, soit passé sans snapshot
-      const noShow = m.isFuture || m.noData;
-
       let actionBtn = '';
       if (m.isFuture) {
         actionBtn = '<span class="cmpt-mut">—</span>';
       } else if (m.frozen) {
         actionBtn = `<button class="cmpt-icon-btn" title="Dégeler ce mois" onclick="AdmCompta.unfreezeMonth('${m.ym}')">🔓</button>`;
-      } else if (m.noData) {
-        // Mois passé sans données : permettre de figer rétroactivement si l'admin
-        // a les vrais chiffres (sera rempli avec snapshot.revHT/charges manuels)
-        actionBtn = `<button class="cmpt-icon-btn" title="Saisir et figer rétroactivement les chiffres de ce mois" onclick="AdmCompta.freezeMonth('${m.ym}')" style="opacity:.6">🔒</button>`;
       } else {
         actionBtn = `<button class="cmpt-icon-btn" title="Figer ce mois (snapshot)" onclick="AdmCompta.freezeMonth('${m.ym}')">🔒</button>`;
       }
-      const exportBtn = noShow ? '' :
+      const exportBtn = m.isFuture ? '' :
         `<button class="cmpt-icon-btn" title="Exporter PDF de ce mois" onclick="AdmCompta.exportPDF('${m.ym}')">📄</button>`;
 
       const rowClass = [
         m.isCurrent ? 'cmpt-row-current' : '',
         m.frozen    ? 'cmpt-row-frozen'  : '',
         m.isFuture  ? 'cmpt-row-future'  : '',
-        m.noData    ? 'cmpt-row-nodata'  : '',
-        // Marge positive/négative seulement pour les mois avec données
-        !noShow && m.benef >= 0 ? 'cmpt-row-pos' : (!noShow ? 'cmpt-row-neg' : '')
+        m.benef >= 0 ? 'cmpt-row-pos' : 'cmpt-row-neg'
       ].filter(Boolean).join(' ');
-
-      // Libellé "no data" avec tooltip discret (en plus du badge)
-      const labelExtra = m.isCurrent
-        ? ' <span class="cmpt-tag-now">en cours</span>'
-        : m.frozen
-          ? ' <span class="cmpt-tag-frozen">🔒 figé</span>'
-          : m.noData
-            ? ' <span class="cmpt-tag-nodata" title="Aucune donnée historique pour ce mois. Cliquez sur 🔒 pour saisir les chiffres rétroactivement si vous les connaissez.">aucune donnée</span>'
-            : '';
 
       return `
         <tr class="${rowClass}">
-          <td>${_ymLabel(m.ym)}${labelExtra}</td>
-          <td class="cmpt-num">${noShow ? '<span class="cmpt-mut">—</span>' : _eur(m.revHT)}</td>
-          <td class="cmpt-num">${noShow ? '<span class="cmpt-mut">—</span>' : _eur(m.charges)}</td>
-          <td class="cmpt-num cmpt-strong ${noShow ? '' : (m.benef>=0?'cmpt-pos':'cmpt-neg')}">${noShow ? '<span class="cmpt-mut">—</span>' : _eur(m.benef)}</td>
-          <td class="cmpt-num">${noShow ? '<span class="cmpt-mut">—</span>' : _pct(m.marge)}</td>
+          <td>${_ymLabel(m.ym)}${m.isCurrent ? ' <span class="cmpt-tag-now">en cours</span>' : ''}${m.frozen ? ' <span class="cmpt-tag-frozen">🔒 figé</span>' : ''}</td>
+          <td class="cmpt-num">${m.isFuture ? '—' : _eur(m.revHT)}</td>
+          <td class="cmpt-num">${m.isFuture ? '—' : _eur(m.charges)}</td>
+          <td class="cmpt-num cmpt-strong ${m.benef>=0?'cmpt-pos':'cmpt-neg'}">${m.isFuture ? '—' : _eur(m.benef)}</td>
+          <td class="cmpt-num">${m.isFuture ? '—' : _pct(m.marge)}</td>
           <td class="cmpt-num">${actionBtn} ${exportBtn}</td>
         </tr>`;
     }).join('');
 
-    // ⚡ Totaux : EXCLURE les mois sans données (futurs OU passés sans snapshot)
-    //   Avant le fix, le total était faussé par les fausses valeurs des mois passés.
-    const totRev = months.reduce((s,m)=>s+(m.isFuture||m.noData?0:m.revHT), 0);
-    const totChg = months.reduce((s,m)=>s+(m.isFuture||m.noData?0:m.charges), 0);
+    // Totaux annuels
+    const totRev = months.reduce((s,m)=>s+(m.isFuture?0:m.revHT), 0);
+    const totChg = months.reduce((s,m)=>s+(m.isFuture?0:m.charges), 0);
     const totBen = totRev - totChg;
     const totMar = totRev > 0 ? (totBen/totRev)*100 : 0;
-    // Compteur de mois avec vraies données (pour clarifier le total)
-    const realMonths = months.filter(m => !m.isFuture && !m.noData).length;
 
     return `
       <table class="cmpt-table cmpt-table-annual">
@@ -916,7 +858,7 @@
         <tbody>${body}</tbody>
         <tfoot>
           <tr class="cmpt-foot-total">
-            <td><strong>Total ${STATE.selectedYear}</strong>${realMonths < 12 ? ` <span class="cmpt-mut" style="font-size:11px;font-weight:400" title="Calculé sur ${realMonths} mois disposant de données réelles ou figées. Les mois 'aucune donnée' sont exclus.">(${realMonths} mois)</span>` : ''}</td>
+            <td><strong>Total ${STATE.selectedYear}</strong></td>
             <td class="cmpt-num cmpt-strong">${_eur(totRev)}</td>
             <td class="cmpt-num cmpt-strong">${_eur(totChg)}</td>
             <td class="cmpt-num cmpt-strong ${totBen>=0?'cmpt-pos':'cmpt-neg'}">${_eur(totBen)}</td>
@@ -1443,13 +1385,8 @@
       .cmpt-table-annual .cmpt-row-current { background: rgba(0,212,170,.04); }
       .cmpt-table-annual .cmpt-row-frozen td { color: var(--t); }
       .cmpt-table-annual .cmpt-row-future td { color: var(--m); opacity: .55; }
-      /* ⚡ Mois passé sans snapshot : visuellement distinct du futur (légèrement
-         différent de cmpt-row-future pour qu'on perçoive que c'est différent
-         du futur — c'est du passé "non saisi", donc actionable via 🔒) */
-      .cmpt-table-annual .cmpt-row-nodata td { color: var(--m); opacity: .65; font-style: italic; }
       .cmpt-tag-now { display: inline-block; background: rgba(0,212,170,.15); color: var(--a); padding: 1px 8px; border-radius: 10px; font-size: 9px; font-family: var(--fm); margin-left: 6px; letter-spacing: .5px; }
       .cmpt-tag-frozen { display: inline-block; background: rgba(255,255,255,.04); color: var(--m); padding: 1px 8px; border-radius: 10px; font-size: 9px; font-family: var(--fm); margin-left: 6px; }
-      .cmpt-tag-nodata { display: inline-block; background: rgba(255,181,71,.08); color: var(--w, #ffb547); padding: 1px 8px; border-radius: 10px; font-size: 9px; font-family: var(--fm); margin-left: 6px; cursor: help; border: 1px dashed rgba(255,181,71,.3); }
       .cmpt-year-label { font-family: var(--fs); font-size: 18px; color: var(--a); padding: 0 10px; }
 
       /* Chart évolution */
@@ -1510,40 +1447,59 @@
     _closeModal
   };
 
-  /* ⚡ Auto-refresh quand un abonnement IDE est modifié ailleurs (modale admin
-     d'override, promotion de rôle, activation Premium, etc.). Sans ça, la
-     Comptabilité affichait les anciennes valeurs jusqu'à un changement
-     d'onglet ou un F5 manuel — déroutant pour l'admin qui vient de promouvoir
-     quelqu'un en Pro et ne voit pas le CA bouger.
+  console.log('[adm-compta] v1.2 prêt — window.AdmCompta exposé');
 
-     Le déclencheur est un CustomEvent dispatché par admin-subscription-ui.js
-     après chaque appel réussi à /webhook/admin-subscription-override (ou
-     /admin-promote-user). On rafraîchit UNIQUEMENT si l'onglet Comptabilité
-     est actuellement visible (sinon load() sera appelé naturellement à la
-     prochaine ouverture via admTab('compta')).
+  /* ═════════════════════════════════════════════════════════════════
+     14. AUTO-REFRESH (réactif aux changements d'abonnement)
+     ─────────────────────────────────────────────────────────────────
+     Évite à l'admin de devoir cliquer ↻ Actualiser après chaque action
+     sur un compte. Trois déclencheurs :
+       1. Événement 'ami:subscription_changed' (émis par admin-subscription-ui
+          à chaque changement de tier / extension trial / addon premium)
+       2. Événement 'ami:subscription_mode_changed' (bascule TEST↔PAYANT)
+       3. Détection de visibilité de l'onglet (visibilitychange)
+  ═════════════════════════════════════════════════════════════════ */
 
-     ⚡ Détection robuste : on lit le DOM (display de la section compta) plutôt
-     que la variable _ADM_ACTIVE_TAB d'admin.js — un `let` top-level n'est PAS
-     forcément accessible entre fichiers script (comportement variable selon
-     le navigateur et le mode de chargement). Le DOM est la source de vérité. */
-  document.addEventListener('ami:subscription_changed', (e) => {
-    try {
-      const comptaSection = document.querySelector('.adm-tab-section[data-tab="compta"]');
-      // visible = display !== 'none' (qui inclut 'block', 'flex' et chaîne vide en init)
-      const isComptaVisible = comptaSection
-        && getComputedStyle(comptaSection).display !== 'none';
-      if (!isComptaVisible) {
-        console.info('[adm-compta] subscription_changed reçu (%s), mais onglet Comptabilité non visible → skip refresh (sera rechargé au prochain switch)',
-          e.detail?.action || 'unknown');
-        return;
-      }
-      console.info('[adm-compta] subscription_changed reçu (%s) → refresh', e.detail?.action || 'unknown');
-      refresh();
-    } catch (err) {
-      console.warn('[adm-compta] auto-refresh KO :', err.message);
+  /** Vrai si l'onglet Comptabilité est actuellement visible dans le panneau admin. */
+  function _isComptaTabActive() {
+    const sec = document.querySelector('.adm-tab-section[data-tab="compta"]');
+    if (!sec) return false;
+    const display = sec.style.display;
+    if (display === 'none') return false;
+    // Vérifier aussi qu'il est dans le DOM visible
+    return sec.offsetParent !== null || display === 'block';
+  }
+
+  // Throttle : évite des reloads en rafale si plusieurs events arrivent en < 500ms
+  let _refreshDebounce = null;
+  function _scheduleRefresh(reason) {
+    if (!_isComptaTabActive()) {
+      console.log('[adm-compta] refresh ignoré (onglet inactif) — raison :', reason);
+      return;
     }
+    if (_refreshDebounce) clearTimeout(_refreshDebounce);
+    _refreshDebounce = setTimeout(() => {
+      console.log('[adm-compta] auto-refresh déclenché — raison :', reason);
+      load();
+      _refreshDebounce = null;
+    }, 500);
+  }
+
+  // Hook 1 : changement d'abonnement (tier_set, extend_trial, premium_addon_on/off)
+  document.addEventListener('ami:subscription_changed', (e) => {
+    _scheduleRefresh('subscription_changed:' + (e.detail && e.detail.action || '?'));
   });
 
-  console.log('[adm-compta] v1.2 prêt — window.AdmCompta exposé + auto-refresh sur ami:subscription_changed');
+  // Hook 2 : bascule mode TEST/PAYANT (au cas où l'event existe ou serait ajouté plus tard)
+  document.addEventListener('ami:subscription_mode_changed', () => {
+    _scheduleRefresh('mode_changed');
+  });
+
+  // Hook 3 : retour de visibilité (l'admin a fait Alt+Tab puis revient)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      _scheduleRefresh('visibility');
+    }
+  });
 
 })();
