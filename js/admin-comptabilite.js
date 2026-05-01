@@ -242,107 +242,39 @@
     return (charges || []).reduce((s,c) => s + (Number(c.amount)||0), 0);
   }
 
-  /* ─── Helper : promesse avec timeout dur (anti-blocage) ─── */
-  function _withTimeout(promise, ms, label) {
-    return Promise.race([
-      promise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout ' + ms + 'ms ' + (label||''))), ms))
-    ]);
-  }
-
   /* ═════════════════════════════════════════════════════════════════
      6. CHARGEMENT (entry point)
-     ─────────────────────────────────────────────────────────────────
-     Stratégie anti-blocage :
-     1. Charger d'abord la config locale (instantané) → rendre l'UI
-     2. Lancer les requêtes serveur en parallèle avec timeout dur 4s
-     3. Re-rendre dès qu'on a les données (ou afficher un bouton retry)
   ═════════════════════════════════════════════════════════════════ */
   async function load() {
-    console.log('[adm-compta] load() démarré');
-    const root = document.getElementById('adm-compta-root');
-    if (!root) {
-      console.error('[adm-compta] #adm-compta-root introuvable dans le DOM');
-      return;
-    }
-
-    // ── Étape 1 : charger config locale (synchrone, < 50ms) + rendre UI immédiatement ──
-    try {
-      // Config locale d'abord (localStorage = instantané) pour rendre l'UI sans attente
-      STATE.charges   = _lsGet(LS_CHARGES, JSON.parse(JSON.stringify(DEFAULT_CHARGES)));
-      STATE.prices    = { ...DEFAULT_TIER_PRICES, ..._lsGet(LS_PRICES, {}) };
-      STATE.vatRate   = _lsGet(LS_VAT, DEFAULT_VAT_RATE);
-      STATE.snapshots = _lsGet(LS_SNAPSHOTS, {});
-      STATE.subs      = [];
-      STATE.appMode   = 'TEST';
-      console.log('[adm-compta] config locale chargée — rendu initial');
-      _render(); // rendu immédiat avec recettes à 0
-    } catch (e) {
-      console.error('[adm-compta] erreur rendu initial :', e);
-      root.innerHTML = `<div class="ai er" style="padding:20px">⚠️ Erreur de rendu : ${_esc(e.message)}</div>`;
-      return;
-    }
-
-    // ── Étape 2 : charger données serveur en parallèle, avec timeout dur 4s chacune ──
-    if (typeof wpost !== 'function') {
-      console.warn('[adm-compta] wpost indisponible — mode 100% local');
-      _injectWarning('⚠️ Connexion serveur indisponible. Données locales uniquement.');
-      return;
-    }
-
-    console.log('[adm-compta] chargement données serveur (parallèle, timeout 4s)…');
-    const tasks = await Promise.allSettled([
-      _withTimeout(wpost('/webhook/admin-charges-fixes-get', {}), 4000, 'charges-get'),
-      _withTimeout(wpost('/webhook/admin-subscription-list', {}), 4000, 'sub-list'),
-      _withTimeout(wpost('/webhook/subscription-status', {}),     4000, 'sub-status')
-    ]);
-
-    // Charges-fixes-get (config serveur)
-    if (tasks[0].status === 'fulfilled' && tasks[0].value && tasks[0].value.ok && tasks[0].value.data) {
-      const d = tasks[0].value.data;
-      if (Array.isArray(d.charges))                STATE.charges   = d.charges;
-      if (d.prices && typeof d.prices === 'object') STATE.prices    = { ...DEFAULT_TIER_PRICES, ...d.prices };
-      if (typeof d.vatRate === 'number')           STATE.vatRate   = d.vatRate;
-      if (d.snapshots && typeof d.snapshots === 'object') STATE.snapshots = d.snapshots;
-      // Sync localStorage
-      _lsSet(LS_CHARGES, STATE.charges);
-      _lsSet(LS_PRICES, STATE.prices);
-      _lsSet(LS_VAT, STATE.vatRate);
-      _lsSet(LS_SNAPSHOTS, STATE.snapshots);
-      console.log('[adm-compta] config serveur récupérée');
-    } else if (tasks[0].status === 'rejected') {
-      console.warn('[adm-compta] charges-get KO (fallback localStorage) :', tasks[0].reason && tasks[0].reason.message);
-    }
-
-    // Subscription-list (recettes)
-    if (tasks[1].status === 'fulfilled' && tasks[1].value && tasks[1].value.ok) {
-      STATE.subs = (tasks[1].value.comptes || []).filter(a => a.role !== 'admin');
-      console.log('[adm-compta] subscription-list OK :', STATE.subs.length, 'abonnements');
-    } else {
-      console.warn('[adm-compta] subscription-list KO :', tasks[1].reason && tasks[1].reason.message);
-    }
-
-    // Subscription-status (mode TEST/PAYANT)
-    if (tasks[2].status === 'fulfilled' && tasks[2].value && tasks[2].value.ok) {
-      STATE.appMode = tasks[2].value.app_mode || 'TEST';
-    }
-
-    // ── Re-rendre avec les données serveur ──
-    _render();
-    console.log('[adm-compta] rendu final OK');
-  }
-
-  /** Affiche un avertissement non-bloquant en bas du module. */
-  function _injectWarning(msg) {
     const root = document.getElementById('adm-compta-root');
     if (!root) return;
-    const existing = document.getElementById('cmpt-warn');
-    if (existing) existing.remove();
-    const div = document.createElement('div');
-    div.id = 'cmpt-warn';
-    div.style.cssText = 'background:rgba(255,181,71,.10);border:1px solid rgba(255,181,71,.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;color:var(--w);font-size:12px;font-family:var(--fm)';
-    div.textContent = msg;
-    root.insertBefore(div, root.firstChild);
+    root.innerHTML = '<div class="ai in" style="font-size:13px;text-align:center;padding:40px"><div class="spin spinw" style="width:28px;height:28px;margin:0 auto 12px"></div>Chargement comptabilité…</div>';
+
+    try {
+      // 1. Charger la config (charges/prix/snapshots)
+      await _loadCharges();
+
+      // 2. Charger la liste des abonnements (déjà existante en prod)
+      let subs = [];
+      let appMode = 'TEST';
+      try {
+        const d = await wpost('/webhook/admin-subscription-list', {});
+        if (d && d.ok) subs = (d.comptes || []).filter(a => a.role !== 'admin');
+      } catch (e) {
+        console.warn('[adm-compta] admin-subscription-list KO :', e.message);
+      }
+      try {
+        const sd = await wpost('/webhook/subscription-status', {});
+        if (sd && sd.ok) appMode = sd.app_mode || 'TEST';
+      } catch (_) {}
+
+      STATE.subs    = subs;
+      STATE.appMode = appMode;
+
+      _render();
+    } catch (e) {
+      root.innerHTML = `<div class="ai er">⚠️ Erreur de chargement : ${_esc(e.message || 'inconnue')}</div>`;
+    }
   }
 
   async function refresh() { return load(); }
@@ -1383,7 +1315,5 @@
     _togglePriceEdit,
     _closeModal
   };
-
-  console.log('[adm-compta] v1.1 prêt — window.AdmCompta exposé');
 
 })();
