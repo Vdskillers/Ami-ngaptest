@@ -49,6 +49,7 @@ function admTab(tab) {
   if (tab === 'messages')  { loadAdmMessages(); }
   if (tab === 'ngap')      { if (typeof admNgapLoad === 'function') admNgapLoad(); }
   if (tab === 'incidents') { if (typeof loadAdmIncidents === 'function') loadAdmIncidents(); }
+  if (tab === 'compta')    { if (typeof AdmCompta !== 'undefined' && AdmCompta.load) AdmCompta.load(); }
 }
 
 /* ════════════════════════════════════════════════
