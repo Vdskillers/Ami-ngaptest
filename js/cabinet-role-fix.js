@@ -1,6 +1,11 @@
 /* ════════════════════════════════════════════════════════════════════
-   cabinet-role-fix.js — AMI NGAP v1.0
+   cabinet-role-fix.js — AMI NGAP v1.1
    ────────────────────────────────────────────────────────────────────
+   v1.1 — FIX signature apiCall
+     • apiCall(path, body) prend le payload DIRECTEMENT en 2e arg
+       (utils.js fait JSON.stringify en interne)
+     • La v1.0 envoyait {method:'POST', body:'{"infirmiere_id":"..."}'}
+       en payload → le worker recevait un objet wrappé inutilisable.
    Compagnon NON-INVASIF de cabinet.js.
    À charger APRÈS cabinet.js dans index.html :
      <script src="js/cabinet-role-fix.js?v=1.0" defer></script>
@@ -127,15 +132,13 @@
       m.role = wantsPromote ? 'manager' : 'membre';
       if (typeof window.renderCabinetSection === 'function') window.renderCabinetSection();
 
-      // Appel backend (les bons noms de champs cette fois !)
+      // Appel backend (signature apiCall(path, payload) — utils.js fait
+      // JSON.stringify lui-même, pas besoin de wrapper {method, body})
       let backendOk = false;
       let backendErr = null;
       try {
         if (typeof apiCall !== 'function') throw new Error('apiCall indisponible');
-        const r = await apiCall(endpoint, {
-          method: 'POST',
-          body: JSON.stringify({ infirmiere_id: memberId })
-        });
+        const r = await apiCall(endpoint, { infirmiere_id: memberId });
         // apiCall renvoie soit {ok:true,...} soit jette
         backendOk = !!(r && (r.ok !== false));
         if (!backendOk && r && r.error) backendErr = r.error;
