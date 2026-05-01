@@ -88,6 +88,12 @@ window.SUB = (function(){
     rapport_trimestriel: { tier:'COMPTABLE', label:'Rapports trimestriels automatiques', desc:'Génération automatique des rapports trimestriels par IDEL.' }
   };
 
+  /* ─── ACCESS_MATRIX ───
+     ⚠️ PREMIUM est un ADD-ON (s'ajoute à Pro OU Cabinet), pas un tier
+     cumulatif. La matrice PREMIUM = features Pro + features Premium.
+     Un user Cabinet+Premium a tier='CABINET' avec premiumAddon=true ;
+     hasAccess() lui ajoute alors les features PREMIUM via le check
+     dédié `_state.premiumAddon` plus bas, sans passer par cette matrice. */
   const ACCESS_MATRIX = {
     TEST:      () => true,
     ADMIN:     () => true,
@@ -95,7 +101,7 @@ window.SUB = (function(){
     ESSENTIEL: f => FEATURES[f]?.tier === 'ESSENTIEL',
     PRO:       f => ['ESSENTIEL','PRO'].includes(FEATURES[f]?.tier),
     CABINET:   f => ['ESSENTIEL','PRO','CABINET'].includes(FEATURES[f]?.tier),
-    PREMIUM:   f => ['ESSENTIEL','PRO','CABINET','PREMIUM'].includes(FEATURES[f]?.tier),
+    PREMIUM:   f => ['ESSENTIEL','PRO','PREMIUM'].includes(FEATURES[f]?.tier),
     COMPTABLE: f => FEATURES[f]?.tier === 'COMPTABLE' || FEATURES[f]?.tier === 'ESSENTIEL',
     LOCKED:    f => ['contact_admin','historique'].includes(f)
   };
@@ -620,7 +626,80 @@ window.SUB = (function(){
       <button class="spb-btn" onclick="SUB.clearPreview()">Quitter l'aperçu</button>`;
   }
 
-  /* ───── 11. UI : CADENAS NAV ─────────────────────────────────────── */
+  /* ───── 11. UI : VISIBILITÉ STRICTE PAR TIER ─────────────────────────
+     v3.5 — Masquage strict des fonctions hors abonnement (intégration
+     de l'ancien fichier compagnon tier-visibility.js).
+
+     Comportement :
+     • Mode strict (DÉFAUT) : les fonctions inaccessibles sont
+       complètement masquées (display:none) — sidebar, bottom-nav,
+       menu mobile "Plus", sous-onglets de hubs, blocs sidebar entiers
+       quand tout est vide.
+     • Mode legacy (toggle off) : ancien comportement avec cadenas dimmé
+       + badge "🔒 PRO/CABINET/…" — utile pour démos commerciales.
+     • Bypass : mode TEST sans sim/preview, et admin sans sim/preview
+       (admin doit tout voir tant qu'il ne simule pas).
+
+     API publique :
+     • SUB.setStrictTierVisibility(true|false) — toggle live
+     • SUB.isStrictTierVisibility()
+  ──────────────────────────────────────────────────────────────────── */
+
+  // Toggle (true = masquage strict, false = ancien comportement cadenas+badge)
+  let _strictTierVisibility = true;
+  // Marqueur DOM pour pouvoir restaurer si on désactive le mode strict
+  const _STV_HIDDEN_ATTR = 'data-stv-hidden';
+
+  // Items toujours visibles peu importe le tier (UX critique)
+  const ALWAYS_VISIBLE_VIEWS = new Set([
+    'mon-abo',       // page abonnement (offre les upgrades)
+    'aide',          // aide & docs
+    'sec',           // sécurité 2FA / compte
+    'profil',        // page profil
+    'contact',       // contact admin (déjà whitelist LOCKED)
+    'outils-hub',    // hub conteneur — onglets internes filtrés séparément
+    'more'           // bouton "Plus" du bottom-nav
+  ]);
+
+  // Map "hub-name:tab-name" → feature ID pour filtrer les sous-onglets
+  const HUB_TAB_FEATURE_MAP = {
+    // ─── outils-hub ───
+    'outils:dash':              'dashboard_stats',
+    'outils:tresor':            'tresor_base',
+    'outils:rapport':           'rapport_mensuel',
+    'outils:copilote':          'copilote_ia',
+    'outils:audit':             'audit_cpam',
+    'outils:charges':           'charges_calc',
+    'outils:modeles':           'modeles_soins',
+    'outils:ca-sous-declare':   'ca_sous_declare',
+    'outils:forensic-cert':     'forensic_certificates',
+    'outils:rapport-juridique': 'rapport_juridique_mensuel',
+    // ─── patients-hub ───
+    'patients:carnet':          'patient_book',
+    'patients:ordos':           'ordonnances',
+    'patients:pilulier':        'pilulier',
+    'patients:constantes':      'constantes',
+    'patients:bsi':             'bsi',
+    'patients:consentements':   'consentements',
+    'patients:cr':              'compte_rendu',
+    'patients:alertes-med':     'alertes_med',
+    // ─── comptable-hub ───
+    'comptable:dashboard':      'dashboard_consolide',
+    'comptable:export-fec':     'export_fiscal',
+    'comptable:2042':           'generateur_2042',
+    'comptable:scoring':        'scoring_risque',
+    'comptable:alertes':        'alertes_ngap_masse',
+    'comptable:connecteurs':    'connecteurs_compta',
+    'comptable:anonymisee':     'vue_anonymisee',
+    'comptable:trimestriel':    'rapport_trimestriel'
+  };
+
+  // ID des conteneurs vue de chaque hub (pour décider si auto-switch d'onglet)
+  const HUB_VIEW_ID = {
+    outils:    'view-outils-hub',
+    patients:  'view-patients',           // ⚠ pas "view-patients-hub"
+    comptable: 'view-comptable-hub'
+  };
 
   const NAV_FEATURE_MAP = {
     'cot':'cotation_ngap','patients':'patient_book','imp':'tournee_basic',
@@ -650,42 +729,182 @@ window.SUB = (function(){
 
   function _featureForView(v) { return NAV_FEATURE_MAP[v] || null; }
 
+  /* ─── Helpers de visibilité ─── */
+
+  function _stvShow(el) {
+    if (el.getAttribute(_STV_HIDDEN_ATTR) === '1') {
+      el.removeAttribute(_STV_HIDDEN_ATTR);
+      el.style.display = el.dataset.stvOrigDisplay || '';
+      delete el.dataset.stvOrigDisplay;
+    }
+  }
+  function _stvHide(el) {
+    if (el.getAttribute(_STV_HIDDEN_ATTR) === '1') return;
+    el.setAttribute(_STV_HIDDEN_ATTR, '1');
+    el.dataset.stvOrigDisplay = el.style.display || '';
+    el.style.display = 'none';
+  }
+  function _stvClearLock(el) {
+    el.classList.remove('ni-locked');
+    el.querySelector('.ni-lock-badge')?.remove();
+  }
+  function _stvSetLock(el, feat) {
+    el.classList.add('ni-locked');
+    if (!el.querySelector('.ni-lock-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'ni-lock-badge';
+      const tierReq = _requiredTierFor(feat);
+      const tinfo = TIERS[tierReq];
+      badge.innerHTML = `🔒 <span class="ni-lock-tier" style="color:${tinfo?.color||'var(--m)'}">${tierReq}</span>`;
+      el.appendChild(badge);
+    }
+  }
+  /** Bascule vers un onglet précis d'un hub (cible déjà calculée pour
+      éviter les cascades de paywalls — cf. PASSE C ci-dessous) */
+  function _stvSwitchToHubTab(hub, tabName, tabEl) {
+    if (!tabName || !tabEl) return;
+    try {
+      if (hub === 'outils'    && typeof window.outilsHubSwitchTab    === 'function') window.outilsHubSwitchTab(tabName, tabEl);
+      else if (hub === 'patients'  && typeof window.patientsHubSwitchTab  === 'function') window.patientsHubSwitchTab(tabName, tabEl);
+      else if (hub === 'comptable' && typeof window.comptableHubSwitchTab === 'function') window.comptableHubSwitchTab(tabName, tabEl);
+      else tabEl.click();
+    } catch (e) {
+      console.warn('[SUB] switch tab fallback:', e.message);
+      try { tabEl.click(); } catch(_) {}
+    }
+  }
+
   function applyUILocks() {
     const st = getState();
-    // Mode TEST désactive les locks, SAUF en simulation admin OU en aperçu user
+    // Mode TEST sans sim/preview → bypass total
     const modeTest = st.appMode === 'TEST' && !st.isAdminSim && !st.isPreview;
+    // Admin sans sim/preview → bypass total (doit tout voir tant qu'il ne simule pas)
+    const adminBypass = st.isAdmin && !st.isAdminSim && !st.isPreview;
+    // Mode strict actif uniquement quand on doit réellement filtrer
+    const strictMode = _strictTierVisibility && !modeTest && !adminBypass;
 
-    document.querySelectorAll('.ni[data-v]').forEach(el => {
-      const v = el.dataset.v;
-      const feat = _featureForView(v);
-      if (!feat || modeTest) {
-        el.classList.remove('ni-locked');
-        el.querySelector('.ni-lock-badge')?.remove();
-        return;
-      }
-      if (hasAccess(feat)) {
-        el.classList.remove('ni-locked');
-        el.querySelector('.ni-lock-badge')?.remove();
-      } else {
-        el.classList.add('ni-locked');
-        if (!el.querySelector('.ni-lock-badge')) {
-          const badge = document.createElement('span');
-          badge.className = 'ni-lock-badge';
-          const tierReq = _requiredTierFor(feat);
-          const tinfo = TIERS[tierReq];
-          badge.innerHTML = `🔒 <span class="ni-lock-tier" style="color:${tinfo?.color||'var(--m)'}">${tierReq}</span>`;
-          el.appendChild(badge);
+    /* PASSE 1 — items de navigation (sidebar + bottom-nav + menu mobile) */
+    const navSelectors = [
+      '.ni[data-v]',
+      '#bottom-nav .bn-item[data-v]',
+      '#mobile-menu .bn-item[data-v]'
+    ];
+    navSelectors.forEach(sel => {
+      document.querySelectorAll(sel).forEach(el => {
+        const v = el.dataset.v;
+        if (!v || ALWAYS_VISIBLE_VIEWS.has(v)) {
+          _stvShow(el); _stvClearLock(el); return;
         }
-      }
+        const feat = _featureForView(v);
+        if (!feat || modeTest || adminBypass) {
+          _stvShow(el); _stvClearLock(el); return;
+        }
+        if (hasAccess(feat)) {
+          _stvShow(el); _stvClearLock(el);
+        } else if (strictMode) {
+          _stvHide(el); _stvClearLock(el);          // masque + retire d'éventuels badges legacy
+        } else {
+          _stvShow(el); _stvSetLock(el, feat);      // mode legacy (cadenas + badge)
+        }
+      });
     });
 
-    document.querySelectorAll('#bottom-nav .bn-item[data-v], #mobile-menu .bn-item[data-v]').forEach(el => {
-      const v = el.dataset.v;
-      const feat = _featureForView(v);
-      if (!feat || modeTest) { el.classList.remove('ni-locked'); return; }
-      if (hasAccess(feat)) el.classList.remove('ni-locked');
-      else el.classList.add('ni-locked');
+    /* PASSE 2 — sous-onglets des hubs (algorithme 3-passes pour éviter
+       la cascade de bascules → cascade de paywalls)  */
+
+    // 2A : pré-calculer l'accessibilité (zéro modif DOM)
+    const tabsByHub = new Map();
+    document.querySelectorAll('.hub-tab[data-hub][data-hub-tab]').forEach(el => {
+      const hub = el.dataset.hub;
+      const tab = el.dataset.hubTab;
+      const feat = HUB_TAB_FEATURE_MAP[hub + ':' + tab];
+      const accessible = !feat || modeTest || adminBypass || hasAccess(feat);
+      const wasActive  = el.classList.contains('on');
+      if (!tabsByHub.has(hub)) tabsByHub.set(hub, []);
+      tabsByHub.get(hub).push({ el, tab, accessible, wasActive });
     });
+
+    // 2B : appliquer hide/show
+    tabsByHub.forEach(tabs => {
+      tabs.forEach(({ el, accessible }) => {
+        if (accessible || !strictMode) _stvShow(el);
+        else                           _stvHide(el);
+      });
+    });
+
+    // 2C : bascule UNE SEULE fois par hub si l'actif a été masqué,
+    //      et UNIQUEMENT si la vue du hub est à l'écran (sinon on
+    //      déclencherait des renders + paywalls inutiles)
+    if (strictMode) {
+      tabsByHub.forEach((tabs, hub) => {
+        const activeWasHidden = tabs.some(t => t.wasActive && !t.accessible);
+        if (!activeWasHidden) return;
+        const firstAccessible = tabs.find(t => t.accessible);
+        if (!firstAccessible) return;
+        const viewId = HUB_VIEW_ID[hub];
+        const view   = viewId ? document.getElementById(viewId) : null;
+        if (!view || !view.classList.contains('on')) return;
+        _stvSwitchToHubTab(hub, firstAccessible.tab, firstAccessible.el);
+      });
+    }
+
+    /* PASSE 3 — masquer les blocs sidebar (.sl) entièrement vides */
+    document.querySelectorAll('nav.side .sl').forEach(block => {
+      const items = block.querySelectorAll('.ni[data-v]');
+      if (!items.length) return;
+      const anyVisible = Array.from(items).some(
+        i => i.getAttribute(_STV_HIDDEN_ATTR) !== '1'
+      );
+      if (anyVisible || !strictMode) _stvShow(block);
+      else                           _stvHide(block);
+    });
+
+    /* PASSE 4 — bouton "Plus" du bottom-nav : si menu mobile vide → cacher */
+    if (strictMode) {
+      const mobMenuItems = document.querySelectorAll('#mobile-menu .bn-item[data-v]');
+      if (mobMenuItems.length) {
+        const anyVisible = Array.from(mobMenuItems).some(
+          i => i.getAttribute(_STV_HIDDEN_ATTR) !== '1'
+        );
+        const moreBtn = document.querySelector('#bottom-nav .bn-item[data-v="more"]');
+        if (moreBtn) anyVisible ? _stvShow(moreBtn) : _stvHide(moreBtn);
+      }
+    }
+  }
+
+  /** Toggle public — strict (default) vs legacy cadenas+badge */
+  function setStrictTierVisibility(on) {
+    _strictTierVisibility = !!on;
+    applyUILocks();
+    console.info('[SUB] strict tier visibility →', _strictTierVisibility ? 'ON' : 'OFF');
+    return _strictTierVisibility;
+  }
+  function isStrictTierVisibility() { return _strictTierVisibility; }
+
+  // Re-jouer après chaque navigation (DOM peut évoluer : auth.js injecte
+  // des items de nav admin, modules dynamiques apparaissent)
+  document.addEventListener('ui:navigate', () => {
+    setTimeout(applyUILocks, 60);
+  });
+  // Re-jouer après chaque ouverture du menu mobile (les items apparaissent).
+  // ui.js définit toggleMobileMenu APRÈS subscription.js → on diffère le
+  // wrap après DOMContentLoaded pour que la fonction existe.
+  function _wrapMobileMenuToggle() {
+    if (typeof window === 'undefined') return;
+    const _origToggle = window.toggleMobileMenu;
+    if (typeof _origToggle !== 'function' || _origToggle.__stvWrapped) return;
+    const wrapped = function () {
+      const r = _origToggle.apply(this, arguments);
+      setTimeout(applyUILocks, 30);
+      return r;
+    };
+    wrapped.__stvWrapped = true;
+    window.toggleMobileMenu = wrapped;
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(_wrapMobileMenuToggle, 50));
+  } else {
+    setTimeout(_wrapMobileMenuToggle, 50);
   }
 
   /* ───── 12. PAYWALL ──────────────────────────────────────────────── */
@@ -1211,7 +1430,15 @@ window.SUB = (function(){
     const tick = () => {
       if (_autoBootstrap()) return;
       if (++attempts >= maxAttempts) {
-        console.warn('[SUB] auto-bootstrap : window.S indisponible après %d tentatives — bootstrap manuel requis', maxAttempts);
+        // ⚠️ console.info (et pas .warn) → pas de stack-trace bruyant.
+        // On bascule en polling lent en arrière-plan jusqu'à ce que
+        // window.S finisse par apparaître (login tardif, etc.).
+        console.info('[SUB] auto-bootstrap : window.S pas encore là — polling lent en arrière-plan');
+        const slowTick = () => {
+          if (_autoBootstrap()) return;            // bootstrap réussi → stop
+          setTimeout(slowTick, 2000);              // re-check toutes les 2s indéfiniment
+        };
+        setTimeout(slowTick, 2000);
         return;
       }
       setTimeout(tick, 200);
@@ -1224,7 +1451,7 @@ window.SUB = (function(){
   } else {
     _waitForSession();
   }
-  console.info('[SUB] subscription.js v3.2 chargé — CSS injecté, auto-bootstrap en attente de window.S');
+  console.info('[SUB] subscription.js v3.5 chargé — CSS injecté, masquage strict ON, auto-bootstrap en attente de window.S');
 
   /* ───── 16. NOTIFICATIONS J-7 (expiration) ───────────────────────── */
 
@@ -1557,9 +1784,14 @@ body.sub-in-preview .ni-locked { opacity:1 !important; filter:none !important; }
     previewTier, clearPreview,                          // ← NOUVEAU v3.0
     showPaywall, applyUILocks, renderAbonnementPage,
     renderProfileCard,                                  // ← NOUVEAU v3.0
+    setStrictTierVisibility, isStrictTierVisibility,    // ← NOUVEAU v3.5
     _closePaywall, _confirmUpgrade, _togglePremiumPreview,
     TIERS, FEATURES, PLAN_DETAILS, NAV_FEATURE_MAP,
-    _debug: () => ({ state:_state, userId:_userId, role:_role })
+    _debug: () => ({
+      state: _state, userId: _userId, role: _role,
+      strictTierVisibility: _strictTierVisibility,
+      hiddenCount: document.querySelectorAll('[' + _STV_HIDDEN_ATTR + '="1"]').length
+    })
   };
 })();
 
