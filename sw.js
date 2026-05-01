@@ -1,6 +1,7 @@
-/* sw.js — AMI NGAP Service Worker v5.12.0-paths-fix
+/* sw.js — AMI NGAP Service Worker v5.13.0-portable
    ✅ Fix: ne cache JAMAIS les requêtes POST (crash "method unsupported")
-   ✅ Chemins relatifs pour GitHub Pages /Ami-ngap/
+   ✅ Chemins relatifs — fonctionne identique dans /Ami-ngap/ ET /Ami-ngaptest/
+       (fallback navigation utilise self.registration.scope auto-détecté)
    ✅ Cache uniquement GET
    ✅ v5.10.0 — Couches IA terrain (no-show, difficulté, météo, autopilot opt-in,
               vocal, simulation) — module ai-smart-tour.js
@@ -13,37 +14,16 @@
    ✅ v5.10.7-incident — Module Plan d'incident RGPD/CNIL <72h finalisé
    ✅ v5.11.0 — Précache COMPLET de tous les modules JS (~50 fichiers)
    ✅ v5.12.0 — 🚨 FIX MAJEUR : chemins de précache CASSÉS depuis l'origine
-              ────────────────────────────────────────────────────────────
-              PROBLÈME (audit live de 62 chemins → 58 en 404) :
-                Le sw.js listait tous les modules avec préfixe './X.js' (racine)
-                alors que GitHub Pages les sert depuis 'js/X.js' et 'css/X.css'
-                (cf <script src="js/auth.js?v=3.8"> dans index.html).
-                Conséquence : 58/62 fichiers échouaient au précache (404),
-                et le .catch() global de cache.addAll() masquait l'erreur.
-                Effet réel : AUCUN module JS/CSS n'était caché → l'app ne
-                fonctionnait PAS en mode offline. Toutes les routes vers
-                cotation, tournée, carnet, etc. cassaient hors-ligne.
-
-              SECONDE FAILLE :
-                caches.match(req) sans option matche l'URL EXACTE, query
-                comprise. Or les <script src> utilisent '?v=3.8'/'?v=4.1'.
-                Donc même les rares fichiers cachés (index.html, manifest)
-                ne matchaient pas les requêtes runtime. Maintenant tous les
-                match() utilisent { ignoreSearch: true }.
-
-              CORRECTIFS APPLIQUÉS v5.12.0 :
-                • STATIC_ASSETS : chemins corrects (js/X.js, css/X.css,
-                  ngap-engine/X)
-                • cache.addAll() → Promise.all(STATIC_ASSETS.map(cache.add))
-                  pour avoir un diagnostic individuel et pas un échec global
-                • caches.match(req, { ignoreSearch: true }) sur cacheFirst
-                  ET networkFirst pour absorber les query strings de version
-                • CACHE_VERSION bump → invalide tous les caches existants
-                  (les 58 fichiers absents seront re-précachés au prochain
-                  install)
+              (cf. détails plus bas)
+   ✅ v5.13.0 — 🌍 PORTABILITÉ TEST/PROD : suppression des hardcodes
+              '/Ami-ngap/' dans les fallbacks navigation. Le SW utilise
+              maintenant self.registration.scope qui vaut '/Ami-ngap/' en
+              prod et '/Ami-ngaptest/' en staging. Le MÊME fichier sw.js
+              fonctionne donc dans les 2 repos sans modification — couplé
+              au manifest "id":"./" qui garantit des installs PWA distincts.
 */
 
-const CACHE_VERSION = 'ami-v5.12.1-osrm-bypass';
+const CACHE_VERSION = 'ami-v5.13.0-portable';
 const CACHE_STATIC  = CACHE_VERSION + '-static';
 const CACHE_TILES   = CACHE_VERSION + '-tiles';
 
@@ -288,23 +268,31 @@ async function networkFirst(req, cacheName) {
     // toujours sur l'index.html caché — sinon Chrome affiche sa page
     // dinosaure et l'utilisateur croit que l'app est cassée.
     if (req.mode === 'navigate') {
+      // 🔧 Path auto-détecté : self.registration.scope vaut '/Ami-ngap/' en
+      // prod et '/Ami-ngaptest/' en staging — comme ça le MÊME sw.js fonctionne
+      // dans les 2 repos sans modification (cf. manifest "id":"./").
+      var scope = (self.registration && self.registration.scope) || './';
+      // scope est une URL absolue (ex: https://vdskillers.github.io/Ami-ngap/) →
+      // on n'en garde que le pathname pour caches.match
+      var scopePath = (function(){ try { return new URL(scope).pathname; } catch(_) { return './'; } })();
       var fallback = await caches.match('./index.html', { ignoreSearch: true })
                   || await caches.match('./',           { ignoreSearch: true })
-                  || await caches.match('/Ami-ngap/index.html', { ignoreSearch: true })
-                  || await caches.match('/Ami-ngap/',           { ignoreSearch: true });
+                  || await caches.match(scopePath + 'index.html', { ignoreSearch: true })
+                  || await caches.match(scopePath,                 { ignoreSearch: true });
       if (fallback) return fallback;
 
       // ⚠️ FILET DE DERNIER RECOURS : si même l'index.html n'est pas en cache
       // (cas du tout premier lancement post "Effacer les données" sans réseau),
       // on renvoie une page minimale qui tente de relancer correctement.
       // Sans ça, Chrome affichait sa page d'erreur "page inexistante".
+      var indexUrl = scopePath + 'index.html';
       var html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
         + '<meta name="viewport" content="width=device-width,initial-scale=1">'
         + '<title>AMI — Reconnexion…</title>'
         + '<style>body{margin:0;background:#0b0f14;color:#e8eef5;font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}.b{max-width:340px}h1{color:#00d4aa;font-size:22px;margin:0 0 12px}p{font-size:14px;line-height:1.5;opacity:.85;margin:0 0 18px}a{display:inline-block;background:#00d4aa;color:#0b0f14;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600}</style>'
         + '</head><body><div class="b"><h1>AMI</h1><p>Reconnexion en cours…<br>Si rien ne se passe, tape sur le bouton ci-dessous.</p>'
-        + '<a href="/Ami-ngap/index.html">Relancer AMI</a></div>'
-        + '<script>setTimeout(function(){location.replace("/Ami-ngap/index.html"+(location.hash||""));},800);</script>'
+        + '<a href="' + indexUrl + '">Relancer AMI</a></div>'
+        + '<script>setTimeout(function(){location.replace("' + indexUrl + '"+(location.hash||""));},800);</script>'
         + '</body></html>';
       return new Response(html, {
         status: 200,
