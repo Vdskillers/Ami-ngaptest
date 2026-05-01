@@ -49,7 +49,23 @@ function admTab(tab) {
   if (tab === 'messages')  { loadAdmMessages(); }
   if (tab === 'ngap')      { if (typeof admNgapLoad === 'function') admNgapLoad(); }
   if (tab === 'incidents') { if (typeof loadAdmIncidents === 'function') loadAdmIncidents(); }
-  if (tab === 'compta')    { if (typeof AdmCompta !== 'undefined' && AdmCompta.load) AdmCompta.load(); }
+  if (tab === 'compta')    {
+    if (typeof AdmCompta !== 'undefined' && AdmCompta.load) {
+      AdmCompta.load();
+    } else {
+      const root = document.getElementById('adm-compta-root');
+      if (root) root.innerHTML = `
+        <div class="ai er" style="padding:20px;line-height:1.6">
+          <strong>⚠️ Module Comptabilité non chargé</strong><br>
+          Le fichier <code>js/admin-comptabilite.js</code> n'a pas pu être chargé.<br><br>
+          <strong>Vérifications :</strong><br>
+          1. Le fichier <code>admin-comptabilite.js</code> est-il bien présent dans <code>/js/</code> du repo ?<br>
+          2. Le tag <code>&lt;script src="js/admin-comptabilite.js?v=1.0"&gt;</code> est-il bien dans <code>index.html</code> ?<br>
+          3. Vide le cache (Ctrl+Shift+R) puis recharge.<br><br>
+          <em>Console (F12) → onglet Network : vérifier que <code>admin-comptabilite.js</code> renvoie 200 OK.</em>
+        </div>`;
+    }
+  }
 }
 
 /* ════════════════════════════════════════════════
