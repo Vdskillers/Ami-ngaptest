@@ -25,14 +25,19 @@
     ESSENTIEL: { label:'Essentiel · 29 €/mois', color:'#4fa8ff', icon:'🟢' },
     PRO:       { label:'Pro · 49 €/mois', color:'#00d4aa', icon:'🔵' },
     CABINET:   { label:'Cabinet · dégressif', color:'#a78bfa', icon:'🟣' },
-    PREMIUM:   { label:'Premium · +29 €/mois', color:'#fbbf24', icon:'💎' },
+    PREMIUM:   { label:'Premium (add-on) · +29 €/mois', color:'#fbbf24', icon:'💎' },
     COMPTABLE: { label:'Comptable · 99 €/mois', color:'#ff5f6d', icon:'🧑‍💼' },
     LOCKED:    { label:'Verrouillé',      color:'#ff5f6d', icon:'🔒' },
     UNKNOWN:   { label:'Aucun',           color:'#6a8099', icon:'❓' }
   };
 
-  // Tiers proposés dans la modale "changer le tier"
-  const ASSIGNABLE_TIERS = ['TRIAL','ESSENTIEL','PRO','CABINET','PREMIUM','COMPTABLE','LOCKED'];
+  // ⚠️ PREMIUM est intentionnellement ABSENT des tiers assignables :
+  // c'est un add-on cumulatif activable séparément via le bouton
+  // "💎 Activer Premium add-on" (cf. admPremiumAddon ci-dessous).
+  // Si on le laissait ici, un admin pourrait par erreur écraser le tier
+  // de base d'un user (Pro/Cabinet) en PREMIUM, ce qui ferait perdre
+  // l'accès aux features Cabinet et casserait la facturation.
+  const ASSIGNABLE_TIERS = ['TRIAL','ESSENTIEL','PRO','CABINET','COMPTABLE','LOCKED'];
 
   /* ─── Cache local des abonnements (rempli à chaque loadAdmComptes) ─── */
   let _SUB_LIST = [];   // [{id, nom, prenom, is_blocked, tier, is_trial, days_left, trial_end, paid_until, override, expired, cabinet_member, ...}]
@@ -186,11 +191,29 @@
       const tier = a.tier || 'UNKNOWN';
       const tierInfo = TIERS_INFO[tier] || TIERS_INFO.UNKNOWN;
 
-      // Pill abonnement
+      // Pill abonnement (tier de base)
       const subPill = `
         <span class="adm-sub-tier-pill" style="background:${tierInfo.color}1a;color:${tierInfo.color};border-color:${tierInfo.color}55">
           ${tierInfo.icon} ${tierInfo.label}
         </span>`;
+
+      // 💎 Pill Premium add-on (cumulatif, affiché EN PLUS du tier de base
+      // quand a.premium_addon === true — exposé par le worker depuis v3.5)
+      let premiumAddonPill = '';
+      if (a.premium_addon === true) {
+        const pColor = '#fbbf24';
+        let untilStr = '';
+        if (a.premium_addon_until) {
+          const dt = new Date(a.premium_addon_until);
+          const days = Math.ceil((dt.getTime() - Date.now()) / (1000*60*60*24));
+          if (days > 0) untilStr = ` · ${days}j`;
+        }
+        premiumAddonPill = `
+          <span class="adm-sub-tier-pill" style="background:${pColor}1a;color:${pColor};border-color:${pColor}55"
+                title="Add-on Premium actif — cumule avec le tier de base">
+            💎 + Premium add-on${untilStr}
+          </span>`;
+      }
 
       // Jours restants
       let daysHTML = '';
@@ -231,6 +254,7 @@
           <div class="acc-name">${name}</div>
           <div class="acc-sub-col">
             ${subPill}
+            ${premiumAddonPill}
             ${daysHTML}
             ${cabHTML}
             ${overrideHTML}
@@ -383,6 +407,16 @@
     }
     if (user.cabinet_member) {
       statusLines.push(`🏥 Cabinet ${user.cabinet_size} IDE · rôle <b>${user.cabinet_role||'membre'}</b>`);
+    }
+    // 💎 Add-on Premium actif (cumulatif sur le tier de base)
+    if (user.premium_addon === true) {
+      let addonLine = `💎 <b style="color:#fbbf24">Add-on Premium actif</b> (+29 €/mois cumulé)`;
+      if (user.premium_addon_until) {
+        const adt = new Date(user.premium_addon_until);
+        const adays = Math.ceil((adt.getTime() - Date.now())/(1000*60*60*24));
+        if (adays > 0) addonLine += ` · expire le ${adt.toLocaleDateString('fr-FR')} (${adays}j)`;
+      }
+      statusLines.push(addonLine);
     }
     if (user.override) {
       statusLines.push(`⚙ Override admin actif`);

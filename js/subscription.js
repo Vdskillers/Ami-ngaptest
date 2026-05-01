@@ -156,12 +156,12 @@ window.SUB = (function(){
       priceSuffix: 'par IDE / mois'
     },
     PREMIUM: {
-      cardName: 'AMI Premium',
-      tag: '💎 Premium',
-      subtitle: '« Zéro stress. Zéro contrôle surprise. »',
+      cardName: 'AMI Premium <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:50px;background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.4);font-family:var(--fm);letter-spacing:.05em;margin-left:6px;vertical-align:middle">ADD-ON</span>',
+      tag: '💎 Premium (add-on)',
+      subtitle: '« Zéro stress. Zéro contrôle surprise. » — Add-on à cumuler avec Pro ou Cabinet',
       price: '+29 € HT / mois',
       features: [
-        { txt:'✨ S\'ajoute à Pro ou Cabinet',                          icon:'✓', bold:true },
+        { txt:'✨ S\'ajoute à Pro ou Cabinet (ne se prend pas seul)',     icon:'✓', bold:true },
         { txt:'Optimisation CA avancée (+150 à +300 € / mois)',         icon:'💎' },
         { txt:'Détection des pertes invisibles (actes non cotés)',      icon:'💎' },
         { txt:'Protection juridique renforcée (anti-redressement)',     icon:'💎' },
@@ -172,10 +172,10 @@ window.SUB = (function(){
         { txt:'Intelligence terrain (Tournée IA+)',                     icon:'💎' },
         { txt:'💎 Chaque mois, tu récupères plus que ce que ça coûte', icon:'✓', bold:true }
       ],
-      cta: 'Simuler ce tier',
+      cta: 'Activer l\'add-on Premium',
       pricePrefix: '+',
       priceSuffix: '€ / mois',
-      addonNote: 'À ajouter à ton plan actuel'
+      addonNote: 'À cumuler avec ton plan Pro ou Cabinet'
     },
     COMPTABLE: {
       cardName: 'AMI Comptable',
@@ -1451,7 +1451,7 @@ window.SUB = (function(){
   } else {
     _waitForSession();
   }
-  console.info('[SUB] subscription.js v3.5 chargé — CSS injecté, masquage strict ON, auto-bootstrap en attente de window.S');
+  console.info('[SUB] subscription.js v3.6 chargé — CSS injecté, masquage strict ON, Premium card clarifié ADD-ON, auto-bootstrap en attente de window.S');
 
   /* ───── 16. NOTIFICATIONS J-7 (expiration) ───────────────────────── */
 
