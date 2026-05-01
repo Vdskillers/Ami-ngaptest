@@ -183,17 +183,62 @@ function _decLegacy(str)  { try { const raw = decodeURIComponent(escape(atob(str
 
 /* ── _enc / _dec ASYNC v2 — production ──
    (await _enc(obj)) → string AES-GCM si dataKey dispo, fallback legacy sinon.
-   _dec(str) → objet en clair, détecte automatiquement le format. */
+   _dec(str) → objet en clair, détecte automatiquement le format.
+
+   ⚡ FIX (2026-05-01) — DÉFENSE EN PROFONDEUR contre la perte de dataKey :
+   Avant, si _enc était appelée alors que S.dataKey venait d'être effacée
+   (bug ss.save sans 4ème arg), elle tombait silencieusement en _encLegacy.
+   Conséquence catastrophique : un patient riche stocké en AES auparavant
+   pouvait être ÉCRASÉ par un blob legacy minimal au prochain save, et la
+   sync push poussait ce blob minimal sur le serveur → données détruites
+   localement ET sur le serveur, irréversible.
+
+   Maintenant, on track si on a déjà observé une session avec dataKey active.
+   Si oui ET qu'on perd la dataKey ET qu'on essaie d'écrire en legacy → on
+   THROW au lieu de fallback. L'erreur remontera dans les catch silencieux
+   du caller (cf. cabinet.js:1769, uber.js:769, etc.) → l'écriture ne se
+   fait pas → blob AES préservé en IDB. Au prochain re-login, _dec pourra
+   le redéchiffrer normalement. */
+
+let _aesSessionEverActive = false; // sticky : true dès qu'on a vu une dataKey valide
+
 async function _enc(obj) {
   try {
     const key = await _getPatientAESKey();
-    if (!key) return _encLegacy(obj); // fallback legacy si pas de dataKey
+    if (!key) {
+      // Pas de dataKey actuelle. 2 cas :
+      //   a) Session jamais entrée en mode AES (compte legacy pur, ou worker
+      //      sans data_key) → fallback legacy OK, c'est le comportement normal.
+      //   b) Session A vu une dataKey valide précédemment mais elle a été
+      //      perdue (bug ss.save, race condition, etc.) → REFUSE l'écriture
+      //      legacy pour ne pas écraser un éventuel blob AES existant.
+      if (_aesSessionEverActive) {
+        const err = new Error('AES_KEY_LOST');
+        err.code = 'AES_KEY_LOST';
+        err._friendly = 'La clé de chiffrement a été perdue dans cette session — écriture annulée pour préserver les données. Reconnectez-vous pour récupérer la clé.';
+        console.warn('[AMI] _enc : dataKey perdue alors qu\'elle était présente — écriture legacy refusée pour ne pas écraser des données AES existantes. Caller doit catch et re-login.');
+        throw err;
+      }
+      // Cas a : pas grave, fallback legacy normal
+      return _encLegacy(obj);
+    }
+    // dataKey OK → on note qu'on a vu une session AES active
+    _aesSessionEverActive = true;
     const plain = new TextEncoder().encode(JSON.stringify(obj));
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain);
     return _ENC_PREFIX_AES + _bytesToB64IDB(iv) + '$' + _bytesToB64IDB(new Uint8Array(cipher));
   } catch (e) {
+    // Re-throw les erreurs critiques (perte de clé) pour ne pas masquer
+    if (e?.code === 'AES_KEY_LOST') throw e;
     console.warn('[AMI] _enc AES KO, fallback legacy:', e.message);
+    // Pour les autres erreurs (ex: subtle.encrypt KO), on autorise quand même
+    // le legacy si on n'a JAMAIS eu de session AES — sinon on throw aussi.
+    if (_aesSessionEverActive) {
+      const err = new Error('AES_KEY_LOST');
+      err.code = 'AES_KEY_LOST';
+      throw err;
+    }
     return _encLegacy(obj);
   }
 }
@@ -208,6 +253,9 @@ async function _dec(str) {
         console.warn('[AMI] _dec : donnée AES rencontrée sans dataKey — patient illisible.');
         return null;
       }
+      // dataKey OK → on note qu'on a vu une session AES active (utile aussi en lecture
+      // pour activer le garde-fou _enc même si on n'a jamais écrit cette session)
+      _aesSessionEverActive = true;
       const parts = str.split('$');
       if (parts.length !== 3) return null;
       const iv = _b64ToBytesIDB(parts[1]);
@@ -221,6 +269,90 @@ async function _dec(str) {
   }
   // Sinon : legacy v1 (base64 obfusqué) — toujours décodable, sera ré-encrypté au save
   return _decLegacy(str);
+}
+
+/* ⚡ FIX (2026-05-01) — NIVEAU 3 défense en profondeur : alerte visuelle
+   si une erreur AES_KEY_LOST est jetée par _enc (Niveau 2).
+   ────────────────────────────────────────────────────────────────────
+   Quand _enc throw AES_KEY_LOST, l'erreur remonte dans les catch
+   silencieux des callers (cabinet.js:1769, uber.js:769, etc.) qui
+   font juste console.warn — l'utilisateur ne sait pas qu'il y a
+   un problème grave.
+   
+   Ici on installe un listener global window 'unhandledrejection' +
+   'error' qui catche AES_KEY_LOST et affiche un bandeau persistant
+   en haut de l'écran avec un bouton "Reconnexion". L'utilisateur
+   est immédiatement informé et guidé vers la solution.
+   
+   On expose aussi window._handleAESKeyLost() pour permettre aux
+   callers qui catchent eux-mêmes l'erreur de déclencher l'alerte
+   manuellement. */
+
+let _aesKeyLostBannerShown = false;
+function _showAESKeyLostBanner() {
+  if (_aesKeyLostBannerShown) return; // déjà affiché — éviter les doublons
+  if (typeof document === 'undefined') return;
+  _aesKeyLostBannerShown = true;
+  
+  const banner = document.createElement('div');
+  banner.id = 'ami-aes-key-lost-banner';
+  banner.style.cssText = `
+    position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+    background: #d32f2f; color: white; padding: 14px 18px;
+    font-family: system-ui, -apple-system, sans-serif; font-size: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+  `;
+  banner.innerHTML = `
+    <div style="flex:1; min-width:240px;">
+      <strong>⚠️ Clé de chiffrement perdue</strong><br>
+      <span style="font-size:13px; opacity:0.95;">
+        Pour protéger vos données, les écritures patient sont temporairement bloquées.
+        Reconnectez-vous pour restaurer la clé et continuer à utiliser l'application.
+      </span>
+    </div>
+    <button id="ami-aes-relogin-btn" style="
+      background: white; color: #d32f2f; border: none; padding: 10px 18px;
+      border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;
+      white-space: nowrap;
+    ">🔄 Se reconnecter</button>
+  `;
+  document.body.appendChild(banner);
+  
+  document.getElementById('ami-aes-relogin-btn').addEventListener('click', () => {
+    // Logout propre puis reload — le worker re-déchiffrera data_key_enc
+    // et renverra la dataKey au prochain login
+    try {
+      if (typeof ss !== 'undefined' && typeof ss.clear === 'function') ss.clear();
+    } catch {}
+    try { sessionStorage.clear(); } catch {}
+    location.reload();
+  });
+  
+  // Log explicite pour faciliter le debug
+  console.error('[AMI] 🔑 ALERTE : dataKey AES perdue dans la session courante. Bandeau de reconnexion affiché.');
+}
+
+// Expose globalement pour permettre aux callers de déclencher l'alerte
+if (typeof window !== 'undefined') {
+  window._handleAESKeyLost = _showAESKeyLostBanner;
+}
+
+// Listener global : capte les unhandled promise rejections AES_KEY_LOST
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    if (event?.reason?.code === 'AES_KEY_LOST') {
+      _showAESKeyLostBanner();
+      event.preventDefault(); // évite le log d'erreur inutile dans la console
+    }
+  });
+  window.addEventListener('error', (event) => {
+    if (event?.error?.code === 'AES_KEY_LOST') {
+      _showAESKeyLostBanner();
+      event.preventDefault();
+    }
+  });
 }
 
 // ⚡ FIX Zones rentables — exposer _dec et helpers IDB en lecture pour map.js

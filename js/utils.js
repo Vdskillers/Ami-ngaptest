@@ -106,7 +106,34 @@ const ss={
   //    au login, utilisée par patients.js pour chiffrer/déchiffrer l'IDB en AES-GCM réel.
   //    Stockée en sessionStorage (volatile, purgée à la fermeture de l'onglet) — JAMAIS
   //    en localStorage. Si absente, patients.js retombe en mode legacy base64.
-  save(t,r,u,k){ S={token:t,role:r,user:u,dataKey:k||null}; APP.token=t; APP.role=r; APP.user=u; APP.dataKey=k||null; sessionStorage.setItem('ami',JSON.stringify(S)); },
+  //
+  // ⚡ FIX (2026-05-01) — DÉFENSE EN PROFONDEUR contre le bug "perte de dataKey" :
+  //    AVANT, si un caller appelait ss.save(t,r,u) sans le 4ème argument, la
+  //    dataKey en mémoire était écrasée par null → tous les patients AES
+  //    devenaient illisibles + risque d'écriture de blobs legacy minimaux par
+  //    dessus les blobs AES riches (perte de données irréversible).
+  //
+  //    MAINTENANT, si k est `undefined` (= argument omis), on PRÉSERVE la dataKey
+  //    actuelle. Pour effacer explicitement la dataKey il faut passer `null`.
+  //    Distinguer undefined de null donne 2 sémantiques :
+  //       ss.save(t,r,u)         → préserve S.dataKey (cas refresh profil)
+  //       ss.save(t,r,u,null)    → efface explicitement (cas logout, login fresh)
+  //       ss.save(t,r,u,'abc..') → set la nouvelle clé (cas login normal)
+  save(t,r,u,k){
+    // Préservation par défaut : si k est undefined (omis) ET qu'on a déjà une
+    // dataKey en mémoire, on la garde. Sinon comportement classique.
+    const finalKey = (typeof k === 'undefined')
+      ? (S?.dataKey || null)   // omis → préserve l'existant
+      : (k || null);            // explicite (string ou null)
+    S={token:t,role:r,user:u,dataKey:finalKey};
+    APP.token=t; APP.role=r; APP.user=u; APP.dataKey=finalKey;
+    sessionStorage.setItem('ami',JSON.stringify(S));
+    if (typeof k === 'undefined' && finalKey) {
+      // Trace dev : un caller a oublié l'argument mais on a sauvé. Aide à
+      // identifier les call sites legacy qu'on devrait corriger.
+      console.debug('[ss.save] dataKey préservée (4e arg omis) — caller à mettre à jour pour passer S.dataKey explicite.');
+    }
+  },
   clear(){ S=null; APP.token=null; APP.role=null; APP.user=null; APP.dataKey=null; sessionStorage.removeItem('ami'); },
   load(){ try{ const x=sessionStorage.getItem('ami'); if(x){ S=JSON.parse(x); APP.token=S.token; APP.role=S.role; APP.user=S.user; APP.dataKey=S.dataKey||null; return S; } }catch{} return null; },
   tok(){ return S?.token||''; },

@@ -2977,7 +2977,7 @@
 ════════════════════════════════════ -->
 
 <!-- Utilitaires de base (doit être en premier) -->
-<script src="js/utils.js?v=3.8"></script>
+<script src="js/utils.js?v=3.9"></script><!-- ⚡ v3.9 NIVEAU 1 défense en profondeur : ss.save() préserve S.dataKey si 4ème argument omis (au lieu de l'effacer) → bug profil-save plus jamais possible -->
 
 <!-- Landing page (overlay iframe — affichée uniquement à la première visite) -->
 <script src="js/landing-loader.js?v=1.0" defer></script>
@@ -2992,14 +2992,14 @@
 <script src="js/admin-subscription-ui.js?v=1.4"></script><!-- 💎 v1.4 : sous-onglet IDE/Admins (full admin only) — endpoint /admin-liste-admins + cartes admin avec boutons rétrograder/promouvoir + protection is_env_admin & is_self -->
 <script src="js/admin-comptabilite.js?v=1.2"></script><!-- 📒 v1.2 : auto-refresh sur ami:subscription_changed (la modif d'un abonnement met instantanement a jour le recap annuel sans F5 manuel) -->
 <script src="js/admin-ngap.js?v=1.3"></script><!-- ⚖️ Édition référentiel NGAP (admin, versioning, rollback) -->
-<script src="js/profil.js?v=3.9"></script>
+<script src="js/profil.js?v=4.0"></script><!-- ⚡ v4.0 FIX CRITIQUE : ss.save() incluait pas le 4ème argument dataKey → effaçait la clé AES en mémoire à chaque sauvegarde de profil → patients IDB illisibles jusqu au logout/login. Maintenant ss.save(...,S.dataKey||null) -->
 <script src="js/profil-subscription-ui.js?v=1.0"></script><!-- 💎 Mini-carte abonnement dans modale profil -->
 <script src="ngap-engine/ngap_engine.js?v=1.0"></script><!-- ⚙️ Moteur NGAP local (cotation offline) — colocalisé avec ngap_referentiel_2026.json — expose window.NGAPPipeline + window.NGAPEngine -->
-<script src="js/cotation.js?v=4.1"></script><!-- ⚡ v4.1 : Coter avec l'IA + Vérifier exclusivement N8N · Cotation Offline (codes bruts détectés OU NLP) -->
+<script src="js/cotation.js?v=4.2"></script><!-- ⚡ v4.2 : même fix que profil.js — ss.save() avec S.dataKey explicite (sinon ADELI/RPPS update faisait perdre la clé AES) -->
 <script src="js/contact.js?v=3.8"></script>
 <script src="js/geocode.js?v=3.8"></script><!-- Pipeline géocodage : API Adresse gouv.fr (IGN+LaPoste) → Photon → Nominatim -->
 <script src="js/navigation.js?v=3.8"></script><!-- computeGeoScore + openNavigation -->
-<script src="js/patients.js?v=3.8"></script>
+<script src="js/patients.js?v=3.9"></script><!-- ⚡ v3.9 NIVEAUX 2+3 défense en profondeur : sticky flag _aesSessionEverActive empêche _enc de fallback en legacy si dataKey perdue (préserve les blobs AES existants) + bandeau d'alerte global avec bouton reconnexion -->
 <script src="js/tresorerie.js?v=3.8"></script>
 <script src="js/offline-queue.js?v=3.8"></script>
 <script src="js/voice.js?v=3.8"></script>

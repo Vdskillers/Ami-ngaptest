@@ -2278,7 +2278,11 @@ async function _showProInfoModal(u, missing) {
 
         /* Mettre à jour la session locale */
         S.user = { ...S.user, adeli, rpps, structure };
-        ss.save(S.token, S.role, S.user);
+        // ⚡ FIX (2026-05-01) : 4ème argument S.dataKey OBLIGATOIRE (sinon ss.save
+        //   reçoit undefined → la dataKey AES en mémoire est effacée → tous les
+        //   patients en IDB deviennent illisibles jusqu'au prochain logout/login).
+        //   Cf. utils.js:109 (signature save(t,r,u,k) avec k||null par défaut).
+        ss.save(S.token, S.role, S.user, S.dataKey || null);
 
         closeProInfoModal();
         await _doPrint(_pendingPrintData, S.user);
