@@ -1013,3 +1013,171 @@
   .uber-fs-btn { min-height: 48px; padding: 8px 4px; }
   .uber-fs-btn > span:first-child { font-size: 16px; }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   📊 TABLES RESPONSIVES MOBILES
+   ────────────────────────────────────────────────────────────────────
+   Ajouté pour fixer 2 modules dont les tables débordaient en mobile
+   sans wrapper de scroll :
+     • admin-comptabilite.js  (Comptabilité SaaS — admin uniquement)
+       - Tables .cmpt-table : "Recettes par offre", "Récapitulatif annuel"
+     • comptable.js           (Module expert-comptable — tier COMPTABLE)
+       - Tables .cpt-table   : Déclaration 2042-C-PRO, URSSAF, CARPIMKO
+
+   Stratégie :
+     1. Sur mobile (≤768px), wraps les tables dans un scroll horizontal
+        natif avec hint visuel (gradient sur bord droit)
+     2. Réduit paddings et font-size pour densifier les cellules
+     3. Force first-of-type cell en sticky pour garder le libellé visible
+        pendant le scroll horizontal
+     4. Détails ".cmpt-cab-detail" passent en flex wrap ou nowrap selon
+        largeur — au lieu de casser sur 3 lignes
+   ════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* ── Wrapper de scroll horizontal sur les sections qui contiennent
+        les grandes tables. On bypass le overflow:hidden du parent
+        en injectant un overflow-x:auto au niveau de la table elle-même. */
+  .cmpt-section,
+  .cpt-section,
+  .cpt-table-wrap {
+    /* On laisse padding latéral mais on permet au contenu de scroller */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Hint visuel : gradient sur bord droit pour suggérer "swipe" */
+    background-image:
+      linear-gradient(to right, var(--s) 30%, rgba(0,0,0,0)),
+      linear-gradient(to right, rgba(0,0,0,0), var(--s) 70%) 100% 0,
+      radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.4), rgba(0,0,0,0)),
+      radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.4), rgba(0,0,0,0)) 100% 0;
+    background-repeat: no-repeat;
+    background-size: 28px 100%, 28px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+
+  /* Tables ressérées : padding et font réduits */
+  .cmpt-table th,
+  .cmpt-table td,
+  .cpt-table th,
+  .cpt-table td {
+    padding: 8px 8px;
+    font-size: 12px;
+  }
+  .cmpt-table th,
+  .cpt-table th {
+    font-size: 9px;
+    padding: 8px 8px;
+    letter-spacing: .4px;
+  }
+  /* Première colonne (libellé) toujours visible pendant scroll horizontal */
+  .cmpt-table th:first-child,
+  .cmpt-table td:first-child,
+  .cpt-table th:first-child,
+  .cpt-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--s);
+    z-index: 2;
+    box-shadow: 1px 0 0 var(--b);
+    /* Largeur min pour éviter que le libellé soit sur 4 lignes */
+    min-width: 110px;
+  }
+  /* Foot row : sticky aussi sinon "Total HT" disparaît au scroll */
+  .cmpt-table tfoot td:first-child,
+  .cpt-table tfoot td:first-child {
+    background: var(--c);
+  }
+
+  /* Détail Cabinet "1-2 IDE: 0 · 3-5: 1 · 6+: 0" — au lieu de
+     casser sur 3 lignes (verticalement) on autorise nowrap pour que
+     le scroll horizontal le prenne en charge */
+  .cmpt-cab-detail {
+    white-space: nowrap;
+    font-size: 9px;
+    padding-left: 0;
+    margin-top: 3px;
+  }
+
+  /* Hero / titre Comptabilité : densifier */
+  .cmpt-h1 { font-size: 20px; }
+  .cmpt-sub { font-size: 11px; }
+  .cmpt-section-title { font-size: 14px; }
+  .cpt-section-title { font-size: 13px; }
+  .cpt-section { padding: 14px 14px; }
+  .cmpt-section { padding: 14px 14px 8px; }
+
+  /* KPIs : forcer 2 colonnes max au lieu de auto-fit (sinon ça se
+     superpose ou reste sur 1 grosse colonne moche) */
+  .cmpt-kpis,
+  .cpt-kpis {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+  }
+  .cmpt-kpi { padding: 12px 10px; }
+  .cmpt-kpi-val { font-size: 19px; }
+  .cmpt-kpi-icon { font-size: 18px; }
+  .cmpt-kpi-label { font-size: 9px; letter-spacing: 1px; }
+  .cmpt-kpi-sub { font-size: 10px; }
+  .cpt-kpi { padding: 11px 12px; }
+  .cpt-kpi-val { font-size: 18px; }
+  .cpt-kpi-label { font-size: 9px; }
+  .cpt-kpi-sub { font-size: 10px; }
+
+  /* Section head (Récapitulatif annuel etc.) — gérer le wrap des
+     contrôles (input année, bouton suivant) plus proprement */
+  .cmpt-section-head {
+    gap: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+  .cmpt-year-label { font-size: 14px; padding: 0 6px; }
+  .cmpt-section-tools .cmpt-btn-mini { padding: 4px 8px; font-size: 10px; }
+
+  /* TVA input : compacter */
+  .cmpt-tva-input { width: 50px; padding: 4px 6px; font-size: 11px; }
+  .cmpt-tva-label { font-size: 10px; }
+
+  /* Charges fixes — la table dans .cmpt-section les contient aussi */
+  .cmpt-table-edit input { font-size: 12px; padding: 5px 8px; }
+  .cmpt-icon-btn { padding: 3px 7px; font-size: 12px; }
+
+  /* 2042-C-PRO : la 3e colonne "Montant" doit rester right-aligned */
+  .cpt-table-num { white-space: nowrap; }
+
+  /* Form select / input dans 2042-C-PRO */
+  .cpt-form-row { grid-template-columns: 1fr; gap: 8px; }
+  .cpt-form-row select,
+  .cpt-form-row input { font-size: 12px; padding: 8px 10px; }
+
+  /* Pills (g/o/r/b) plus petites */
+  .cpt-pill { padding: 1px 7px; font-size: 9px; }
+}
+
+/* Très petits écrans (≤420px) : on pousse le compactage encore plus loin */
+@media (max-width: 420px) {
+  .cmpt-section,
+  .cpt-section,
+  .cpt-table-wrap {
+    padding: 10px 10px;
+    /* Permet à la table de toucher les bords du conteneur pour
+       maximiser l'espace de lecture sans paraître coupée */
+    margin-left: -2px;
+    margin-right: -2px;
+  }
+  .cmpt-table th,
+  .cmpt-table td,
+  .cpt-table th,
+  .cpt-table td {
+    padding: 6px 6px;
+    font-size: 11px;
+  }
+  .cmpt-table th,
+  .cpt-table th { font-size: 8px; }
+  .cmpt-h1 { font-size: 18px; }
+
+  /* KPIs : 2 colonnes même sur très petit (chaque cellule rétrécit) */
+  .cmpt-kpi-val { font-size: 16px; }
+  .cpt-kpi-val { font-size: 16px; }
+}
+/* ── /TABLES RESPONSIVES MOBILES ───────────────────────────────────── */
