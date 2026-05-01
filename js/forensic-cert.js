@@ -144,10 +144,16 @@
   ────────────────────────────────────────────────────────────────── */
   async function _enrichOldCerts() {
     try {
-      if (typeof window.getAllSignatures !== 'function') return 0;
+      if (typeof window.getAllSignatures !== 'function') {
+        console.info('[ForensicCert] enrich skip : getAllSignatures pas dispo');
+        return 0;
+      }
       const all = await _getAll();
       const needEnrich = all.filter(c => !c.patient_nom && c.invoice);
-      if (!needEnrich.length) return 0;
+      if (!needEnrich.length) {
+        // log silencieux pour pas spam la console à chaque render
+        return 0;
+      }
 
       const sigs = await window.getAllSignatures();
       // Index signatures par invoice_id pour O(1) lookup
@@ -156,12 +162,12 @@
         if (s && s.invoice_id) sigByInvoice[s.invoice_id] = s;
       });
 
-      let enriched = 0;
+      let enriched = 0, missing = 0;
       for (const c of needEnrich) {
         const s = sigByInvoice[c.invoice];
-        if (!s) continue;
+        if (!s) { missing++; continue; }
         const nom = (s.patient_nom || s.proof_payload?.patient_nom || '').toString().trim();
-        if (!nom) continue;
+        if (!nom) { missing++; continue; }
         try {
           // Met à jour UNIQUEMENT patient_nom — ne touche à AUCUN champ
           // hashé, donc ne casse pas la vérification d'intégrité.
@@ -171,9 +177,9 @@
           console.warn('[ForensicCert] enrich %s : %s', c.id, e.message);
         }
       }
-      if (enriched) {
-        console.info('[ForensicCert] ✨ %d certificat(s) enrichi(s) avec patient_nom', enriched);
-      }
+      // Log toujours quand il y avait du boulot, même si 0 enrichi (utile debug)
+      console.info('[ForensicCert] ✨ enrich : %d enrichi(s) / %d candidat(s) (%d sans nom dispo dans la sig source)',
+                    enriched, needEnrich.length, missing);
       return enriched;
     } catch (e) {
       console.warn('[ForensicCert] _enrichOldCerts KO :', e.message);
@@ -419,6 +425,7 @@
               ⚡ Générer les certificats des signatures existantes
             </button>
             <button class="btn bs bsm" data-action="refresh" style="font-size:12px">↻ Rafraîchir</button>
+            ${all.length ? `<button class="btn bs bsm" data-action="delete-all" style="font-size:12px;color:#ff5f6d;border-color:rgba(255,95,109,.4)" title="Supprime tous les certificats locaux et casse la chaîne. À utiliser uniquement pour reconstruire from scratch.">🗑 Tout supprimer</button>` : ''}
           </div>
           <div class="fc-status" id="fc-backfill-status"></div>
         </div>
@@ -450,6 +457,7 @@
                 <div class="fc-actions">
                   <button data-action="verify" data-id="${c.id}">✓ Vérifier</button>
                   <button data-action="pdf"    data-id="${c.id}">📄 PDF</button>
+                  <button data-action="delete" data-id="${c.id}" title="Supprime ce certificat (casse la chaîne en aval)" style="color:#ff5f6d;border-color:rgba(255,95,109,.3)">🗑</button>
                 </div>
               </div>`;
             }).join('')}
@@ -512,6 +520,46 @@
           }
           if (action === 'pdf') {
             await exportPDF(id);
+            return;
+          }
+          if (action === 'delete') {
+            const c = await _getById(id);
+            if (!c) return;
+            const title = _friendlyTitle(c);
+            if (!confirm(`Supprimer le certificat #${c.seq} (${title}) ?\n\n⚠️ La chaîne sera cassée pour les certificats suivants (la vérification d'intégrité retournera "chaînage rompu" pour les certs après celui-ci).`)) return;
+            try {
+              await _delete(id);
+              if (typeof showToast === 'function') showToast(`✓ Certificat #${c.seq} supprimé`, 's');
+              renderList();
+            } catch (e) {
+              alert('❌ Suppression impossible : ' + e.message);
+            }
+            return;
+          }
+          if (action === 'delete-all') {
+            const all = await _getAll();
+            if (!all.length) return;
+            const msg = `⚠️ Supprimer TOUS les ${all.length} certificat(s) forensiques ?\n\n` +
+                        `Cette action :\n` +
+                        `  • efface l'IndexedDB locale 'ami_forensic'\n` +
+                        `  • casse complètement la chaîne de preuve cryptographique\n` +
+                        `  • ne touche PAS aux signatures elles-mêmes (elles restent intactes)\n\n` +
+                        `Tu pourras ensuite cliquer "Générer les certificats des signatures existantes" pour reconstruire une chaîne propre depuis les signatures actuelles.\n\n` +
+                        `Confirmer la suppression ?`;
+            if (!confirm(msg)) return;
+            // Double confirmation pour cette action destructive
+            if (!confirm(`Dernière confirmation : supprimer ${all.length} certificat(s) ?`)) return;
+            try {
+              let deleted = 0;
+              for (const c of all) {
+                try { await _delete(c.id); deleted++; } catch (_) {}
+              }
+              console.info('[ForensicCert] 🗑 %d certificat(s) supprimé(s)', deleted);
+              if (typeof showToast === 'function') showToast(`✓ ${deleted} certificat(s) supprimé(s) — chaîne réinitialisée`, 's');
+              renderList();
+            } catch (e) {
+              alert('❌ Suppression échouée : ' + e.message);
+            }
             return;
           }
         } catch (err) {
@@ -680,24 +728,73 @@
 
   /* ───── Hook : génération auto après signature verrouillée ─
      L'event réel dispatché par signature.js est `ami:preuve_updated`
-     (et non `ami:signature_locked` comme initialement supposé). */
+     (et non `ami:signature_locked` comme initialement supposé).
+
+     ⚡ v1.7 : on ne se fie plus au detail (souvent incomplet selon le
+     flow appelant : uber.js, cotation.js, edit, …) — on va relire la
+     signature complète depuis IndexedDB via window.getAllSignatures().
+     Ça garantit que patient_id, actes, geozone, signature_hash sont
+     pleins quoi qu'il arrive (la sig elle-même est la source de vérité).
+
+     ⚡ v1.7 : double filtre IDE — par type ('signature_patient' uniquement)
+     ET par invoice_number (pas '__ide_self__'). Belt-and-suspenders, parce
+     que la signature IDE auto-injectée NE doit JAMAIS générer de certif. */
   document.addEventListener('ami:preuve_updated', async e => {
     try {
       if (typeof SUB !== 'undefined' && !SUB.hasAccess('forensic_certificates')) return;
       const detail = e.detail || {};
-      // On n'agit que sur les signatures patient (pas sur les preuves photo seules)
+      // Filtre 1 : type (les preuves photo seules ou autres ne créent pas de cert)
       if (detail.type && detail.type !== 'signature_patient') return;
+
+      const invoice = detail.invoice_number;
+      if (!invoice) return;
+
+      // Filtre 2 : la signature personnelle de l'IDE NE doit JAMAIS créer de cert.
+      //   Hardcode '__ide_self__' (la valeur définie dans signature.js) plutôt
+      //   que de s'appuyer sur window.IDE_SELF_SIG_ID — au cas où ce module
+      //   se charge avant signature.js et que la variable n'est pas encore
+      //   définie. C'est notre filet de dernier recours.
+      if (invoice === '__ide_self__' || invoice === (window.IDE_SELF_SIG_ID || '')) {
+        console.info('[ForensicCert] Skip auto-gen pour signature IDE (%s)', invoice);
+        return;
+      }
+
       // Eviter les doublons : si déjà certifié, on skip
       const all = await _getAll();
-      if (all.some(c => c.invoice === detail.invoice_number)) return;
+      if (all.some(c => c.invoice === invoice)) return;
+
+      // ⚡ Lookup signature complète depuis IDB pour récupérer TOUS les
+      //    champs — patient_nom, patient_id, actes, geozone, signature_hash —
+      //    sans dépendre de ce que l'event detail a transmis.
+      let sig = null;
+      try {
+        if (typeof window.getAllSignatures === 'function') {
+          const all = await window.getAllSignatures();
+          sig = (all || []).find(s => s.invoice_id === invoice) || null;
+        }
+      } catch (_) { /* fallback sur detail */ }
+
+      // Source de vérité : sig si disponible, sinon detail
+      const src = sig || detail;
+      const patient_id  = sig?.patient_id || sig?.proof_payload?.patient_id || detail.patient_id || '';
+      const patient_nom = (sig?.patient_nom || sig?.proof_payload?.patient_nom || detail.patient_nom || '').toString().trim();
+      const actes       = (Array.isArray(sig?.actes) ? sig.actes
+                          : (Array.isArray(sig?.proof_payload?.actes) ? sig.proof_payload.actes
+                          : (Array.isArray(detail.actes) ? detail.actes : [])));
+      const geozone     = sig?.geozone || detail.geozone || null;
+      const proof_hash  = sig?.signature_hash || sig?.proof_hash || detail.hash_preuve || '';
+      const sig_type    = (sig?.geozone && sig?.signature_hash) ? 'FORTE'
+                        : (sig?.signature_hash ? 'STANDARD'
+                        : (detail.force_probante || 'STANDARD'));
+
       await generate({
-        invoice:    detail.invoice_number,
-        patient_id: detail.patient_id || '',
-        patient_nom: (detail.patient_nom || '').toString().trim(),
-        actes:      detail.actes || [],
-        base_proof_hash: detail.hash_preuve || '',
-        signature_type:  detail.force_probante || 'STANDARD',
-        geozone:    detail.geozone || null
+        invoice,
+        patient_id,
+        patient_nom,
+        actes,
+        base_proof_hash: proof_hash,
+        signature_type:  sig_type,
+        geozone
       });
     } catch (err) {
       console.warn('[ForensicCert] auto-gen KO:', err.message);
@@ -709,12 +806,17 @@
     try {
       if (typeof SUB !== 'undefined' && !SUB.hasAccess('forensic_certificates')) return;
       const detail = e.detail || {};
+      const invoice = detail.invoice;
+      if (!invoice) return;
+      // Même filtre IDE qu'au-dessus
+      if (invoice === '__ide_self__' || invoice === (window.IDE_SELF_SIG_ID || '')) return;
       const all = await _getAll();
-      if (all.some(c => c.invoice === detail.invoice)) return;
+      if (all.some(c => c.invoice === invoice)) return;
       await generate({
-        invoice:   detail.invoice,
-        patient_id: detail.patient_id,
-        actes:      detail.actes,
+        invoice,
+        patient_id:  detail.patient_id,
+        patient_nom: (detail.patient_nom || '').toString().trim(),
+        actes:       detail.actes,
         base_proof_hash: detail.proof_hash,
         signature_type:  detail.signature_type || 'STANDARD',
         geozone:    detail.geozone

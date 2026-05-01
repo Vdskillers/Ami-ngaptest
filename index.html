@@ -3044,7 +3044,7 @@
      💎 Modules Premium add-on (gated par SUB.requireAccess)
 ════════════════════════════════════ -->
 <script src="js/ca-sous-declare.js?v=1.1"></script><!-- 💸 v1.1 : sous-onglet hub Outils + retrait suffixe PREMIUM -->
-<script src="js/forensic-cert.js?v=1.6"></script><!-- 🛡️ v1.6 : patient_nom métadonnée d'affichage (hors hash, n'affecte pas l'intégrité) + helper _friendlyTitle (uber_pat_X_Y → Patient X_Y) + auto-enrichissement rétroactif des certifs anciens via jointure signatures + PDF affiche Patient + Patient (ID interne) + Actes -->
+<script src="js/forensic-cert.js?v=1.7"></script><!-- 🛡️ v1.7 : auto-trigger fait lookup IDB de la signature (vs detail incomplet) → patient_nom + actes + geozone toujours pleins · double filtre IDE invoice='__ide_self__' · boutons 🗑 par cert + 🗑 Tout supprimer · enrich plus loquace -->
 <script src="js/rapport-juridique.js?v=1.5"></script><!-- ⚖️ v1.5 : fix filtre IDE_SELF_SIG_ID (même bug que forensic-cert) → la sig IDE faussait les compteurs FORTE/STANDARD/MINIMAL -->
 <script src="js/comptable.js?v=1.0"></script><!-- 🧑‍💼 AMI Comptable — 8 features expert-comptable santé (dashboard multi-IDEL, FEC, 2035, 2042, scoring, alertes, connecteurs, pseudo-FEC, rapports trimestriels) — gated COMPTABLE -->
 
