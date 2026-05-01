@@ -193,7 +193,12 @@ async function _syncKmToServer(entries) {
     // Chiffrement côté client — le serveur reçoit un blob opaque
     let encrypted_data;
     if (typeof _enc === 'function') {
-      try { encrypted_data = _enc({ __km_journal: data }); } catch { encrypted_data = JSON.stringify(data); }
+      // ⚡ FIX (2026-05-01) : _enc est ASYNC (patients.js:187). Sans
+      // await, encrypted_data était un Promise → wpost l'envoyait au
+      // serveur sous forme '[object Promise]' (JSON.stringify d'un Promise),
+      // donc le KM journal côté serveur était corrompu de manière silencieuse
+      // — les sync push semblaient OK mais les pull renvoyaient n'importe quoi.
+      try { encrypted_data = await _enc({ __km_journal: data }); } catch { encrypted_data = JSON.stringify(data); }
     } else {
       encrypted_data = JSON.stringify(data);
     }
@@ -218,7 +223,11 @@ async function syncKmFromServer() {
     let remote = null;
     try {
       if (typeof _dec === 'function') {
-        const d = _dec(res.data.encrypted_data);
+        // ⚡ FIX (2026-05-01) : _dec est ASYNC. Sans await, d était un
+        // Promise → d?.__km_journal toujours undefined → on tombait dans
+        // le fallback JSON.parse qui plantait sur du blob chiffré → KM
+        // journal jamais restauré au reload après Clear Storage.
+        const d = await _dec(res.data.encrypted_data);
         remote = d?.__km_journal || null;
       }
       if (!remote) remote = JSON.parse(res.data.encrypted_data);
@@ -740,7 +749,12 @@ async function _loadOrdosFromCarnet() {
     if (!rows) return [];
     const ordos = [];
     for (const row of rows) {
-      const p = { id: row.id, nom: row.nom, prenom: row.prenom, ...(_dec(row._data) || {}) };
+      // ⚡ FIX (2026-05-01) : _dec ASYNC. Sans await, le ...spread déballait
+      // un Promise au lieu de l'objet patient → p.ordonnances toujours
+      // undefined → AUCUNE ordonnance jamais chargée depuis le carnet
+      // (la fonction retournait toujours [] alors que les ordos existaient
+      // bien en IDB). Cause silencieuse de "mes ordonnances ont disparu".
+      const p = { id: row.id, nom: row.nom, prenom: row.prenom, ...((await _dec(row._data)) || {}) };
       const nomAff = [p.prenom, p.nom].filter(Boolean).join(' ') || p.nom || 'Patient';
 
       // Lire le tableau ordonnances[] (nouveau format)
@@ -825,11 +839,18 @@ async function addOrdonnance() {
         return nom.includes(patientNorm) || nom2.includes(patientNorm) || patientNorm.includes((r.nom||'').toLowerCase());
       });
       if (row) {
-        const pat = { id: row.id, nom: row.nom, prenom: row.prenom, ...(_dec(row._data)||{}) };
+        // ⚡ FIX (2026-05-01) : _dec et _enc sont ASYNC (patients.js:187+201).
+        // Sans await sur _dec, le ...spread ne déballait pas l'objet patient
+        // → ordonnances pushée dans le vide, plus pat.ordonnances était
+        // immédiatement écrasé par push() sur un mauvais objet. Et _enc(pat)
+        // sans await stockait un Promise dans IDB → 'Failed to execute put...
+        // could not be cloned' (silencieux côté caller). Résultat invisible :
+        // l'ordonnance n'était JAMAIS persistée dans le carnet.
+        const pat = { id: row.id, nom: row.nom, prenom: row.prenom, ...((await _dec(row._data))||{}) };
         if (!pat.ordonnances) pat.ordonnances = [];
         pat.ordonnances.push(ordo);
         pat.updated_at = new Date().toISOString();
-        const _tsOrdo = { id: pat.id, nom: pat.nom, prenom: pat.prenom, _data: _enc(pat), updated_at: pat.updated_at };
+        const _tsOrdo = { id: pat.id, nom: pat.nom, prenom: pat.prenom, _data: await _enc(pat), updated_at: pat.updated_at };
         await _idbPut(STORE, _tsOrdo);
         // Sync immédiate vers carnet_patients — propagation inter-appareils
         if (typeof _syncPatientNow === 'function') _syncPatientNow(_tsOrdo).catch(() => {});

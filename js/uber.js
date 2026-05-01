@@ -558,7 +558,12 @@ async function _autoCoterEtImporterPatient(p) {
           const rows = await _idbGetAll(PATIENTS_STORE);
           const row  = rows.find(r => r.id === p.patient_id || r.id === p.id);
           if (row && typeof _dec === 'function') {
-            const pat = _dec(row._data) || {};
+            // ⚡ FIX (2026-05-01) : _dec ASYNC. Sans await, pat était un
+            // Promise → pat.actes_recurrents toujours undefined → les actes
+            // récurrents du carnet n'étaient JAMAIS pré-remplis dans la
+            // cotation Uber. Cause silencieuse de "il faut tout retaper
+            // à chaque tournée alors qu'on a déjà les actes en mémoire".
+            const pat = (await _dec(row._data)) || {};
             if (pat.actes_recurrents) actesRecurrents = pat.actes_recurrents;
           }
         }
@@ -672,8 +677,18 @@ async function _autoCoterEtImporterPatient(p) {
       let pat;
 
       if (row) {
+        // ⚡ FIX (2026-05-01) CRITIQUE : _dec ASYNC. Sans await, pat était
+        // construit via spread d'un Promise → AUCUN champ patient existant
+        // n'était hérité (cotations, piluliers, constantes, ordonnances,
+        // pathologies, actes_recurrents, adresse, lat/lng…). Le pat sauvé
+        // ensuite via _idbPut (ligne 770) écrasait toute l'historique du
+        // patient à chaque tournée Uber. Combiné au fait que pat.cotations
+        // était undefined → pat.cotations.findIndex throw → catch silencieux
+        // ligne 769 → la cotation Uber n'était même pas persistée.
+        // Sans cet await, AUCUNE cotation Uber ne se sauvait dans le carnet
+        // depuis que le dataKey AES était activé pour Bastien.
         pat = { id: row.id, nom: row.nom, prenom: row.prenom,
-                ...((typeof _dec === 'function' ? _dec(row._data) : null) || {}) };
+                ...((typeof _dec === 'function' ? (await _dec(row._data)) : null) || {}) };
       } else {
         const newId = p.patient_id || p.id
           || ('pat_' + Date.now() + '_' + Math.random().toString(36).slice(2,6));
@@ -792,7 +807,14 @@ async function _autoCoterEtImporterPatient(p) {
           + Math.cos(parseFloat(prev.lat)*Math.PI/180)
           * Math.cos(parseFloat(p.lat)*Math.PI/180)
           * Math.sin(dLon/2)**2;
-        const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        // ⚡ FIX (2026-05-01) : facteur 1.25 pour convertir distance vol
+        // d'oiseau (haversine) → distance routière estimée. Cohérent avec
+        // l'estimation appliquée en priorité 3 de terminerTourneeAvecBilan
+        // (index.html:1306). Avant ce fix, le journal kilométrique était
+        // sous-estimé d'environ 20% sur les tournées Uber Médical car la
+        // somme accumulée était en distance vol d'oiseau pure.
+        const kmHav = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const km = kmHav * 1.25;
         const curKm = parseFloat(APP.get('tourneeKmJour') || 0);
         APP.set('tourneeKmJour', curKm + km);
         try { localStorage.setItem('ami_tournee_km', String(curKm + km)); } catch (_e) {}
@@ -1324,8 +1346,29 @@ async function markUberDone() {
 
   /* Toast si tous les patients sont terminés */
   const remaining = (APP.get('uberPatients') || []).filter(q => !q.done && !q.absent);
-  if (!remaining.length && typeof showToast === 'function') {
-    showToast('✅ Tous les patients visités — cliquez sur 🏁 Clôturer la journée');
+  if (!remaining.length) {
+    /* ⚡ FIX (2026-05-01) : AUTO-CLÔTURE quand le dernier patient est terminé.
+       Avant : seul un toast informatif était affiché ("Tous patients visités —
+       cliquez 🏁"). Si l'IDE oubliait de cliquer, le KM accumulé dans
+       tourneeKmJour n'était JAMAIS écrit dans le journal kilométrique pour
+       cette journée — il restait dans localStorage et était attribué à la
+       date du PROCHAIN clic Clôturer (souvent le lendemain). Comptabilité
+       fiscale faussée.
+
+       Après : on déclenche terminerTourneeAvecBilan automatiquement, AVEC
+       sa confirmation native. L'IDE garde le contrôle (peut annuler), mais
+       n'a plus à se rappeler du clic explicite. Comportement cohérent avec
+       le mode GPS plein écran (qui utilise skipConfirm:true pour ne pas
+       casser le geste tactile, mais l'effet final est le même : le KM est
+       écrit dans le journal). */
+    if (typeof showToast === 'function') {
+      showToast('✅ Tous les patients visités — clôture de la journée…');
+    }
+    setTimeout(() => {
+      if (typeof terminerTourneeAvecBilan === 'function') {
+        terminerTourneeAvecBilan(); // confirm() inclus, IDE peut annuler
+      }
+    }, 600); // léger délai pour laisser le toast s'afficher
   }
 }
 

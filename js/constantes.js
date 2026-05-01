@@ -455,11 +455,17 @@ async function constSave() {
       const rows = await _idbGetAll(PATIENTS_STORE);
       const row  = rows?.find?.(r => r.id === editMode.patientId);
       if (row && typeof _dec === 'function' && typeof _enc === 'function') {
-        const p = { ...(_dec(row._data)||{}), id: row.id, nom: row.nom, prenom: row.prenom };
+        // ⚡ FIX (2026-05-01) : _dec et _enc sont ASYNC (patients.js:187+201).
+        // Sans await : _dec retournait un Promise au lieu de l'objet patient,
+        // donc le ...spread ne donnait rien et p.constantes était toujours
+        // undefined → la mesure éditée n'était JAMAIS sauvée. Et même si
+        // c'était passé, _enc(p) sans await aurait stocké un Promise dans
+        // IDB → 'Failed to execute put...could not be cloned'.
+        const p = { ...((await _dec(row._data))||{}), id: row.id, nom: row.nom, prenom: row.prenom };
         if (Array.isArray(p.constantes) && p.constantes[editMode.idx] != null) {
           p.constantes[editMode.idx] = { ...obj, id: p.constantes[editMode.idx].id };
           p.updated_at = new Date().toISOString();
-          const toStore = { id: row.id, nom: row.nom, prenom: row.prenom, _data: _enc(p), updated_at: p.updated_at };
+          const toStore = { id: row.id, nom: row.nom, prenom: row.prenom, _data: await _enc(p), updated_at: p.updated_at };
           if (typeof _idbPut === 'function') await _idbPut(PATIENTS_STORE, toStore);
           if (typeof _syncPatientNow === 'function') _syncPatientNow(toStore).catch(() => {});
         }

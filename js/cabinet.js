@@ -1626,7 +1626,13 @@ async function cabinetPullSync() {
             for (const p of pts) {
               if (!p.id || !p.nom) continue;
               const existing   = localMap.get(p.id);
-              const localDecoded = existing ? (_dec(existing._data) || {}) : null;
+              // ⚡ FIX (2026-05-01) : _dec est ASYNC (patients.js:201).
+              // Sans await, localDecoded était un Promise → la condition
+              // `if (existing._version > localDecoded._version)` comparait
+              // toujours undefined → false ; et plus loin localDecoded.cotations
+              // était toujours undefined → écrasement total des données
+              // existantes du patient à chaque pull cabinet.
+              const localDecoded = existing ? ((await _dec(existing._data)) || {}) : null;
 
               // ✅ CRITIQUE : toujours encoder avec la clé locale du destinataire
               // Enrichir avec version + traçabilité
@@ -1638,7 +1644,10 @@ async function cabinetPullSync() {
                 source:      'cabinet',
                 owner_id:    item.sender_id,
               };
-              const encoded = _enc(enriched);
+              // ⚡ FIX (2026-05-01) : _enc est ASYNC. Sans await, encoded
+              // était un Promise → IDB stockait un Promise → 'could not be
+              // cloned' (silencieux) → patient cabinet jamais sauvé localement.
+              const encoded = await _enc(enriched);
               if (!encoded) continue;
 
               // ✅ CRITIQUE : infirmiere_id = userId LOCAL du destinataire
@@ -1668,9 +1677,14 @@ async function cabinetPullSync() {
 
                 if (changed) {
                   localDecoded.updated_at = new Date().toISOString();
+                  // ⚡ FIX (2026-05-01) : _enc est ASYNC (patients.js:187).
+                  // Sans await on stockait un Promise dans IDB → 'Failed to
+                  // execute put on IDBObjectStore: #<Promise> could not be
+                  // cloned' (catch silencieux côté caller → corruption
+                  // invisible des patients pullés depuis le cabinet).
                   await _idbPut(PATIENTS_STORE, {
                     ...baseRow,
-                    _data: _enc(localDecoded),
+                    _data: await _enc(localDecoded),
                   });
                   nbPt++;
                 }
@@ -1731,7 +1745,10 @@ async function cabinetPullSync() {
             for (const [pid, cots] of byPatient.entries()) {
               const row = byId.get(pid);
               if (!row) continue; // ✅ Règle : patient absent → ignorer (pas de fiche fantôme)
-              const decoded = (typeof _dec === 'function') ? (_dec(row._data) || {}) : (row._data || {});
+              // ⚡ FIX (2026-05-01) : _dec ASYNC. Sans await, decoded était
+              // un Promise → decoded.cotations toujours undefined → on
+              // perdait les cotations existantes à chaque sync cabinet.
+              const decoded = (typeof _dec === 'function') ? ((await _dec(row._data)) || {}) : (row._data || {});
               if (!Array.isArray(decoded.cotations)) decoded.cotations = [];
 
               // Index pour upsert par invoice_number
@@ -1767,7 +1784,9 @@ async function cabinetPullSync() {
 
               if (changed) {
                 decoded.updated_at = new Date().toISOString();
-                const encoded = (typeof _enc === 'function') ? _enc(decoded) : decoded;
+                // ⚡ FIX (2026-05-01) : _enc ASYNC. Sans await, encoded était
+                // un Promise → IDB stockait un Promise → 'could not be cloned'.
+                const encoded = (typeof _enc === 'function') ? (await _enc(decoded)) : decoded;
                 await _idbPut(PATIENTS_STORE, {
                   ...row,
                   _data:         encoded,

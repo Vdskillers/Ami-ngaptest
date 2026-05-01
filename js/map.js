@@ -397,8 +397,15 @@ async function _confirmPatientCorrection() {
       const rows = await _idbGetAll('ami_patients');
       const row  = rows.find(r => r.id === patientId);
       if (row) {
+        // ⚡ FIX (2026-05-01) : _dec et _enc sont ASYNC (patients.js:187+201).
+        // Sans await sur _dec, le ...spread déballait un Promise → on perdait
+        // toutes les données patient (cotations, piluliers, ordonnances).
+        // Sans await sur _enc, on stockait un Promise → 'could not be cloned'
+        // silencieux → coordonnées GPS jamais persistées.
+        // Cause silencieuse de "j'ai corrigé l'adresse mais le GPS revient au
+        // mauvais endroit après reload".
         const p = { id: row.id, nom: row.nom, prenom: row.prenom,
-                    ...(typeof _dec === 'function' ? (_dec(row._data) || {}) : {}) };
+                    ...(typeof _dec === 'function' ? ((await _dec(row._data)) || {}) : {}) };
         p.lat      = finalLat;
         p.lng      = finalLng;
         p.geoScore = 95;
@@ -406,7 +413,7 @@ async function _confirmPatientCorrection() {
           id:         p.id,
           nom:        p.nom,
           prenom:     p.prenom,
-          _data:      typeof _enc === 'function' ? _enc(p) : row._data,
+          _data:      typeof _enc === 'function' ? (await _enc(p)) : row._data,
           updated_at: new Date().toISOString(),
         };
         if (typeof _idbPut === 'function') await _idbPut('ami_patients', toStore);

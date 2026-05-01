@@ -1176,6 +1176,19 @@
           } catch (_) {}
         }
 
+        /* ⚡ FIX (2026-05-01) : RESET du compteur km au démarrage de la journée.
+           Avant : si l'IDE avait optimisé la Tournée IA (qui pose `tourneeKmJour`
+           = total OSRM prévu, ex: 25 km), puis cliquait Démarrer, l'accumulation
+           haversine de uber.js (à chaque patient terminé) s'AJOUTAIT au total
+           OSRM → double-comptage. Le journal kilométrique enregistrait alors
+           OSRM-prévu + haversines-réels ≈ 1.5× la vraie distance.
+           Après : on reset à 0 au moment où la journée démarre vraiment, donc
+           l'accumulation incrémentale repart de zéro et le km final reflète
+           uniquement le parcours réellement effectué (haversine × 1.25). */
+        APP.set('tourneeKmJour', 0);
+        APP.set('_lastVisitedPos', null);
+        try { localStorage.removeItem('ami_tournee_km'); } catch {}
+
         /* 2. Démarrer le GPS Uber sans écraser startPoint si déjà défini */
         startLiveTracking();
         loadUberPatients();
@@ -1258,7 +1271,12 @@
               const a = Math.sin(dLat/2)**2 + Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLon/2)**2;
               return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             };
-            kmRetour = _hav(parseFloat(lastPos.lat), parseFloat(lastPos.lng), parseFloat(startPt.lat), parseFloat(startPt.lng));
+            // ⚡ FIX (2026-05-01) : ×1.25 pour convertir vol d'oiseau → route.
+            // Cohérent avec uber.js (incréments par patient) et index.html:1306
+            // (haversine fallback). Sans ça, le retour cabinet était sous-estimé
+            // d'~20%.
+            const kmRetourHav = _hav(parseFloat(lastPos.lat), parseFloat(lastPos.lng), parseFloat(startPt.lat), parseFloat(startPt.lng));
+            kmRetour = kmRetourHav * 1.25;
             const curKm = parseFloat(APP.get('tourneeKmJour') || 0);
             APP.set('tourneeKmJour', curKm + kmRetour);
             try { localStorage.setItem('ami_tournee_km', String(curKm + kmRetour)); } catch {}
@@ -2968,7 +2986,7 @@
 <script src="js/offline-auth.js?v=1.0"></script><!-- Login hors-ligne par PIN (doit être AVANT auth.js) -->
 <script src="js/auth.js?v=3.9"></script>
 <script src="js/subscription.js?v=3.7"></script><!-- 💎 v3.7 : Cabinet card "à partir de 49€" (au lieu de 29€ qui est le tarif dégressé max) + affiche le tarif réel pour les users déjà en cabinet -->
-<script src="js/cabinet.js?v=4.1"></script><!-- v4.1 : intégration des correctifs cabinet-role-fix (endpoints promote/demote-member, signature apiCall, normalisation gestionnaire→manager) -->
+<script src="js/cabinet.js?v=4.2"></script><!-- v4.2 : ⚡ FIX critique : ajout des await manquants sur _enc/_dec (async depuis l'activation AES dataKey). Sans await, on stockait des Promises dans IDB ou on déballait des Promises dans des spread → corruption silencieuse de données patient/sync. Voir COMMIT pour détails. (sync cabinet pull patients + cotations) -->
 <script src="js/security.js?v=3.8"></script><!-- RGPD + AES + PIN + Consentement -->
 <script src="js/admin.js?v=3.9"></script>
 <script src="js/admin-subscription-ui.js?v=1.4"></script><!-- 💎 v1.4 : sous-onglet IDE/Admins (full admin only) — endpoint /admin-liste-admins + cartes admin avec boutons rétrograder/promouvoir + protection is_env_admin & is_self -->
@@ -2994,8 +3012,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <!-- Modules dépendant de Leaflet -->
-<script src="js/map.js?v=5.10.5"></script>
-<script src="js/uber.js?v=5.10.8"></script><!-- 🚗 v5.10.8 : await _enc(pat) sur _idbPut PATIENTS_STORE (sans await, on stockait un Promise dans IDB → erreur Failed to execute put) -->
+<script src="js/map.js?v=5.10.6"></script><!-- v5.10.6 : ⚡ FIX critique : ajout des await manquants sur _enc/_dec (async depuis l'activation AES dataKey). Sans await, on stockait des Promises dans IDB ou on déballait des Promises dans des spread → corruption silencieuse de données patient/sync. Voir COMMIT pour détails. (sauvegarde correction GPS d'un patient) -->
+<script src="js/uber.js?v=5.10.10"></script><!-- 🚗 v5.10.10 : auto-clôture journée Uber Médical au dernier patient (parité avec GPS plein écran) + facteur 1.25 sur les incréments KM haversine (route ≈ 1.25 × vol d'oiseau) → KM journal kilométrique précis -->
 
 <!-- Moteurs IA (pas de dépendance Leaflet) — doivent précéder tournee.js -->
 <script src="js/ai-tournee.js?v=5.10.2"></script>
@@ -3021,7 +3039,7 @@
 
 <!-- Modules cliniques AMI v2 -->
 <script src="js/transmissions.js?v=3.8"></script>
-<script src="js/constantes.js?v=3.8"></script>
+<script src="js/constantes.js?v=3.9"></script><!-- v3.9 : ⚡ FIX critique : ajout des await manquants sur _enc/_dec (async depuis l'activation AES dataKey). Sans await, on stockait des Promises dans IDB ou on déballait des Promises dans des spread → corruption silencieuse de données patient/sync. Voir COMMIT pour détails. (édition constante d'un patient) -->
 <script src="js/pilulier.js?v=3.8"></script>
 <script src="js/bsi-engine.js?v=3.9"></script><!-- 🆕 Moteurs BSI : suggestion, cohérence, impact €, risque CPAM, score confiance -->
 <script src="js/bsi.js?v=3.9"></script>
@@ -3701,7 +3719,7 @@ document.addEventListener('click', function(e) {
 })();
 </script>
 
-<script src="js/infirmiere-tools.js?v=3.8"></script>
+<script src="js/infirmiere-tools.js?v=3.9"></script><!-- v3.9 : ⚡ FIX critique : ajout des await manquants sur _enc/_dec (async depuis l'activation AES dataKey). Sans await, on stockait des Promises dans IDB ou on déballait des Promises dans des spread → corruption silencieuse de données patient/sync. Voir COMMIT pour détails. (sync KM journal + chargement ordonnances + ajout ordo dans carnet) -->
 
 <!-- ══ TOAST CONTAINER ══ -->
 <div id="toast-container"></div>
