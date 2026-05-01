@@ -1,6 +1,12 @@
 /* ════════════════════════════════════════════════════════════════════
-   tier-visibility.js — AMI NGAP v1.0
+   tier-visibility.js — AMI NGAP v1.1
    ────────────────────────────────────────────────────────────────────
+   v1.1 — FIX cascade paywalls
+     • Algorithme de masquage des sous-onglets de hubs en 2 passes
+       (évite la cascade des renderXXX → _gate → showPaywall en chaîne)
+     • Bascule UNIQUEMENT si la vue du hub est actuellement à l'écran
+       (sinon on ne déclenche pas inutilement les renders qui appellent
+        SUB.requireAccess et popent un paywall en arrière-plan)
    Compagnon NON-INVASIF de subscription.js.
    À charger APRÈS subscription.js dans index.html :
      <script src="tier-visibility.js" defer></script>
@@ -170,22 +176,54 @@
         });
       });
 
-      /* ─── 2.2 Sous-onglets des hubs ─── */
+      /* ─── 2.2 Sous-onglets des hubs (algorithme 2-passes pour éviter
+              la cascade de bascules → cascade de paywalls) ─── */
+
+      // PASSE A : décider l'accessibilité de chaque onglet et la stocker
+      //           (sans rien changer au DOM — pas de switch ici)
+      const tabsByHub = new Map();   // hubName → [{el, tab, accessible, wasActive}]
       document.querySelectorAll('.hub-tab[data-hub][data-hub-tab]').forEach(el => {
         const hub = el.dataset.hub;
         const tab = el.dataset.hubTab;
         const feat = HUB_TAB_FEATURE_MAP[hub + ':' + tab];
-        // Pas de mapping → toujours visible (onglet neutre)
-        if (!feat) { _show(el); return; }
+        // Pas de mapping → toujours accessible (onglet neutre)
+        const accessible = !feat || SUB.hasAccess(feat);
+        const wasActive  = el.classList.contains('on');
+        if (!tabsByHub.has(hub)) tabsByHub.set(hub, []);
+        tabsByHub.get(hub).push({ el, tab, accessible, wasActive });
+      });
 
-        if (SUB.hasAccess(feat)) {
-          _show(el);
-        } else {
-          const wasActive = el.classList.contains('on');
-          _hide(el);
-          // Si on vient de cacher l'onglet actif → bascule sur le 1er visible
-          if (wasActive) _switchToFirstVisibleHubTab(hub);
-        }
+      // PASSE B : appliquer hide/show selon l'accessibilité (silencieux)
+      tabsByHub.forEach(tabs => {
+        tabs.forEach(({ el, accessible }) => {
+          if (accessible) _show(el);
+          else            _hide(el);
+        });
+      });
+
+      // PASSE C : pour chaque hub dont l'onglet actif vient d'être masqué,
+      //           basculer UNE SEULE FOIS vers le 1er onglet accessible —
+      //           et UNIQUEMENT si la vue du hub est actuellement visible
+      //           (sinon on déclencherait des renders + paywalls inutiles
+      //            pour des onglets que l'utilisateur n'est pas en train de regarder)
+      const HUB_VIEW_ID = {
+        outils:    'view-outils-hub',
+        patients:  'view-patients-hub',  // peut ne pas exister selon la version
+        comptable: 'view-comptable-hub'
+      };
+      tabsByHub.forEach((tabs, hub) => {
+        const activeWasHidden = tabs.some(t => t.wasActive && !t.accessible);
+        if (!activeWasHidden) return;
+
+        const firstAccessible = tabs.find(t => t.accessible);
+        if (!firstAccessible) return;   // tous masqués → laisser tel quel
+
+        const viewId = HUB_VIEW_ID[hub];
+        const view   = viewId ? document.getElementById(viewId) : null;
+        const isViewActive = view && view.classList.contains('on');
+        if (!isViewActive) return;      // pas à l'écran → pas la peine de switcher maintenant
+
+        _switchToHubTab(hub, firstAccessible.tab, firstAccessible.el);
       });
 
       /* ─── 2.3 Blocs sidebar (.sl) → masquer si tous les items sont cachés ─── */
@@ -210,22 +248,18 @@
       }
     }
 
-    /** Bascule sur le 1er onglet visible d'un hub donné */
-    function _switchToFirstVisibleHubTab(hub) {
-      const tabs = document.querySelectorAll(`.hub-tab[data-hub="${hub}"]`);
-      const firstVisible = Array.from(tabs).find(
-        t => t.getAttribute(HIDDEN_ATTR) !== '1'
-      );
-      if (!firstVisible) return;
-      const tabName = firstVisible.dataset.hubTab;
+    /** Bascule vers un onglet précis d'un hub (utilisé par PASSE C ci-dessus,
+        avec un target déjà calculé en pré-passe — évite les cascades) */
+    function _switchToHubTab(hub, tabName, tabEl) {
+      if (!tabName || !tabEl) return;
       try {
-        if (hub === 'outils'    && typeof window.outilsHubSwitchTab    === 'function') window.outilsHubSwitchTab(tabName, firstVisible);
-        else if (hub === 'patients'  && typeof window.patientsHubSwitchTab  === 'function') window.patientsHubSwitchTab(tabName, firstVisible);
-        else if (hub === 'comptable' && typeof window.comptableHubSwitchTab === 'function') window.comptableHubSwitchTab(tabName, firstVisible);
-        else firstVisible.click();
+        if (hub === 'outils'    && typeof window.outilsHubSwitchTab    === 'function') window.outilsHubSwitchTab(tabName, tabEl);
+        else if (hub === 'patients'  && typeof window.patientsHubSwitchTab  === 'function') window.patientsHubSwitchTab(tabName, tabEl);
+        else if (hub === 'comptable' && typeof window.comptableHubSwitchTab === 'function') window.comptableHubSwitchTab(tabName, tabEl);
+        else tabEl.click();
       } catch (e) {
         console.warn('[tier-visibility] switch tab fallback:', e.message);
-        firstVisible.click();
+        try { tabEl.click(); } catch(_) {}
       }
     }
 

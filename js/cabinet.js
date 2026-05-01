@@ -271,7 +271,12 @@ async function renderCabinetSection() {
 
 /** Renvoie le rôle effectif de l'utilisateur courant dans le cabinet courant.
  *  Retours possibles : 'titulaire' | 'manager' | 'membre' | null
- *  Pour les admins en mode démo, renvoie 'manager' si le toggle est actif. */
+ *  Pour les admins en mode démo, renvoie 'manager' si le toggle est actif.
+ *
+ *  ⚠️ NORMALISATION : la BDD stocke 'gestionnaire' (cf. worker.js endpoints
+ *  cabinet-promote-member / cabinet-demote-member). On normalise vers
+ *  'manager' à la lecture pour que tout le frontend (qui compare === 'manager')
+ *  reste cohérent. */
 window.cabGetMyRole = function() {
   try {
     // 1. Mode démo admin : override session
@@ -287,16 +292,21 @@ window.cabGetMyRole = function() {
     const myId = (typeof S !== 'undefined' && S?.user?.id) || cab.my_id || null;
     if (myId && Array.isArray(cab.members)) {
       const me = cab.members.find(m => String(m.id) === String(myId));
-      if (me) return me.role || 'membre';
+      if (me) {
+        const r = me.role || 'membre';
+        return r === 'gestionnaire' ? 'manager' : r;
+      }
     }
-    return cab.my_role || 'membre';
+    const r = cab.my_role || 'membre';
+    return r === 'gestionnaire' ? 'manager' : r;
   } catch (_) { return null; }
 };
 
-/** True si l'utilisateur peut voir les onglets cabinet privilégiés (dashboard, conformité). */
+/** True si l'utilisateur peut voir les onglets cabinet privilégiés (dashboard, conformité).
+ *  Accepte 'manager' (frontend) ET 'gestionnaire' (BDD) par sécurité. */
 window.cabIsManager = function() {
   const r = window.cabGetMyRole();
-  return r === 'titulaire' || r === 'manager';
+  return r === 'titulaire' || r === 'manager' || r === 'gestionnaire';
 };
 
 /** Affiche / cache les onglets dashboard + conformité selon le rôle.
@@ -339,11 +349,20 @@ window.cabToggleDemoManager = function(force) {
   return next;
 };
 
-/** Promotion d'un membre en manager (réservé titulaire).
- *  Stockage local (membre.role = 'manager') + best-effort backend. */
+/** Promotion / rétrogradation d'un membre en manager (réservé titulaire).
+ *  ─────────────────────────────────────────────────────────────────────
+ *  • Worker expose 2 endpoints distincts :
+ *      POST /webhook/cabinet-promote-member  — membre → gestionnaire
+ *      POST /webhook/cabinet-demote-member   — gestionnaire → membre
+ *    Body attendu : { infirmiere_id }
+ *  • La BDD stocke 'gestionnaire', le frontend manipule 'manager'.
+ *    Mise à jour optimiste locale + refresh canonique après confirmation
+ *    backend pour aligner les autres champs et garantir la cohérence
+ *    multi-device. */
 window.cabPromoteToManager = async function(memberId) {
   const myRole = window.cabGetMyRole();
-  if (myRole !== 'titulaire' && !(typeof S !== 'undefined' && S?.role === 'admin')) {
+  const isAdmin = (typeof S !== 'undefined' && S?.role === 'admin');
+  if (myRole !== 'titulaire' && !isAdmin) {
     if (typeof showToast === 'function') showToast('❌ Réservé au titulaire du cabinet', 'e');
     return false;
   }
@@ -355,34 +374,76 @@ window.cabPromoteToManager = async function(memberId) {
     if (typeof showToast === 'function') showToast('⚠️ Le titulaire est déjà manager par défaut', 'w');
     return false;
   }
-  m.role = (m.role === 'manager') ? 'membre' : 'manager';
-  // Best-effort backend (l'endpoint peut ne pas exister, on dégrade silencieusement)
-  try {
-    if (typeof apiCall === 'function') {
-      await apiCall('/webhook/cabinet-set-role', {
-        method:'POST',
-        body: JSON.stringify({ cabinet_id: cab.id, member_id: memberId, role: m.role })
-      });
-    }
-  } catch (_) {}
-  if (typeof showToast === 'function') {
-    showToast(m.role === 'manager'
-      ? `✅ ${m.prenom||''} ${m.nom||''} est maintenant manager`
-      : `↩️ ${m.prenom||''} ${m.nom||''} repassé en membre`, 's');
-  }
+
+  // Décide l'action selon le rôle actuel (accepte 'manager' OU 'gestionnaire')
+  const wantsPromote = !(m.role === 'manager' || m.role === 'gestionnaire');
+  const endpoint = wantsPromote
+    ? '/webhook/cabinet-promote-member'
+    : '/webhook/cabinet-demote-member';
+
+  // Mise à jour optimiste locale
+  const previousRole = m.role;
+  m.role = wantsPromote ? 'manager' : 'membre';
   if (typeof window.renderCabinetSection === 'function') window.renderCabinetSection();
-  return true;
+
+  // Appel backend — apiCall(path, body) prend le payload directement,
+  // _apiFetch fait le JSON.stringify en interne.
+  let backendOk = false;
+  let backendErr = null;
+  try {
+    if (typeof apiCall !== 'function') throw new Error('apiCall indisponible');
+    const r = await apiCall(endpoint, { infirmiere_id: memberId });
+    backendOk = !!(r && (r.ok !== false));
+    if (!backendOk && r && r.error) backendErr = r.error;
+  } catch (e) {
+    backendErr = (e && e.message) || String(e);
+  }
+
+  if (backendOk) {
+    if (typeof showToast === 'function') {
+      showToast(wantsPromote
+        ? `✅ ${m.prenom || ''} ${m.nom || ''} est maintenant manager`
+        : `↩️ ${m.prenom || ''} ${m.nom || ''} repassé en membre`, 's');
+    }
+    // Refresh canonique depuis le backend pour garantir la cohérence
+    // (joined_at, role réel en BDD, état multi-device)
+    try {
+      if (typeof apiCall === 'function') {
+        const fresh = await apiCall('/webhook/cabinet-get', {});
+        if (fresh && fresh.cabinet) {
+          APP.cabinet = {
+            ...fresh.cabinet,
+            my_role: fresh.my_role,
+            members: Array.isArray(fresh.members) ? fresh.members : []
+          };
+          if (typeof window.renderCabinetSection === 'function') window.renderCabinetSection();
+          if (typeof window.cabApplyRoleVisibility === 'function') window.cabApplyRoleVisibility();
+        }
+      }
+    } catch (_) { /* refresh best-effort */ }
+    return true;
+  } else {
+    // Rollback local
+    m.role = previousRole;
+    if (typeof window.renderCabinetSection === 'function') window.renderCabinetSection();
+    if (typeof showToast === 'function') {
+      showToast('❌ Échec : ' + (backendErr || 'erreur backend'), 'e');
+    }
+    console.warn('[cabinet] échec promotion:', backendErr);
+    return false;
+  }
 };
 
-/** Helper d'affichage du rôle d'un membre (icône + label). */
+/** Helper d'affichage du rôle d'un membre (icône + label).
+ *  Accepte 'manager' (frontend) ET 'gestionnaire' (BDD). */
 function _cabRoleLabel(role) {
   if (role === 'titulaire') return '👑 Titulaire';
-  if (role === 'manager')   return '⭐ Manager';
+  if (role === 'manager' || role === 'gestionnaire') return '⭐ Manager';
   return '👤 Membre';
 }
 function _cabRoleIcon(role) {
   if (role === 'titulaire') return '👑';
-  if (role === 'manager')   return '⭐';
+  if (role === 'manager' || role === 'gestionnaire') return '⭐';
   return '👤';
 }
 window._cabRoleLabel = _cabRoleLabel;
@@ -562,7 +623,7 @@ function _renderCabinetDashboard(root, d) {
     const syncWith = prefs.with[m.id] !== false; // true par défaut pour les membres
     // Bouton "Promouvoir manager" — visible uniquement pour le titulaire et sur les autres membres non-titulaires
     const canPromote = (myRole === 'titulaire') && !isMe && (m.role !== 'titulaire');
-    const promoteLabel = (m.role === 'manager') ? '↩️ Retirer manager' : '⭐ Manager';
+    const promoteLabel = (m.role === 'manager' || m.role === 'gestionnaire') ? '↩️ Retirer manager' : '⭐ Manager';
     const promoteBtn = canPromote
       ? `<button class="btn bs bsm" onclick="cabPromoteToManager('${m.id}')" style="font-size:11px;flex-shrink:0">${promoteLabel}</button>`
       : '';
@@ -894,7 +955,7 @@ function _renderCabinetDemoDashboard(root, cab) {
           </div>
           <div style="flex:1">
             <div style="font-weight:600;font-size:14px">${m.prenom} ${m.nom} ${m.id===APP.user?.id?'<span style="font-size:10px;color:var(--a);font-family:var(--fm)">(moi)</span>':''}</div>
-            <div style="font-size:11px;color:var(--m);font-family:var(--fm)">${m.role === 'titulaire' ? '👑 Titulaire' : (m.role === 'manager' ? '⭐ Manager simulé' : '👤 Membre simulé')}</div>
+            <div style="font-size:11px;color:var(--m);font-family:var(--fm)">${m.role === 'titulaire' ? '👑 Titulaire' : ((m.role === 'manager' || m.role === 'gestionnaire') ? '⭐ Manager simulé' : '👤 Membre simulé')}</div>
           </div>
         </div>`).join('')}
     </div>
