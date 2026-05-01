@@ -3015,7 +3015,7 @@
 <script src="js/onboarding.js?v=3.8"></script>
 
 <!-- Nouveaux modules SaaS médical -->
-<script src="js/signature.js?v=5.9"></script>
+<script src="js/signature.js?v=5.11"></script><!-- 🖋️ v5.11 : event ami:preuve_updated transmet patient_nom + patient_id + actes + geozone (forensic-cert peut créer des certifs riches avec libellé patient + actes lisibles dans le PDF) -->
 <script src="js/copilote.js?v=3.8"></script>
 <script src="js/rapport.js?v=3.8"></script>
 
@@ -3044,8 +3044,8 @@
      💎 Modules Premium add-on (gated par SUB.requireAccess)
 ════════════════════════════════════ -->
 <script src="js/ca-sous-declare.js?v=1.1"></script><!-- 💸 v1.1 : sous-onglet hub Outils + retrait suffixe PREMIUM -->
-<script src="js/forensic-cert.js?v=1.4"></script><!-- 🛡️ v1.4 : CSS injecté + délégation event handlers + PDF download fallback -->
-<script src="js/rapport-juridique.js?v=1.4"></script><!-- ⚖️ v1.4 : CSS injecté (KPI cards + table + reco classifiées) + délégation event + PDF fallback -->
+<script src="js/forensic-cert.js?v=1.6"></script><!-- 🛡️ v1.6 : patient_nom métadonnée d'affichage (hors hash, n'affecte pas l'intégrité) + helper _friendlyTitle (uber_pat_X_Y → Patient X_Y) + auto-enrichissement rétroactif des certifs anciens via jointure signatures + PDF affiche Patient + Patient (ID interne) + Actes -->
+<script src="js/rapport-juridique.js?v=1.5"></script><!-- ⚖️ v1.5 : fix filtre IDE_SELF_SIG_ID (même bug que forensic-cert) → la sig IDE faussait les compteurs FORTE/STANDARD/MINIMAL -->
 <script src="js/comptable.js?v=1.0"></script><!-- 🧑‍💼 AMI Comptable — 8 features expert-comptable santé (dashboard multi-IDEL, FEC, 2035, 2042, scoring, alertes, connecteurs, pseudo-FEC, rapports trimestriels) — gated COMPTABLE -->
 
 <!-- 🚀 NGAP Update Manager — gestionnaire unifié de mise à jour (Avenant 11 embarqué) -->

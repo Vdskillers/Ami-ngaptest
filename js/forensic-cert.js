@@ -99,6 +99,124 @@
     });
   }
 
+  async function _delete(id) {
+    const db = await _db();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).delete(id).onsuccess = () => res(true);
+      tx.onerror = () => rej(tx.error);
+    });
+  }
+
+  /* ──────────────────────────────────────────────────────────────────
+     🏷️  Titre lisible pour un certificat
+     ──────────────────────────────────────────────────────────────────
+     Stratégie en cascade :
+       1. patient_nom si stocké (certs créés post v1.6 ou enrichis)
+       2. invoice_id "uber_pat_XXX_YYY" → "Patient XXX_YYY" (lisible-ish)
+       3. invoice_id brut comme fallback ultime
+     Utilisé à la fois dans la liste et dans le PDF.
+  ────────────────────────────────────────────────────────────────── */
+  function _friendlyTitle(c) {
+    const nom = (c && c.patient_nom || '').toString().trim();
+    if (nom) return nom;
+    const inv = (c && c.invoice || '').toString();
+    const m = inv.match(/^uber_pat_(\d+)_(\d+)$/);
+    if (m) return `Patient ${m[1]}_${m[2]}`;
+    return inv || '—';
+  }
+
+  /* ──────────────────────────────────────────────────────────────────
+     ✨ ENRICHISSEMENT rétroactif des certificats existants
+     ──────────────────────────────────────────────────────────────────
+     Les certificats créés avant v1.6 n'ont pas de patient_nom (le champ
+     n'existait pas). Pour leur donner un titre lisible sans avoir à les
+     régénérer (ce qui changerait leur hash et casserait la chaîne), on
+     fait une jointure ponctuelle avec les signatures source via
+     window.getAllSignatures, qui depuis signature.js v5.11+ stocke
+     patient_nom au niveau de chaque sig.
+
+     Le patient_nom est de la métadonnée d'affichage (cf. verify() qui
+     l'exclut du calcul canonical) → on peut le mettre à jour en place
+     sans casser l'intégrité forensique.
+
+     Idempotent : ne met à jour que les certs dont patient_nom est vide.
+  ────────────────────────────────────────────────────────────────── */
+  async function _enrichOldCerts() {
+    try {
+      if (typeof window.getAllSignatures !== 'function') return 0;
+      const all = await _getAll();
+      const needEnrich = all.filter(c => !c.patient_nom && c.invoice);
+      if (!needEnrich.length) return 0;
+
+      const sigs = await window.getAllSignatures();
+      // Index signatures par invoice_id pour O(1) lookup
+      const sigByInvoice = {};
+      (sigs || []).forEach(s => {
+        if (s && s.invoice_id) sigByInvoice[s.invoice_id] = s;
+      });
+
+      let enriched = 0;
+      for (const c of needEnrich) {
+        const s = sigByInvoice[c.invoice];
+        if (!s) continue;
+        const nom = (s.patient_nom || s.proof_payload?.patient_nom || '').toString().trim();
+        if (!nom) continue;
+        try {
+          // Met à jour UNIQUEMENT patient_nom — ne touche à AUCUN champ
+          // hashé, donc ne casse pas la vérification d'intégrité.
+          await _put({ ...c, patient_nom: nom });
+          enriched++;
+        } catch (e) {
+          console.warn('[ForensicCert] enrich %s : %s', c.id, e.message);
+        }
+      }
+      if (enriched) {
+        console.info('[ForensicCert] ✨ %d certificat(s) enrichi(s) avec patient_nom', enriched);
+      }
+      return enriched;
+    } catch (e) {
+      console.warn('[ForensicCert] _enrichOldCerts KO :', e.message);
+      return 0;
+    }
+  }
+
+  /* ──────────────────────────────────────────────────────────────────
+     🧹 PURGE des certificats orphelins liés à la signature IDE.
+     ──────────────────────────────────────────────────────────────────
+     Avant le 2026-05-01, le filtre de backfill cherchait
+     'ide_self_signature' au lieu de '__ide_self__' (la vraie clé
+     définie dans signature.js). Conséquence : la signature personnelle
+     de l'IDE auto-injectée passait à travers et un faux certificat
+     intitulé "Facture __ide_self__" était créé, faussant le compteur
+     "N certificats émis" et la chaîne de preuve.
+
+     Cette purge supprime UNIQUEMENT les certificats dont
+     `invoice === IDE_SELF_SIG_ID`. Elle est :
+       - idempotente : aucun effet si rien à supprimer
+       - sûre : ne touche jamais les certificats patients réels
+       - silencieuse : log console seulement
+     Appelée automatiquement au début de renderList() pour auto-réparer
+     le problème côté utilisateur sans intervention.
+  ────────────────────────────────────────────────────────────────── */
+  async function _purgeOrphanIdeCerts() {
+    const IDE_SELF_SIG_ID = (typeof window !== 'undefined' && window.IDE_SELF_SIG_ID) || '__ide_self__';
+    try {
+      const all = await _getAll();
+      const orphans = all.filter(c => c.invoice === IDE_SELF_SIG_ID);
+      if (!orphans.length) return 0;
+      for (const c of orphans) {
+        try { await _delete(c.id); }
+        catch (e) { console.warn('[ForensicCert] purge orphan id=%s : %s', c.id, e.message); }
+      }
+      console.info('[ForensicCert] 🧹 %d certificat(s) orphelin(s) "IDE self" purgé(s)', orphans.length);
+      return orphans.length;
+    } catch (e) {
+      console.warn('[ForensicCert] purge KO :', e.message);
+      return 0;
+    }
+  }
+
   /* ───── Crypto ─────────────────────────────────────────── */
   async function _sha256(str) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -158,11 +276,16 @@
     const canonical = JSON.stringify(body, Object.keys(body).sort());
     const hash = await _sha256(canonical);
 
+    // ⚠️ patient_nom est stocké HORS body pour ne pas affecter le hash
+    //    (et donc préserver la vérifiabilité des certificats existants).
+    //    C'est purement de la métadonnée d'affichage. La fonction verify()
+    //    l'exclut explicitement du calcul canonical.
     const cert = {
       id: 'cert_' + hash.slice(0,16),
       hash,
       ...body,
-      created_at: ts_iso
+      created_at: ts_iso,
+      patient_nom: (payload.patient_nom || '').toString().trim()
     };
     await _put(cert);
 
@@ -185,7 +308,9 @@
     if (!certificate || !certificate.hash) return { valid:false, reason:'Certificat vide' };
 
     // 1. Re-calculer le hash à partir du contenu
-    const { id, hash, created_at, ...rest } = certificate;
+    //    On exclut id, hash, created_at (jamais hashés) ET patient_nom
+    //    (métadonnée d'affichage ajoutée après coup, cf. generate()).
+    const { id, hash, created_at, patient_nom, ...rest } = certificate;
     const canonical = JSON.stringify(rest, Object.keys(rest).sort());
     const expected = await _sha256(canonical);
 
@@ -265,6 +390,17 @@
     if (typeof SUB !== 'undefined' && !SUB.requireAccess('forensic_certificates')) return;
     _injectFCStyles();
 
+    // 🧹 Auto-cleanup : purger les certificats orphelins "Facture __ide_self__"
+    //    (cf. _purgeOrphanIdeCerts) — exécution silencieuse, idempotente.
+    //    À la première ouverture après le fix du 2026-05-01, ça nettoie le
+    //    faux certif. Aux ouvertures suivantes, ça ne fait rien.
+    await _purgeOrphanIdeCerts();
+
+    // ✨ Auto-enrichissement : pour les certificats créés avant v1.6, on
+    //    récupère patient_nom depuis les signatures source (jointure
+    //    in-place sans casser le hash, cf. _enrichOldCerts).
+    await _enrichOldCerts();
+
     // Cible : hub Outils pratiques (préféré) ou ancienne section view
     const root = document.getElementById('hub-host-forensic-cert')
               || document.getElementById('view-forensic-cert');
@@ -305,10 +441,10 @@
                 <div class="fc-main">
                   <div class="fc-title">
                     <span class="fc-seq">#${c.seq}</span>
-                    Facture ${sanitize(c.invoice || '—')}
+                    ${sanitize(_friendlyTitle(c))}
                     <span class="fc-type-pill ${t}">${t}</span>
                   </div>
-                  <div class="fc-sub">${dateStr}</div>
+                  <div class="fc-sub">${dateStr}${c.invoice ? ` · <span style="opacity:.6;font-family:var(--fm,monospace);font-size:10px">${sanitize(c.invoice)}</span>` : ''}</div>
                   <div class="fc-hash" title="${c.hash}">Hash · ${c.hash.slice(0,40)}…</div>
                 </div>
                 <div class="fc-actions">
@@ -415,8 +551,9 @@
       <p>Séquence <b>#${c.seq}</b> · Émis le <b>${new Date(c.created_at).toLocaleString('fr-FR')}</b>
          · <span class="badge ${valid?'ok':'ko'}">${valid?'CHAÎNE INTÈGRE':'CHAÎNE ROMPUE'}</span></p>
       <dl class="kv">
+        <dt>Patient</dt><dd>${sanitize(_friendlyTitle(c))}</dd>
         <dt>Facture</dt><dd>${sanitize(c.invoice || '—')}</dd>
-        <dt>Patient (ID)</dt><dd>${sanitize(c.patient_id || '—')}</dd>
+        <dt>Patient (ID interne)</dt><dd>${sanitize(c.patient_id || '—')}</dd>
         <dt>Actes</dt><dd>${(c.actes||[]).join(', ') || '—'}</dd>
         <dt>Type signature</dt><dd>${sanitize(c.signature_type)}</dd>
         <dt>Géozone</dt><dd>${c.geozone ? JSON.stringify(c.geozone) : '—'}</dd>
@@ -499,8 +636,14 @@
       return { generated:0, skipped:0, total:0, error: e.message };
     }
 
-    // Filtrer les signatures patient (exclure la signature IDE auto-injectée)
-    const IDE_SELF_SIG_ID = 'ide_self_signature';
+    // Filtrer les signatures patient (exclure la signature IDE auto-injectée).
+    // ⚠️ Utiliser window.IDE_SELF_SIG_ID exposé par signature.js comme source
+    //    de vérité unique. Fallback sur la valeur littérale au cas où ce
+    //    module se charge avant signature.js.
+    //    Avant le 2026-05-01 ce filtre cherchait 'ide_self_signature' qui
+    //    n'a jamais existé → la sig IDE passait à travers et apparaissait
+    //    comme "Facture __ide_self__" dans la liste des certificats.
+    const IDE_SELF_SIG_ID = (typeof window !== 'undefined' && window.IDE_SELF_SIG_ID) || '__ide_self__';
     signatures = (signatures || []).filter(s => s.invoice_id && s.invoice_id !== IDE_SELF_SIG_ID);
 
     // Liste des invoice_id qui ont déjà un certificat
@@ -515,6 +658,10 @@
         await generate({
           invoice:    invoiceId,
           patient_id: sig.patient_id || sig.proof_payload?.patient_id || '',
+          // ⚡ patient_nom = métadonnée d'affichage (cf. _friendlyTitle / verify
+          //    qui l'exclut du hash). Permet d'avoir "Marie Dupont" au lieu de
+          //    "uber_pat_XXX_YYY" sans casser la vérifiabilité.
+          patient_nom: (sig.patient_nom || sig.proof_payload?.patient_nom || '').toString().trim(),
           actes:      Array.isArray(sig.actes) ? sig.actes : (sig.proof_payload?.actes || []),
           base_proof_hash: sig.signature_hash || sig.proof_hash || '',
           signature_type:  (sig.geozone && sig.signature_hash) ? 'FORTE' : (sig.signature_hash ? 'STANDARD' : 'MINIMAL'),
@@ -546,6 +693,7 @@
       await generate({
         invoice:    detail.invoice_number,
         patient_id: detail.patient_id || '',
+        patient_nom: (detail.patient_nom || '').toString().trim(),
         actes:      detail.actes || [],
         base_proof_hash: detail.hash_preuve || '',
         signature_type:  detail.force_probante || 'STANDARD',

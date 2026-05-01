@@ -81,8 +81,12 @@
           });
         }
       }
-      // Exclure la signature IDE auto-injectée
-      const IDE_SELF_SIG_ID = 'ide_self_signature';
+      // Exclure la signature IDE auto-injectée.
+      // ⚠️ Source de vérité : window.IDE_SELF_SIG_ID exposé par signature.js.
+      //    Avant le 2026-05-01 ce filtre cherchait 'ide_self_signature' qui
+      //    n'a jamais existé → la sig IDE était comptée comme une preuve
+      //    patient (faussant les compteurs FORTE/STANDARD/MINIMAL).
+      const IDE_SELF_SIG_ID = (typeof window !== 'undefined' && window.IDE_SELF_SIG_ID) || '__ide_self__';
       const lst = (allSigs || []).filter(s => s.invoice_id !== IDE_SELF_SIG_ID);
       lst.forEach(s => {
         const d = new Date(s.signed_at || s.created_at || s.date || 0);

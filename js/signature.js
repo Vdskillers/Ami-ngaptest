@@ -30,7 +30,12 @@
 const SIG_STORE = 'ami_signatures';
 // ⚡ Clé réservée pour la signature personnelle de l'infirmier(ère)
 // Utilisée pour l'auto-injection dans les PDF générés (facture, BSI, etc.)
+// ⚠️ EXPOSÉE GLOBALEMENT (window.IDE_SELF_SIG_ID) pour que les modules
+//    consommateurs (forensic-cert.js, rapport-juridique.js) utilisent la
+//    MÊME valeur — sinon le filtre de leur côté ne match plus et la sig
+//    IDE est traitée comme une facture (bug fixé le 2026-05-01).
 const IDE_SELF_SIG_ID = '__ide_self__';
+try { window.IDE_SELF_SIG_ID = IDE_SELF_SIG_ID; } catch (_) { /* SW context */ }
 let _sigCanvas = null, _sigCtx = null, _sigDrawing = false;
 let _currentInvoiceId = null, _sigDB = null;
 let _sigDBUserId = null;        // Garde la trace du user actif pour la DB signatures
@@ -1490,6 +1495,10 @@ async function saveSignature() {
   // L'event permet à cotation.js de mettre à jour le badge preuve, masquer
   // le bandeau « Aucune preuve terrain » dans le simulateur CPAM et le
   // scoring IDE, et afficher un visuel positif « Preuve forte enregistrée ».
+  // ⚡ v5.11 : on transmet aussi patient_nom + patient_id + actes + geozone
+  //    pour que forensic-cert.js (auto-trigger) puisse créer un certif riche
+  //    avec un libellé lisible (ex: "Marie Dupont" au lieu de "uber_pat_…")
+  //    et la liste des actes affichée dans le PDF opposable.
   try {
     document.dispatchEvent(new CustomEvent('ami:preuve_updated', {
       detail: {
@@ -1499,6 +1508,12 @@ async function saveSignature() {
         hash_preuve:    signatureHash,
         timestamp:      signedAt,
         certifie_ide:   !!serverCert,
+        // 👇 Nouveaux champs (rétrocompat : si absents, le consommateur
+        //    retombe sur ses fallbacks comme avant)
+        patient_id:     ctx.patient_id  || '',
+        patient_nom:    ctx.patient_nom || '',
+        actes:          Array.isArray(ctx.actes) ? ctx.actes : [],
+        geozone:        effectiveGeozone || null,
       }
     }));
   } catch (_) {}
@@ -1845,7 +1860,7 @@ window.normalizeSignaturePNGCached = _normalizeSignaturePNGCached;
 
    Retourne un tableau de signatures incluant la sig IDE + les sig patients.
    Pour ne récupérer que les signatures patients, filtrer sur :
-     s.invoice_id !== 'ide_self_signature'
+     s.invoice_id !== window.IDE_SELF_SIG_ID    // = '__ide_self__'
 ════════════════════════════════════════════════════════════════════════ */
 window.getAllSignatures = async function getAllSignatures() {
   try {
