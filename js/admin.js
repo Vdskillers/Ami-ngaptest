@@ -34,7 +34,36 @@
 ════════════════════════════════════════════════ */
 let _ADM_ACTIVE_TAB = 'comptes';
 
+/* ⚡ ROLE GATING — masque les onglets non autorisés selon le rôle utilisateur.
+   Appelé par loadAdm() au montage du panneau.
+   - 'admin'        → voit tout (8 onglets)
+   - 'admin_compta' → voit UNIQUEMENT 📒 Comptabilité, le reste est physiquement
+                      retiré du DOM (pas juste display:none, pour éviter qu'un
+                      utilisateur curieux les ré-active via DevTools).
+*/
+function _admApplyRoleGating() {
+  const role = (typeof S !== 'undefined' && S?.role) || 'nurse';
+  if (role === 'admin_compta') {
+    // Masquer tous les onglets sauf 'compta'
+    document.querySelectorAll('.adm-tab-btn').forEach(btn => {
+      if (btn.dataset.tab !== 'compta') btn.style.display = 'none';
+    });
+    document.querySelectorAll('.adm-tab-section').forEach(sec => {
+      if (sec.dataset.tab !== 'compta') sec.style.display = 'none';
+    });
+    // Force l'onglet actif
+    _ADM_ACTIVE_TAB = 'compta';
+    console.info('[admin] Role gating : admin_compta → onglets restreints à 📒 Comptabilité');
+  }
+}
+
 function admTab(tab) {
+  // ⚡ Sécurité : un admin_compta ne peut pas changer d'onglet via console
+  const role = (typeof S !== 'undefined' && S?.role) || 'nurse';
+  if (role === 'admin_compta' && tab !== 'compta') {
+    console.warn('[admin] Tentative de changement onglet bloquée (admin_compta restreint) :', tab);
+    tab = 'compta';
+  }
   _ADM_ACTIVE_TAB = tab;
   document.querySelectorAll('.adm-tab-btn').forEach(btn => {
     btn.classList.toggle('on', btn.dataset.tab === tab);
@@ -59,6 +88,9 @@ let ACCS = [];
 
 async function loadAdm() {
   if (!requireAuth()) return;
+  // ⚡ Applique le gating par rôle AVANT de monter l'onglet (sinon les onglets
+  // restreints clignotent une frame avant d'être masqués)
+  _admApplyRoleGating();
   admTab(_ADM_ACTIVE_TAB || 'comptes');
 }
 

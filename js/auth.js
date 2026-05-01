@@ -23,8 +23,9 @@
 ─────────────────────────────────────────────── */
 const CLIENT_PERMISSIONS = {
   nurse: ['create_invoice','view_own_data','import_calendar','manage_tournee','change_password','delete_account','manage_prescripteurs','export_data'],
-  admin: ['block_user','unblock_user','delete_user','view_stats','view_logs','view_users_list','export_data']
-  // ⚠️ 'view_patient_data' intentionnellement absent du rôle admin
+  admin: ['block_user','unblock_user','delete_user','view_stats','view_logs','view_users_list','export_data','view_compta','manage_admins'],
+  admin_compta: ['view_compta','change_password']
+  // ⚠️ 'view_patient_data' intentionnellement absent des rôles admin
 };
 function clientHasPermission(permission){
   const role = S?.role || 'nurse';
@@ -317,7 +318,11 @@ function showApp(){
   //   admin → app, etc.), il n'attache les listeners qu'une seule fois.
   try { _amiIdleAttach(); } catch (e) { console.warn('[AMI] Idle attach KO:', e); }
 
-  const isAdmin = S?.role==='admin';
+  // ⚡ isAdmin = "a un rôle admin de quelque type que ce soit" — utilisé pour
+  // déterminer si l'utilisateur voit le panneau admin / le mode admin sécurisé.
+  // Inclut 'admin' (full) ET 'admin_compta' (limité à l'onglet Comptabilité).
+  // Le gating fin (quels onglets affichés) est géré dans admin.js _admApplyRoleGating().
+  const isAdmin = S?.role==='admin' || S?.role==='admin_compta';
 
   if(isAdmin){
     /* ── MODE ADMIN : données patients masquées (RGPD/HDS) ────────── */

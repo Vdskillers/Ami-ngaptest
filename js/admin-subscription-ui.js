@@ -463,6 +463,21 @@
             </div>
           </div>
 
+          ${(typeof S !== 'undefined' && S?.role === 'admin') ? `
+          <!-- ⚡ Section Rôle admin — visible UNIQUEMENT pour full admins (pas admin_compta) -->
+          <div class="adm-sub-modal-extras" style="border-top:1px dashed rgba(255,181,71,.3);margin-top:14px;padding-top:14px">
+            <div class="adm-sub-modal-extras-h" style="color:#ffb547">🛡️ Rôle administrateur</div>
+            <div style="font-size:11px;color:var(--m);margin-bottom:10px;line-height:1.4">
+              Promouvoir cet utilisateur lui donnera accès au panneau admin. <strong>Action sensible</strong> — chaque changement est loggé (RGPD).
+            </div>
+            <div class="adm-sub-modal-extras-row">
+              <button class="adm-sub-extras-btn" onclick="admPromoteUser('${userId}','${name.replace(/'/g,"\\'")}','admin_compta')" style="border-color:rgba(99,102,241,.4);color:#a5b4fc">📒 Promouvoir admin comptable</button>
+              <button class="adm-sub-extras-btn" onclick="admPromoteUser('${userId}','${name.replace(/'/g,"\\'")}','admin')" style="border-color:rgba(239,68,68,.4);color:#fca5a5">🔑 Promouvoir admin (full)</button>
+              <button class="adm-sub-extras-btn" onclick="admPromoteUser('${userId}','${name.replace(/'/g,"\\'")}','nurse')" style="border-color:rgba(107,114,128,.4)">↩ Rétrograder en IDE</button>
+            </div>
+          </div>
+          ` : ''}
+
           <div class="adm-sub-modal-actions">
             <button class="adm-sub-modal-btn adm-sub-modal-btn-cancel" onclick="admCloseSubModal()">Fermer</button>
           </div>
@@ -524,6 +539,46 @@
       setTimeout(() => window.loadAdmComptes(), 200);
     } catch (e) {
       alert('❌ ' + e.message);
+    }
+  };
+
+  /* ════════════════════════════════════════════════
+     PROMOTION DE RÔLE (admin / admin_compta / nurse)
+     ────────────────────────────────────────────────
+     Fonction sensible : appelle /webhook/admin-promote-user (gate manage_admins).
+     Double confirmation pour les rôles élevés (admin / admin_compta), simple
+     confirmation pour la rétrogradation. Audit log géré côté worker.
+  ════════════════════════════════════════════════ */
+  window.admPromoteUser = async function(userId, name, newRole) {
+    const ROLE_LABELS = {
+      'admin':         { label: '🔑 Administrateur (full)', warn: 'TOUS les droits : voir tous les comptes IDE, leurs données, les bloquer, les supprimer, gérer les autres admins, accès complet aux logs et stats. Ne donnez ce rôle qu\'à des personnes de confiance absolue.' },
+      'admin_compta':  { label: '📒 Administrateur Comptable', warn: 'Accès UNIQUEMENT à l\'onglet Comptabilité (CA, charges, calcul fiscal). Ne voit AUCUNE donnée IDE personnelle (anonymisation auto). Convient à un expert-comptable externe.' },
+      'nurse':         { label: '👤 Infirmier(ère) IDE', warn: 'Rétrograde au rôle standard. Perd tous accès admin. À utiliser pour révoquer des privilèges.' },
+    };
+    const meta = ROLE_LABELS[newRole];
+    if (!meta) { alert('Rôle invalide.'); return; }
+
+    // Confirmation 1 : présente le contexte
+    const msg1 = `Modifier le rôle de ${name} ?\n\nNouveau rôle : ${meta.label}\n\n${meta.warn}\n\nCette action sera enregistrée dans les logs d'audit (RGPD).`;
+    if (!confirm(msg1)) return;
+
+    // Confirmation 2 (double) UNIQUEMENT pour les promotions vers admin / admin_compta
+    if (newRole !== 'nurse') {
+      if (!confirm(`Dernière confirmation : promouvoir ${name} en ${meta.label} ?`)) return;
+    }
+
+    try {
+      const d = await wpost('/webhook/admin-promote-user', {
+        infirmiere_id: userId,
+        new_role: newRole,
+      });
+      if (!d.ok) throw new Error(d.error || 'Erreur');
+      if (typeof admAlert === 'function') admAlert(`✅ ${d.message || 'Rôle modifié'}`, 'o');
+      else alert('✅ ' + (d.message || 'Rôle modifié'));
+      window.admCloseSubModal();
+      setTimeout(() => window.loadAdmComptes(), 200);
+    } catch (e) {
+      alert('❌ Promotion échouée : ' + e.message);
     }
   };
 
