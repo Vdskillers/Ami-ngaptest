@@ -142,7 +142,7 @@ window.SUB = (function(){
       cardName: 'AMI Cabinet',
       tag: '🟣 Cabinet',
       subtitle: '« Gère ton cabinet comme un pro »',
-      price: 'Dégressif · à partir de 29 € HT / IDE / mois',
+      price: 'Dégressif · à partir de 49 € HT / IDE / mois',
       features: [
         { txt:'✨ Tout AMI Pro, plus :',         icon:'✓', bold:true },
         { txt:'Multi-IDE (sync sélective)', icon:'✓' },
@@ -1174,11 +1174,29 @@ window.SUB = (function(){
     // ─── Bloc prix : différent pour Cabinet (encadré dégressif) ───
     let priceHTML = '';
     if (key === 'CABINET') {
+      // 🆕 Si l'utilisateur est déjà dans un cabinet ≥ 1, calcule et montre
+      //    son tarif réel selon la grille dégressive (cohérent avec
+      //    admin-comptabilite.js _computeRevenue → CABINET_1_2/3_5/6P).
+      let userRateHTML = '';
+      const sz = Number(st.cabinetSize || 0);
+      if (sz >= 1) {
+        let unit = 49, bucket = '1-2 IDE';
+        if (sz >= 6)      { unit = 29; bucket = '6+ IDE'; }
+        else if (sz >= 3) { unit = 39; bucket = '3-5 IDE'; }
+        const total = unit * sz;
+        userRateHTML = `
+          <div class="sub-plan-price-userrate" style="margin-top:8px;padding:8px 12px;background:${tinfo.color}1a;border:1px solid ${tinfo.color}55;border-radius:8px;font-size:12px;color:var(--t)">
+            <span style="color:var(--m)">Pour ton cabinet de ${sz} IDE (${bucket}) :</span>
+            <b style="color:${tinfo.color}">${unit} € HT / IDE / mois</b>
+            <span style="color:var(--m)"> · soit </span><b>${total} € HT / mois</b>
+          </div>`;
+      }
       priceHTML = `
-        <div class="sub-plan-price-main" style="color:${tinfo.color}">Dégressif · à partir de 29 € HT / IDE / mois</div>
+        <div class="sub-plan-price-main" style="color:${tinfo.color}">Dégressif · à partir de 49 € HT / IDE / mois</div>
         <div class="sub-plan-price-degbox">
           1-2 IDE → 49 € · 3-5 IDE → 39 € · 6+ IDE → 29 € HT / IDE / mois
-        </div>`;
+        </div>
+        ${userRateHTML}`;
     } else {
       priceHTML = `<div class="sub-plan-price-main" style="color:${tinfo.color}">${detail.price}</div>`;
     }
@@ -1451,7 +1469,7 @@ window.SUB = (function(){
   } else {
     _waitForSession();
   }
-  console.info('[SUB] subscription.js v3.6 chargé — CSS injecté, masquage strict ON, Premium card clarifié ADD-ON, auto-bootstrap en attente de window.S');
+  console.info('[SUB] subscription.js v3.7 chargé — CSS injecté, masquage strict ON, Premium card clarifié ADD-ON, Cabinet "à partir de 49€" + tarif réel utilisateur, auto-bootstrap en attente de window.S');
 
   /* ───── 16. NOTIFICATIONS J-7 (expiration) ───────────────────────── */
 
