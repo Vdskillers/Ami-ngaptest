@@ -41,8 +41,16 @@
 
   /* ─── Cache local des abonnements (rempli à chaque loadAdmComptes) ─── */
   let _SUB_LIST = [];   // [{id, nom, prenom, is_blocked, tier, is_trial, days_left, trial_end, paid_until, override, expired, cabinet_member, ...}]
+  let _ADMIN_LIST = []; // [{id, nom, prenom, email, role, is_blocked, is_env_admin, is_self}]
   let _APP_MODE = 'TEST';
   let _APP_PAID_SINCE = null;
+
+  /* ⚡ Mode d'affichage : 'ide' (par défaut) ou 'admins'.
+     Le toggle est visible UNIQUEMENT pour les full admins (manage_admins).
+     Un admin_compta ne verra ni le toggle ni la liste admin. */
+  let _VIEW_MODE = 'ide';
+
+  /* ─── Style pour le toggle de vue (segment control IDE/Admins) ─── */
 
   /* ════════════════════════════════════════════════════════════════════
      1. CSS injecté (utilise les variables existantes)
@@ -53,6 +61,20 @@
 .adm-sub-mode-card { display:flex; align-items:center; gap:16px; padding:16px 20px;
   background:linear-gradient(135deg, rgba(0,212,170,.05), var(--c));
   border:1px solid var(--b); border-radius:12px; margin-bottom:18px; flex-wrap:wrap; }
+
+/* ⚡ Toggle de vue IDE / Admins (segment control) */
+.adm-view-toggle { display:flex; gap:0; margin-bottom:14px; padding:4px; background:var(--c);
+  border:1px solid var(--b); border-radius:10px; max-width:fit-content; }
+.adm-view-btn { background:transparent; border:none; padding:8px 18px; cursor:pointer;
+  color:var(--m); font-family:var(--fi); font-size:12px; border-radius:8px;
+  transition:all .15s; display:flex; align-items:center; gap:6px; }
+.adm-view-btn:hover { color:var(--t); background:rgba(255,255,255,.03); }
+.adm-view-btn.on { background:var(--a); color:#000; font-weight:600; }
+.adm-view-btn.on:hover { background:var(--a); }
+.adm-view-count { background:rgba(0,0,0,.15); color:inherit; padding:1px 7px; border-radius:10px;
+  font-family:var(--fm); font-size:10px; min-width:14px; text-align:center; }
+.adm-view-btn:not(.on) .adm-view-count { background:var(--b); color:var(--m); }
+
 .adm-sub-mode-card.payant { background:linear-gradient(135deg, rgba(255,95,109,.05), var(--c));
   border-color:rgba(255,95,109,.3); }
 .adm-sub-mode-ic { font-size:28px; flex-shrink:0; }
@@ -131,6 +153,62 @@
 
   window.loadAdmComptes = async function() {
     _injectAdmSubStyles();
+    _renderViewToggle();   // ⚡ Affiche le toggle IDE / Admins (si full admin)
+    if (_VIEW_MODE === 'admins') {
+      return _loadAdminsList();
+    }
+    return _loadIDEList();
+  };
+
+  /* ⚡ Toggle de vue IDE ↔ Admins
+     Inséré juste avant la barre de recherche. Visible uniquement pour les
+     full admins (admin_compta n'a pas la permission manage_admins, donc ne
+     doit pas voir/toucher la gestion des admins). */
+  function _renderViewToggle() {
+    const isFullAdmin = (typeof S !== 'undefined' && S?.role === 'admin');
+    const accsEl = document.getElementById('accs');
+    if (!accsEl) return;
+
+    let toggle = document.getElementById('adm-view-toggle');
+
+    // Si l'utilisateur n'est pas full admin, on supprime le toggle s'il existe
+    if (!isFullAdmin) {
+      if (toggle) toggle.remove();
+      return;
+    }
+
+    // Créer le toggle s'il n'existe pas
+    if (!toggle) {
+      toggle = document.createElement('div');
+      toggle.id = 'adm-view-toggle';
+      toggle.className = 'adm-view-toggle';
+      // Insérer AVANT la barre de recherche
+      const search = document.querySelector('.adm-search');
+      const parent = (search?.parentNode) || accsEl.parentNode;
+      const before = search || accsEl;
+      parent.insertBefore(toggle, before);
+    }
+
+    // Render contenu (boutons radio-like)
+    toggle.innerHTML = `
+      <button class="adm-view-btn ${_VIEW_MODE==='ide'?'on':''}" onclick="admSetViewMode('ide')">
+        👤 Comptes IDE <span class="adm-view-count">${_SUB_LIST.length || ''}</span>
+      </button>
+      <button class="adm-view-btn ${_VIEW_MODE==='admins'?'on':''}" onclick="admSetViewMode('admins')">
+        🛡️ Administrateurs <span class="adm-view-count">${_ADMIN_LIST.length || ''}</span>
+      </button>
+    `;
+  }
+
+  window.admSetViewMode = function(mode) {
+    if (mode !== 'ide' && mode !== 'admins') return;
+    if (_VIEW_MODE === mode) return;
+    _VIEW_MODE = mode;
+    window.loadAdmComptes();
+  };
+
+  /* ─── Charge la liste IDE (comportement historique) ─── */
+  async function _loadIDEList() {
     const el = document.getElementById('accs');
     if (!el) return;
     el.innerHTML = '<div class="empty"><div class="ei"><div class="spin spinw" style="width:28px;height:28px"></div></div><p style="margin-top:12px">Chargement...</p></div>';
@@ -161,11 +239,116 @@
       window.ACCS = _SUB_LIST;   // garde la compat avec filterAccs() existant
       _renderModeCard();
       _renderAccsWithSub(_SUB_LIST);
+      _renderViewToggle();        // refresh count
     } catch (e) {
       if (typeof admAlert === 'function') admAlert(e.message, 'e');
       el.innerHTML = '<div class="empty"><div class="ei">⚠️</div><p>Impossible de charger les comptes</p></div>';
     }
-  };
+  }
+
+  /* ─── Charge la liste ADMINS (admin + admin_compta) ─── */
+  async function _loadAdminsList() {
+    const el = document.getElementById('accs');
+    if (!el) return;
+    el.innerHTML = '<div class="empty"><div class="ei"><div class="spin spinw" style="width:28px;height:28px"></div></div><p style="margin-top:12px">Chargement des admins…</p></div>';
+
+    try {
+      const d = await wpost('/webhook/admin-liste-admins', {});
+      if (!d.ok) throw new Error(d.error || 'Erreur');
+      _ADMIN_LIST = d.comptes || [];
+      window.ACCS = _ADMIN_LIST;  // compat avec filterAccs()
+      _renderAdmins(_ADMIN_LIST);
+      _renderViewToggle();
+    } catch (e) {
+      if (typeof admAlert === 'function') admAlert(e.message, 'e');
+      el.innerHTML = `<div class="empty"><div class="ei">⚠️</div><p>Impossible de charger les admins<br><span style="font-size:11px;color:var(--m)">${(e.message||'').replace(/[<>]/g,'')}</span></p></div>`;
+    }
+  }
+
+  /* ─── Render cartes admin (différent des cartes IDE) ─── */
+  function _renderAdmins(list) {
+    const el = document.getElementById('accs');
+    if (!el) return;
+    if (!list || !list.length) {
+      el.innerHTML = '<div class="empty"><div class="ei">🛡️</div><p>Aucun administrateur en base.<br><span style="font-size:11px;color:var(--m)">Les admins de la config Cloudflare (ADMIN_EMAILS env) ne sont pas listés ici — ils sont gérés via Wrangler uniquement.</span></p></div>';
+      return;
+    }
+
+    const ROLE_INFO = {
+      'admin':        { icon: '🔑', label: 'Admin (full)',     color: '#ef4444', desc: 'Tous droits' },
+      'admin_compta': { icon: '📒', label: 'Admin Comptable',  color: '#a5b4fc', desc: 'Accès Comptabilité uniquement' },
+    };
+
+    el.innerHTML = list.map(a => {
+      const ini = ((a.prenom||'?')[0] + (a.nom||'?')[0]).toUpperCase();
+      const name = ((a.prenom||'') + ' ' + (a.nom||'')).trim() || '—';
+      const safe = name.replace(/'/g, "\\'");
+      const ri = ROLE_INFO[a.role] || { icon: '?', label: a.role, color: 'var(--m)', desc: '' };
+
+      // Pill rôle
+      const rolePill = `
+        <span class="adm-sub-tier-pill" style="background:${ri.color}1a;color:${ri.color};border-color:${ri.color}55"
+              title="${ri.desc}">
+          ${ri.icon} ${ri.label}
+        </span>`;
+
+      // Email (info importante pour identifier l'admin)
+      const emailHTML = a.email
+        ? `<span class="adm-sub-days" style="font-family:var(--fm);font-size:11px">✉ ${a.email.replace(/[<>"']/g,'')}</span>`
+        : '';
+
+      // Badge spéciaux
+      let badges = '';
+      if (a.is_env_admin) {
+        badges += `<span class="adm-sub-days" style="color:var(--w);background:rgba(255,181,71,.1);border:1px solid rgba(255,181,71,.3);padding:2px 8px;border-radius:10px" title="Admin défini dans la config Cloudflare (ADMIN_EMAILS env). Modification possible uniquement via Wrangler — l'UI ne peut pas le toucher.">⚙ Admin système (env)</span>`;
+      }
+      if (a.is_self) {
+        badges += `<span class="adm-sub-days" style="color:var(--a);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.3);padding:2px 8px;border-radius:10px" title="C'est vous — auto-modification interdite (anti-lockout).">👤 Vous</span>`;
+      }
+
+      // ── Boutons d'action ──
+      // Désactivés si is_env_admin OU is_self (le worker refuserait de toute façon)
+      const disabled = a.is_env_admin || a.is_self;
+      const disabledTitle = a.is_env_admin
+        ? 'Modification impossible : compte admin système (config Cloudflare)'
+        : a.is_self
+          ? 'Modification impossible : auto-modification interdite (anti-lockout)'
+          : '';
+      const disabledAttr = disabled ? `disabled title="${disabledTitle}" style="opacity:.4;cursor:not-allowed"` : '';
+
+      // Boutons selon le rôle actuel
+      let actionButtons = '';
+      if (a.role === 'admin_compta') {
+        // admin_compta : peut être promu admin OU rétrogradé en nurse
+        actionButtons = `
+          <button class="bxs b-sub" onclick="admPromoteUser('${a.id}','${safe}','admin')" ${disabledAttr}>↑ Admin full</button>
+          <button class="bxs b-blk" onclick="admPromoteUser('${a.id}','${safe}','nurse')" ${disabledAttr}>↩ Rétrograder IDE</button>
+        `;
+      } else if (a.role === 'admin') {
+        // admin : peut être rétrogradé en admin_compta OU en nurse
+        actionButtons = `
+          <button class="bxs b-sub" onclick="admPromoteUser('${a.id}','${safe}','admin_compta')" ${disabledAttr}>📒 → Comptable</button>
+          <button class="bxs b-blk" onclick="admPromoteUser('${a.id}','${safe}','nurse')" ${disabledAttr}>↩ Rétrograder IDE</button>
+        `;
+      }
+
+      return `<div class="acc">
+        <div class="avat" style="background:${ri.color}33;color:${ri.color}">${ini}</div>
+        <div class="acc-info-col">
+          <div class="acc-name">${name}</div>
+          <div class="acc-sub-col">
+            ${rolePill}
+            ${emailHTML}
+            ${badges}
+          </div>
+        </div>
+        <div class="acc-st on">● Actif</div>
+        <div class="acc-acts">
+          ${actionButtons}
+        </div>
+      </div>`;
+    }).join('');
+  }
 
   /* ════════════════════════════════════════════════════════════════════
      3. Override de renderAccs — ajoute la colonne abonnement
@@ -490,6 +673,18 @@
     if (modal) modal.innerHTML = '';
   };
 
+  /* ⚡ Helper : notifie tous les modules intéressés (notamment AdmCompta) qu'un
+     abonnement vient d'être modifié, pour qu'ils rafraîchissent leur affichage.
+     Évite que l'admin doive faire F5 manuel après chaque promotion / changement
+     de tier pour voir le CA bouger. */
+  function _notifySubscriptionChanged(action, userId, extra) {
+    try {
+      document.dispatchEvent(new CustomEvent('ami:subscription_changed', {
+        detail: { action, userId, ...(extra || {}) }
+      }));
+    } catch (_) { /* dispatchEvent ne devrait jamais throw, mais belt-and-suspenders */ }
+  }
+
   window.admConfirmChangeTier = async function(userId, name, newTier) {
     const ti = TIERS_INFO[newTier];
     if (!confirm(`Changer l'abonnement de ${name} en :\n\n${ti?.icon||''} ${ti?.label||newTier}\n\nConfirmer ?`)) return;
@@ -502,6 +697,7 @@
       if (!d.ok) throw new Error(d.error || 'Erreur');
       if (typeof admAlert === 'function') admAlert(`✅ ${name} → ${ti?.label||newTier}`, 'o');
       window.admCloseSubModal();
+      _notifySubscriptionChanged('tier_set', userId, { tier: newTier });
       setTimeout(() => window.loadAdmComptes(), 200);
     } catch (e) {
       alert('❌ ' + e.message);
@@ -519,6 +715,7 @@
       if (!d.ok) throw new Error(d.error || 'Erreur');
       if (typeof admAlert === 'function') admAlert(`✅ Essai de ${name} prolongé de ${days}j`, 'o');
       window.admCloseSubModal();
+      _notifySubscriptionChanged('extend_trial', userId, { days });
       setTimeout(() => window.loadAdmComptes(), 200);
     } catch (e) {
       alert('❌ ' + e.message);
@@ -536,6 +733,7 @@
       if (!d.ok) throw new Error(d.error || 'Erreur');
       if (typeof admAlert === 'function') admAlert(`✅ Premium ${on?'activé':'désactivé'} pour ${name}`, 'o');
       window.admCloseSubModal();
+      _notifySubscriptionChanged(action, userId);
       setTimeout(() => window.loadAdmComptes(), 200);
     } catch (e) {
       alert('❌ ' + e.message);
@@ -576,12 +774,15 @@
       if (typeof admAlert === 'function') admAlert(`✅ ${d.message || 'Rôle modifié'}`, 'o');
       else alert('✅ ' + (d.message || 'Rôle modifié'));
       window.admCloseSubModal();
+      // Une promotion change la liste des nurses considérés pour le CA
+      // (l'admin-subscription-list filtre role=eq.nurse) → notifier la compta
+      _notifySubscriptionChanged('role_change', userId, { new_role: newRole });
       setTimeout(() => window.loadAdmComptes(), 200);
     } catch (e) {
       alert('❌ Promotion échouée : ' + e.message);
     }
   };
 
-  console.info('[adm-sub] admin-subscription-ui.js v3.0 chargé · loadAdmComptes/renderAccs étendus');
+  console.info('[adm-sub] admin-subscription-ui.js v1.4 chargé · toggle IDE/Admins + endpoint admin-liste-admins + cartes admin avec rétrogradation');
 
 })();

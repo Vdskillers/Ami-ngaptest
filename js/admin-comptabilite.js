@@ -1510,6 +1510,40 @@
     _closeModal
   };
 
-  console.log('[adm-compta] v1.1 prêt — window.AdmCompta exposé');
+  /* ⚡ Auto-refresh quand un abonnement IDE est modifié ailleurs (modale admin
+     d'override, promotion de rôle, activation Premium, etc.). Sans ça, la
+     Comptabilité affichait les anciennes valeurs jusqu'à un changement
+     d'onglet ou un F5 manuel — déroutant pour l'admin qui vient de promouvoir
+     quelqu'un en Pro et ne voit pas le CA bouger.
+
+     Le déclencheur est un CustomEvent dispatché par admin-subscription-ui.js
+     après chaque appel réussi à /webhook/admin-subscription-override (ou
+     /admin-promote-user). On rafraîchit UNIQUEMENT si l'onglet Comptabilité
+     est actuellement visible (sinon load() sera appelé naturellement à la
+     prochaine ouverture via admTab('compta')).
+
+     ⚡ Détection robuste : on lit le DOM (display de la section compta) plutôt
+     que la variable _ADM_ACTIVE_TAB d'admin.js — un `let` top-level n'est PAS
+     forcément accessible entre fichiers script (comportement variable selon
+     le navigateur et le mode de chargement). Le DOM est la source de vérité. */
+  document.addEventListener('ami:subscription_changed', (e) => {
+    try {
+      const comptaSection = document.querySelector('.adm-tab-section[data-tab="compta"]');
+      // visible = display !== 'none' (qui inclut 'block', 'flex' et chaîne vide en init)
+      const isComptaVisible = comptaSection
+        && getComputedStyle(comptaSection).display !== 'none';
+      if (!isComptaVisible) {
+        console.info('[adm-compta] subscription_changed reçu (%s), mais onglet Comptabilité non visible → skip refresh (sera rechargé au prochain switch)',
+          e.detail?.action || 'unknown');
+        return;
+      }
+      console.info('[adm-compta] subscription_changed reçu (%s) → refresh', e.detail?.action || 'unknown');
+      refresh();
+    } catch (err) {
+      console.warn('[adm-compta] auto-refresh KO :', err.message);
+    }
+  });
+
+  console.log('[adm-compta] v1.2 prêt — window.AdmCompta exposé + auto-refresh sur ami:subscription_changed');
 
 })();
