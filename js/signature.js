@@ -528,7 +528,70 @@ window.reinforceSignatureProof = reinforceSignatureProof;
    Les PNG sont chiffrés AES-256-GCM AVANT envoi.
    Le serveur ne stocke que des blobs opaques (RGPD/HDS).
    La clé de chiffrement reste sur l'appareil.
+
+   ⚡ v5.12 (2026-05-01) : SYNC ENRICHIE
+   Avant : seul le PNG était chiffré et synchronisé.
+   Après un "Clear site data" + reload, on perdait DÉFINITIVEMENT :
+     - patient_nom, patient_id (libellés humains)
+     - actes (liste pour le PDF certificat)
+     - signature_hash, photo_hash, geozone (preuve médico-légale)
+     - server_cert (certification HMAC)
+     - proof_payload (recalcul du hash)
+   → Conséquence : Signatures électroniques affichait "Patient — XXX_YYY"
+     au lieu du nom, et les certificats forensiques recréés depuis ces
+     sigs vides étaient privés de Patient (ID interne) / Actes / Géozone.
+
+   Maintenant : le blob chiffré contient { v:2, png, meta } où meta a TOUTES
+   les métadonnées. Le serveur reste opaque (juste un blob chiffré). Au pull,
+   on déchiffre, on parse JSON, on restaure tous les champs en IDB.
+
+   ⚠️ Backwards compat : si le déchiffré n'est pas du JSON valide ou n'a pas
+   de champ "png", on traite comme blob legacy (PNG brut) — assure que les
+   anciennes signatures synchronisées avant ce fix continuent de fonctionner.
 ════════════════════════════════════════════════ */
+
+/* Construit le blob JSON à chiffrer pour la synchro serveur. Format v2. */
+function _buildSyncBlob(sig) {
+  // On embarque tout ce qui est nécessaire pour reconstruire la sig à
+  // l'identique côté pull, EN INCLUANT les métadonnées d'affichage et de
+  // preuve. Tout reste dans le blob CHIFFRÉ : aucune donnée perso ne
+  // transite en clair par le serveur.
+  const payload = {
+    v: 2,
+    png: sig.png || '',
+    meta: {
+      patient_id:        sig.patient_id      || '',
+      patient_nom:       sig.patient_nom     || '',
+      actes:             Array.isArray(sig.actes) ? sig.actes : [],
+      signature_hash:    sig.signature_hash  || null,
+      photo_hash:        sig.photo_hash      || null,
+      geozone:           sig.geozone         || null,
+      server_cert:       sig.server_cert     || null,
+      proof_payload:     sig.proof_payload   || null,
+      proof_version:     sig.proof_version   || 1,
+      ide_self:          !!sig.ide_self,
+      user_agent:        sig.user_agent      || '',
+    }
+  };
+  return JSON.stringify(payload);
+}
+
+/* Parse le résultat de _sigDecrypt avec rétro-compat blob PNG legacy.
+   Retourne { png, meta } — meta peut être {} si format legacy. */
+function _parseSyncBlob(decrypted) {
+  if (!decrypted) return { png: '', meta: {} };
+  // Format v2 : JSON avec {v, png, meta}
+  if (decrypted.charAt(0) === '{') {
+    try {
+      const obj = JSON.parse(decrypted);
+      if (obj && typeof obj === 'object' && obj.png) {
+        return { png: obj.png, meta: obj.meta || {} };
+      }
+    } catch (_) { /* fallback legacy */ }
+  }
+  // Format legacy v1 : juste le PNG en base64 brut (data:image/png;base64,...)
+  return { png: decrypted, meta: {} };
+}
 
 /* Chiffre un PNG base64 via AES-256-GCM (Web Crypto) — retourne base64 */
 async function _sigEncrypt(pngBase64) {
@@ -583,7 +646,10 @@ async function syncSignaturesToServer() {
     for (const sig of all) {
       if (!sig.invoice_id || !sig.png) continue;
       try {
-        const encrypted_data = await _sigEncrypt(sig.png);
+        // ⚡ v5.12 : on chiffre maintenant un blob JSON {png + meta}
+        //   au lieu du PNG seul, pour préserver patient_nom/actes/preuve
+        //   après un éventuel "Clear site data" + reload (cf. _buildSyncBlob).
+        const encrypted_data = await _sigEncrypt(_buildSyncBlob(sig));
         signatures.push({
           invoice_id:     sig.invoice_id,
           encrypted_data,
@@ -635,12 +701,30 @@ async function syncSignaturesFromServer() {
       const localDate  = local ? new Date(local.signed_at || 0).getTime() : 0;
       if (!local || remoteDate > localDate) {
         try {
-          const png = await _sigDecrypt(remote.encrypted_data);
+          // ⚡ v5.12 : déchiffre puis parse le blob JSON pour restaurer
+          //   non seulement le PNG mais TOUTES les métadonnées (patient_nom,
+          //   actes, signature_hash, geozone, etc.) sinon elles seraient
+          //   perdues à chaque "Clear site data" + reload (cf. _parseSyncBlob).
+          //   Backwards compat : si format legacy (PNG brut), seul le PNG
+          //   est restauré, mais ça ne casse rien.
+          const decrypted = await _sigDecrypt(remote.encrypted_data);
+          const { png, meta } = _parseSyncBlob(decrypted);
           await _sigPut({
             invoice_id: remote.invoice_id,
             png,
             signed_at:  remote.updated_at || new Date().toISOString(),
-            user_agent: 'sync',
+            user_agent: meta.user_agent || 'sync',
+            // Métadonnées restaurées (vides si blob legacy v1)
+            patient_id:     meta.patient_id     || '',
+            patient_nom:    meta.patient_nom    || '',
+            actes:          Array.isArray(meta.actes) ? meta.actes : [],
+            signature_hash: meta.signature_hash || null,
+            photo_hash:     meta.photo_hash     || null,
+            geozone:        meta.geozone        || null,
+            server_cert:    meta.server_cert    || null,
+            proof_payload:  meta.proof_payload  || null,
+            proof_version:  meta.proof_version  || 1,
+            ide_self:       !!meta.ide_self,
           });
           merged++;
         } catch(_) {}
@@ -656,11 +740,23 @@ async function syncSignaturesFromServer() {
   }
 }
 
-/* Push immédiat d'une signature après sauvegarde */
+/* Push immédiat d'une signature après sauvegarde.
+   ⚡ v5.12 : on relit la sig complète depuis IDB pour envoyer un blob
+   enrichi (cf. _buildSyncBlob), pas juste le PNG. Sinon le serveur garde
+   l'ancien blob v1 (png seul) et un Clear/reload perd les métadonnées. */
 async function _syncSignatureNow(invoiceId, png, signedAt) {
   if (typeof S === 'undefined' || !S?.token) return;
   try {
-    const encrypted_data = await _sigEncrypt(png);
+    // Relire la sig complète depuis IDB — elle vient juste d'être posée
+    // par _sigPut, donc on a accès à patient_nom/actes/proof/etc.
+    let sig = null;
+    try { sig = await _sigGet(invoiceId); } catch (_) {}
+    // Fallback : si lookup échoue, on construit un blob minimal avec juste
+    // ce qu'on a sous la main (PNG + horodatage)
+    const blob = sig
+      ? _buildSyncBlob(sig)
+      : _buildSyncBlob({ png, signed_at: signedAt });
+    const encrypted_data = await _sigEncrypt(blob);
     const wpost = typeof window.wpost === 'function' ? window.wpost
       : (url, body) => (typeof apiCall === 'function' ? apiCall(url, body) : Promise.reject('no wpost'));
     await wpost('/webhook/signatures-push', {
@@ -1831,14 +1927,56 @@ async function refreshIDESignatureUI() {
   }
 }
 
-/* Exposer globalement */
-window.openSignatureModal  = openSignatureModal;
+/* ════════════════════════════════════════════════
+   RELINK signature : provisoireInvoiceId → vrai invoice_number
+   ────────────────────────────────────────────────
+   Utilisé par uber.js après que l'API cotation a renvoyé le vrai
+   invoice_number (ex: F2026-3B17C2-000524). Sans ça, la signature
+   reste sous la clé provisoire (uber_xxx_yyy) et le PDF facture
+   généré depuis le carnet patient ne la trouve pas (cherche par
+   invoice_number réel) → champ "Signature patient" reste vide.
+
+   Stratégie :
+     - Si la sig existe sous oldId, on la relit, on la recrée sous
+       newId avec TOUTES ses métadonnées préservées (patient_nom,
+       hash, geozone, server_cert, etc.)
+     - On supprime l'entrée sous oldId pour éviter les doublons
+     - On synchronise immédiatement vers le serveur sous le nouvel ID
+       (la version chiffrée v2 contient toutes les métadonnées)
+     - Idempotent : si oldId == newId ou si oldId n'existe pas → no-op
+════════════════════════════════════════════════ */
+async function relinkSignatureInvoiceId(oldId, newId) {
+  if (!oldId || !newId || oldId === newId) return false;
+  try {
+    const sig = await _sigGet(oldId);
+    if (!sig) return false;
+    // Recréer sous le nouvel ID avec toutes les métadonnées
+    const newSig = { ...sig, invoice_id: newId };
+    await _sigPut(newSig);
+    // Supprimer l'ancien
+    await _sigExec(db => new Promise((res, rej) => {
+      const tx  = db.transaction(SIG_STORE, 'readwrite');
+      tx.objectStore(SIG_STORE).delete(oldId).onsuccess = () => res(true);
+      tx.onerror = () => rej(tx.error);
+    }));
+    // Re-sync vers serveur sous le nouvel ID (best-effort)
+    if (newSig.png) {
+      _syncSignatureNow(newId, newSig.png, newSig.signed_at).catch(() => {});
+    }
+    console.info('[AMI:Sig] 🔗 Relink %s → %s (toutes métadonnées préservées)', oldId, newId);
+    return true;
+  } catch (e) {
+    console.warn('[AMI:Sig] Relink KO :', e?.message);
+    return false;
+  }
+}
 window.closeSignatureModal = closeSignatureModal;
 window.clearSignature      = clearSignature;
 window.saveSignature       = saveSignature;
 window.getSignature        = getSignature;
 window.deleteSignature     = deleteSignature;
 window.injectSignatureInPDF = injectSignatureInPDF;
+window.relinkSignatureInvoiceId = relinkSignatureInvoiceId;
 window.syncSignaturesToServer   = syncSignaturesToServer;
 window.syncSignaturesFromServer = syncSignaturesFromServer;
 window.captureProofPhoto   = captureProofPhoto;

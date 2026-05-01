@@ -1004,14 +1004,31 @@ async function _uberAfterDoneFlow(p) {
   // (qui restera utilisé en mode offline/fallback).
   const finalInvoiceId = p?._cotation?.invoice_number || provisoireInvoiceId;
 
+  // ⚡ v5.12 (2026-05-01) : RELINK signature provisoire → vrai invoice
+  // Avant : la sig restait sous la clé 'uber_xxx_yyy' alors que la cotation
+  // BDD a un vrai invoice_number 'F2026-3B17C2-000524'. Conséquence : le PDF
+  // facture généré depuis le carnet patient ne trouvait pas la sig (cherchait
+  // sous F2026-...) et affichait "À signer" alors qu'elle existait.
+  // Maintenant : si l'API a répondu avec un vrai invoice différent du provisoire,
+  // on remap la sig dans IDB (et resync serveur) en préservant TOUTES les
+  // métadonnées (patient_nom, hash, geozone, server_cert).
+  if (finalInvoiceId && finalInvoiceId !== provisoireInvoiceId
+      && typeof window.relinkSignatureInvoiceId === 'function') {
+    try {
+      await window.relinkSignatureInvoiceId(provisoireInvoiceId, finalInvoiceId);
+    } catch (e) {
+      console.warn('[AMI] Relink signature KO :', e?.message);
+    }
+  }
+
   // Vérifier si la signature a effectivement été posée dans IDB
   // (saveSignature persiste dans ami_signatures via _sigPut)
-  // ⚡ Lookup sur le provisoireInvoiceId puisque c'est avec celui-ci que
-  // la modale a été ouverte. Si le vrai invoice_number diffère, il faudra
-  // une migration côté ami_signatures (TODO si nécessaire).
+  // ⚡ Lookup sur le finalInvoiceId (post-relink) pour gérer les 2 cas :
+  //    - online : sig sous le vrai invoice_number après relink
+  //    - offline : sig reste sous le provisoire (= finalInvoiceId aussi)
   try {
     if (typeof _sigGet === 'function') {
-      const sig = await _sigGet(provisoireInvoiceId);
+      const sig = await _sigGet(finalInvoiceId);
       _outcome.signatureOk = !!(sig && sig.png && sig.signed_at);
     }
   } catch(_) {}

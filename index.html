@@ -2995,7 +2995,7 @@
 
 <!-- Modules dépendant de Leaflet -->
 <script src="js/map.js?v=5.10.5"></script>
-<script src="js/uber.js?v=5.10.6"></script>
+<script src="js/uber.js?v=5.10.7"></script><!-- 🚗 v5.10.7 : RELINK signature provisoire→vrai invoice après réponse API (sinon PDF facture du carnet ne trouvait pas la signature → "À signer") -->
 
 <!-- Moteurs IA (pas de dépendance Leaflet) — doivent précéder tournee.js -->
 <script src="js/ai-tournee.js?v=5.10.2"></script>
@@ -3015,7 +3015,7 @@
 <script src="js/onboarding.js?v=3.8"></script>
 
 <!-- Nouveaux modules SaaS médical -->
-<script src="js/signature.js?v=5.11"></script><!-- 🖋️ v5.11 : event ami:preuve_updated transmet patient_nom + patient_id + actes + geozone (forensic-cert peut créer des certifs riches avec libellé patient + actes lisibles dans le PDF) -->
+<script src="js/signature.js?v=5.12"></script><!-- 🖋️ v5.12 : SYNC ENRICHIE — le blob chiffré contient maintenant {png + meta} avec patient_nom/patient_id/actes/hash/geozone/server_cert/proof. Plus de perte de données après Clear+Reload. Backwards compat blob legacy v1. + relinkSignatureInvoiceId(oldId,newId) pour que le PDF facture trouve sa sig sous le vrai invoice_number -->
 <script src="js/copilote.js?v=3.8"></script>
 <script src="js/rapport.js?v=3.8"></script>
 
