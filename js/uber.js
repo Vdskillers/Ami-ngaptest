@@ -761,9 +761,13 @@ async function _autoCoterEtImporterPatient(p) {
       }
       pat.updated_at = today;
 
+      // ⚡ FIX (2026-05-01) : _enc() est ASYNC (cf. patients.js:187). Sans
+      // await, on stockait un Promise dans IDB → "Failed to execute 'put' on
+      // IDBObjectStore: #<Promise> could not be cloned." → corruption silencieuse
+      // de la cotation patient (rien ne sauvait, mais pas de crash visible).
       await _idbPut(PATIENTS_STORE, {
         id: pat.id, nom: pat.nom, prenom: pat.prenom,
-        _data: _enc(pat), updated_at: today,
+        _data: await _enc(pat), updated_at: today,
       });
     }
   } catch (_e) { console.warn('[AMI] Import IDB KO:', _e?.message); }

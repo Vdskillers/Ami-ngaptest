@@ -1943,6 +1943,10 @@ async function refreshIDESignatureUI() {
      - On supprime l'entrée sous oldId pour éviter les doublons
      - On synchronise immédiatement vers le serveur sous le nouvel ID
        (la version chiffrée v2 contient toutes les métadonnées)
+     - ⚡ v5.13 : on appelle AUSSI /webhook/signatures-delete pour purger
+       l'ancien invoice_id côté SERVEUR. Sans ça, le serveur garde la sig
+       sous oldId, et la prochaine sync pull la re-restaure dans IDB —
+       résultat : 2 signatures par patient (uber_pat_X_Y ET F2026-...).
      - Idempotent : si oldId == newId ou si oldId n'existe pas → no-op
 ════════════════════════════════════════════════ */
 async function relinkSignatureInvoiceId(oldId, newId) {
@@ -1953,7 +1957,7 @@ async function relinkSignatureInvoiceId(oldId, newId) {
     // Recréer sous le nouvel ID avec toutes les métadonnées
     const newSig = { ...sig, invoice_id: newId };
     await _sigPut(newSig);
-    // Supprimer l'ancien
+    // Supprimer l'ancien EN LOCAL (IDB)
     await _sigExec(db => new Promise((res, rej) => {
       const tx  = db.transaction(SIG_STORE, 'readwrite');
       tx.objectStore(SIG_STORE).delete(oldId).onsuccess = () => res(true);
@@ -1962,6 +1966,17 @@ async function relinkSignatureInvoiceId(oldId, newId) {
     // Re-sync vers serveur sous le nouvel ID (best-effort)
     if (newSig.png) {
       _syncSignatureNow(newId, newSig.png, newSig.signed_at).catch(() => {});
+    }
+    // ⚡ Supprimer l'ancien invoice_id côté SERVEUR aussi (best-effort).
+    //    Sans cette ligne, la sync pull suivante restaure l'ancienne sig
+    //    en IDB → doublons visibles dans Signatures électroniques.
+    //    Endpoint /webhook/signatures-delete existe déjà côté worker.
+    if (typeof S !== 'undefined' && S?.token) {
+      const _wpost = typeof window.wpost === 'function' ? window.wpost
+        : (url, body) => (typeof apiCall === 'function' ? apiCall(url, body) : Promise.reject('no wpost'));
+      _wpost('/webhook/signatures-delete', { invoice_id: oldId })
+        .then(() => console.info('[AMI:Sig] 🧹 Serveur purgé pour ancien invoice_id %s', oldId))
+        .catch(e => console.warn('[AMI:Sig] Serveur purge KO pour %s : %s (non-bloquant)', oldId, e?.message));
     }
     console.info('[AMI:Sig] 🔗 Relink %s → %s (toutes métadonnées préservées)', oldId, newId);
     return true;
